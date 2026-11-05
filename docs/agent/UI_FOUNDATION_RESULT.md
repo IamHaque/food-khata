@@ -1,7 +1,8 @@
-# UI-T1A result: incomplete
-
-- Added the Vite `/api` development proxy to `127.0.0.1:8765` in `dashboard-ui/vite.config.js`.
-- `npm test`: seven existing Node tests passed. `npm run build`: passed outside the sandbox after esbuild spawn failed inside it.
-- No new entry or hooks were implemented; the existing root URL still opens the legacy app. Once the planned entry is implemented, the browser baseline must use `/legacy`.
-- Remaining: routing, typed API and generated types, query hooks, account and URL filters, theme and scoped styles, states, foundation tests, typecheck and lint setup, and page placeholders.
-- No browser, screenshots, or real data were used. Changes are uncommitted.
+# UI foundation progress
+- Typed entry/router and seven navigation placeholders added; legacy loads unchanged at /legacy.
+- Generated API types and reproducible generation script added; API client/query hooks still pending.
+- Root fixed strict TS boundary: legacy JSX declared separately; new TS remains strict. Added alias configuration.
+- Root verified: typecheck, lint (existing new TS only), build, seven Node tests, original synthetic browser suite at /legacy all pass.
+- Existing browser and baseline scripts now target /legacy without dropping scenarios.
+- Remaining: API/Zod/hooks/mocked tests, account/global URL filters, scoped themes, actual page content.
+- npm audit: 11 moderate findings (router and lint dependency chains); no forced audit fix applied.

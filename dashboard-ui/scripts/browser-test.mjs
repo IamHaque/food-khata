@@ -83,7 +83,7 @@ try {
     const target = new URL(route.request().url());
     if (
       target.origin === new URL(url).origin &&
-      (target.pathname === "/" || target.pathname.startsWith("/assets/"))
+      (target.pathname === "/" || target.pathname === "/legacy" || target.pathname.startsWith("/assets/"))
     )
       return route.continue();
     return route.abort();
@@ -99,7 +99,7 @@ try {
   await page.route("**/data/dashboard.json", (route) =>
     route.fulfill({ json: data }),
   );
-  await page.goto(url);
+  await page.goto(new URL("legacy", url).href);
   await page.getByRole("combobox", { name: "Customer", exact: true }).waitFor();
   assert.equal(await page.locator('[role="tab"]').count(), 0);
   assert.equal((await page.locator(".recharts-surface").count()) > 0, true);
@@ -219,4 +219,5 @@ try {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));
 }
+
 

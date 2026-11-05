@@ -26,12 +26,12 @@ try {
       const requestUrl = route.request().url();
       if (requestUrl === new URL("data/dashboard.json", url).href) return route.fulfill({ json: data });
       const parsed = new URL(requestUrl);
-      if (parsed.origin === new URL(url).origin && (parsed.pathname === "/" || parsed.pathname.startsWith("/assets/"))) return route.continue();
+      if (parsed.origin === new URL(url).origin && (parsed.pathname === "/" || parsed.pathname === "/legacy" || parsed.pathname.startsWith("/assets/"))) return route.continue();
       blocked.push(parsed.origin + parsed.pathname);
       return route.abort();
     });
     await page.addInitScript(value => localStorage.setItem("food-khata-theme", value), theme);
-    await page.goto(url);
+    await page.goto(new URL("legacy", url).href);
     await page.getByRole("combobox", { name: "Customer", exact: true }).waitFor();
     assert.equal(await page.locator("html").evaluate(e => e.classList.contains("dark")), theme === "dark");
     assert.equal(await page.locator("tbody tr").count(), 20);
@@ -80,3 +80,4 @@ try {
   if (browser) await browser.close();
   if (server) await new Promise(done => server.httpServer.close(done));
 }
+
