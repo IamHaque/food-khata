@@ -12,3 +12,4 @@
 2026-11-06: E-1 independent review assigned Terra Medium: audit scripts, privacy isolation, guard, source boundaries and documented findings; no app modifications.
 2026-11-06: Root independently verified generator, live aggregate profile, 8 Playwright/axe states, contained existing browser functional suite, pytest 57 +10 subtests, Ruff, guard self-check/tracked scan. Existing a11y/contrast defects documented, not fixed.
 2026-11-06: Terra Medium review found report-output DB alias risk and ordinary-filename screenshot guard gap. Root fixed both with regression checks; existing browser baseline gap closed with network containment and successful run.
+2026-11-06: E-1 evidence committed 4b83f33; BASE-01/02/03 and DATA-01 done. STOP: waiting for MIGRATION_PLAN approval; no implementation/deletion authorized by this checkpoint.

@@ -173,9 +173,9 @@ Story CLEAN-02: Retire the JSON export path
 | Story | Status | Owner | Commit / evidence |
 | --- | --- | --- | --- |
 | BASE-03 | done | Terra Low + root | 72dcc0b; root guard verification |
-| BASE-01 | done | Terra Low + root | Root-verified 8 states and functional browser suite; baseline defects recorded |
-| BASE-02 | done | root + Terra Medium review | Final MIGRATION_PLAN approval checkpoint |
-| DATA-01 | done | Terra Medium + root | DATA_PROFILE and privacy regression test, root verified |
+| BASE-01 | done | Terra Low + root | 4b83f33; root-verified 8 states and browser suite; defects recorded |
+| BASE-02 | done | root + Terra Medium review | 4b83f33; final MIGRATION_PLAN approval checkpoint |
+| DATA-01 | done | Terra Medium + root | 4b83f33; DATA_PROFILE/privacy tests root verified |
 
 ## Remaining story scenarios (technical BRIEF sections 2–10)
 All stories below are todo, owner pending, commit pending. Required source ACCT/LEDGER/new-story text above remains authoritative.
@@ -262,4 +262,5 @@ CLEAN-01 — As a maintainer I want approved legacy retirement so duplicate char
 Scenario: Given approved REMOVALS and proven replacements, when removing legacy UI/Recharts, then dedicated removal commits preserve tested capability and remove unused dependencies.
 CLEAN-03 — As a maintainer I want accurate docs so supported workflows are clear.
 Scenario: Given approved completed changes, when updating README/architecture/METRICS/CI, then docs describe actual behavior and supported commands with Windows-compatible scripts.
+
 

@@ -31,9 +31,9 @@ No execution blocker; waiting at requested human approval checkpoint.
 ## Done recently
 - BASE-03 72dcc0b: guard, initial briefs/state/backlog; root reverified.
 - BASE-02 draft 689afa9: baseline/source inventory.
-- BASE-01: generated 3-account/36-month synthetic export, 8 screenshots/axe/contrast and existing functional browser suite; root reran.
-- DATA-01: local read-only aggregate profile plus privacy/output-alias tests; root reran.
-- E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
+- BASE-01 4b83f33: generated 3-account/36-month synthetic export, 8 screenshots/axe/contrast and existing functional browser suite; root reran.
+- DATA-01 4b83f33: local read-only aggregate profile plus privacy/output-alias tests; root reran.
+- BASE-02 4b83f33: final migration plan/source inventory; E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
 ## Open questions for the human
 Approve MIGRATION_PLAN.md. No removal approval requested.
 ## Environment notes
@@ -46,4 +46,5 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 2026-11-06 root: pytest 57 passed +10 subtests; Ruff lint/format pass; npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. No new API/parity run yet.
-Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Final evidence commits pending immediately below this state update.
+Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
