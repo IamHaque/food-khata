@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "vite build && node scripts/licenses.mjs",
-    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts",
+    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts src/lib/filters.test.ts",
     "test:browser": "node scripts/browser-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
     "generate:api": "openapi-typescript src/types/openapi.json -o src/types/api.d.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/response-schema.ts src/hooks/api.ts"
+    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/response-schema.ts src/lib/filters.ts src/hooks/api.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
@@ -48,3 +48,4 @@
     "vitest": "^5.1.0"
   }
 }
+

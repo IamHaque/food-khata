@@ -171,10 +171,58 @@ export interface components {
             source_bill?: components["schemas"]["JsonValue"];
             discount_breakdown?: components["schemas"]["JsonValue"];
         };
+        /** CalendarDay */
+        CalendarDay: {
+            /** Date */
+            date: string | null;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+        };
+        /** ChartLeader */
+        ChartLeader: {
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number;
+            /** Amount */
+            amount: number;
+        };
         /** Charts */
         Charts: {
             /** Monthly */
             monthly: components["schemas"]["Month"][];
+            /** Calendar */
+            calendar: components["schemas"]["CalendarDay"][];
+            cost_waterfall: components["schemas"]["Waterfall"];
+            /** Top Restaurants */
+            top_restaurants: components["schemas"]["ChartLeader"][];
+            /** Top Dishes */
+            top_dishes: components["schemas"]["ChartLeader"][];
+            /** Platforms */
+            platforms: components["schemas"]["PlatformChart"][];
+            /** Monthly Fee Components */
+            monthly_fee_components: components["schemas"]["FeeMonth"][];
+            /** Insights */
+            insights: components["schemas"]["Insight"][];
+        };
+        /** Comparison */
+        Comparison: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            kpis: components["schemas"]["KPIs"];
+            percent_change: components["schemas"]["KPIDeltas"];
         };
         /** Dashboard */
         Dashboard: {
@@ -186,8 +234,28 @@ export interface components {
             generated_at: string;
             kpis: components["schemas"]["KPIs"];
             charts: components["schemas"]["Charts"];
+            comparison: components["schemas"]["Comparison"] | null;
             /** Data Complete */
             data_complete: boolean;
+        };
+        /** FeeMonth */
+        FeeMonth: {
+            /** Month */
+            month: string | null;
+            /** Order Count */
+            order_count: number;
+            /** Net Delivery */
+            net_delivery: number;
+            /** Packaging */
+            packaging: number;
+            /** Platform */
+            platform: number;
+            /** Tax */
+            tax: number;
+            /** Total Fees */
+            total_fees: number;
+            /** Rounding Adjustment */
+            rounding_adjustment: number;
         };
         /** FilterOptions */
         FilterOptions: {
@@ -324,6 +392,32 @@ export interface components {
             /** Details Complete */
             details_complete: boolean;
         };
+        /** Insight */
+        Insight: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "most_frequent_platform" | "top_restaurant" | "fee_percentage";
+            /** Text */
+            text: string;
+            /** Value */
+            value: string;
+            filter_patch: components["schemas"]["InsightPatch"];
+        };
+        /** InsightPatch */
+        InsightPatch: {
+            /**
+             * Platforms
+             * @default []
+             */
+            platforms: string[];
+            /**
+             * Restaurant Ids
+             * @default []
+             */
+            restaurant_ids: string[];
+        };
         /** Item */
         Item: {
             /** Item Name */
@@ -340,6 +434,41 @@ export interface components {
             category: string | null;
         };
         JsonValue: unknown;
+        /** KPIDeltas */
+        KPIDeltas: {
+            /** Orders */
+            orders: number | null;
+            /** Valid Order Count */
+            valid_order_count: number | null;
+            /** Spend */
+            spend: number | null;
+            /** Aov */
+            aov: number | null;
+            /** Total Discount */
+            total_discount: number | null;
+            /** Reported Savings */
+            reported_savings: number | null;
+            /** Discount Rate */
+            discount_rate: number | null;
+            /** Reported Savings Rate */
+            reported_savings_rate: number | null;
+            /** Fees */
+            fees: number | null;
+            /** Fee Percentage */
+            fee_percentage: number | null;
+            /** Tax */
+            tax: number | null;
+            /** Tips */
+            tips: number | null;
+            /** Refunds */
+            refunds: number | null;
+            /** Unique Restaurants */
+            unique_restaurants: number | null;
+            /** Unique Dishes */
+            unique_dishes: number | null;
+            /** Average Rating */
+            average_rating: number | null;
+        };
         /** KPIs */
         KPIs: {
             /** Orders */
@@ -501,6 +630,21 @@ export interface components {
             /** Filtered Total Amount */
             filtered_total_amount: number;
         };
+        /** PlatformChart */
+        PlatformChart: {
+            /** Platform */
+            platform: string;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+            /** Discounts */
+            discounts: number;
+            /** Advertised Savings */
+            advertised_savings: number;
+            /** Fees */
+            fees: number;
+        };
         /** PriceMonth */
         PriceMonth: {
             /** Month */
@@ -553,6 +697,31 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Waterfall */
+        Waterfall: {
+            /** Subtotal */
+            subtotal: number;
+            /** Food Discount */
+            food_discount: number;
+            /** Net Delivery */
+            net_delivery: number;
+            /** Packaging */
+            packaging: number;
+            /** Platform */
+            platform: number;
+            /** Tax */
+            tax: number;
+            /** Tip */
+            tip: number;
+            /** Other */
+            other: number;
+            /** Residual */
+            residual: number;
+            /** Provider Paid */
+            provider_paid: number;
+            /** Refunds */
+            refunds: number;
         };
     };
     responses: never;

@@ -11,5 +11,6 @@
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src/entry.tsx", "src/legacy.d.ts", "src/app", "src/lib/api.ts", "src/hooks/api.ts"]
+  "include": ["src/entry.tsx", "src/legacy.d.ts", "src/app", "src/lib/api.ts", "src/lib/filters.ts", "src/hooks/api.ts"]
 }
+

@@ -19,11 +19,11 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-MIG-01 harness implemented by root, local parity zero mismatches; values ignored. UI API request core verified, dashboard Zod contract sync pending; remaining page datasets worker returned no changes. Next UI contract sync and smaller behavior dataset task (Medium only).
+UI-T2B / Terra Medium: account+URL filter controls next. Root completed contract sync/filtermodel:7Node+7Vitest,typecheck/lint/build pass. E1-T7A behavior worker still running; backend edits and generated uv.lock attributed to its execution, not staged.
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Complete typed frontend foundation/account filters (UI-T1, Terra Medium).
-3. Implement and locally run parity harness (root).
+3. Parity passed6e86ee2; rerun after remaining serverchanges.
 4. Ledger/modal then Overview and remaining pages.
 5. Final a11y/responsive/stress checks and removal proposals.
 ## Blocked
@@ -49,6 +49,7 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 

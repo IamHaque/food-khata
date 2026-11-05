@@ -13,3 +13,9 @@
 - Hooks: `useMetadata`, `useHealth`, `useDashboard`, `useOrders`, `useBill`, `useRestaurants`, `useItems`, `useSlim` use corresponding arguments without signals.
 - Strict typecheck and lint pass; npm test passes seven Node and three mocked Vitest tests; production build passes (existing chunk-size warning).
 - Test/build required elevated execution for esbuild spawn; no browser or real data used.
+
+## UI-T2A / UI-05 UI-03 (incomplete)
+- Consolidated repeated filter and order response schemas in response-schema.ts.
+- Typecheck fails: Dashboard schema lacks regenerated comparison and chart fields.
+- Remaining: complete contract schemas, URL filter model and tests, lint/test configuration, and all checks.
+Root completion: expanded Dashboard Zod schemas retain chart/comparison fields; URL filter model defaults/parse/serialize/accountprune added.7Node+7Vitest/typecheck/lint/build verified. UIcontrols/account selector remain next.
