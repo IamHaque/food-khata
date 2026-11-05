@@ -18,6 +18,6 @@ for (const name of Object.keys(pkg.dependencies)) {
     notices.push([name, readFileSync(resolve(directory, license), "utf8")]);
 }
 writeFileSync(
-  resolve(root, "../food_khata/dashboard_assets/THIRD-PARTY-LICENSES.txt"),
+  resolve(root, "dist/THIRD-PARTY-LICENSES.txt"),
   notices.map(([name, text]) => `${name}\n${text}`).join("\n\n"),
 );

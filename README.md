@@ -2,7 +2,7 @@
 
 A local CLI for saving and visualizing your Zomato and Swiggy food order history.
 Log in or reuse active sessions, sync new orders incrementally, ingest order history
-into a local SQLite analytics database, and generate an interactive visual dashboard.
+into a local SQLite analytics database, and export data for an independent React dashboard.
 
 ## Install and run
 
@@ -22,19 +22,20 @@ On macOS/Linux activate with `source .venv/bin/activate`. The installed
 
 * **`food-khata`** or **`food-khata sync`** *(Default)*:
   Interactive account selection, login/refresh, smart order sync, automatic local
-  database update, and interactive prompt to view the visual dashboard.
+  database update, and interactive prompt to export dashboard data.
 * **`food-khata ingest`**:
   Migrates all saved order JSONs across all accounts into the local SQLite database
   (`food_analytics.db`) without performing any network or login requests.
-* **`food-khata dashboard`**:
-  Compiles and opens the visual analytics dashboard (`dashboard.html`) in your default
-  browser directly from the local database.
+* **`food-khata export`** (or **`food-khata dashboard`**, its alias):
+  Exports complete dashboard data from SQLite into `.food-khata/dashboard.json`.
+  Use `--output PATH` to choose a different data file.
 
 Flags:
 * `--data-dir PATH`: Override the private data directory (default: `.food-khata/`).
 * `--db-path PATH`: Override the SQLite database location (default: `.food-khata/food_analytics.db`).
 * `--no-dashboard`: Skip the post-sync dashboard prompt.
-* `--no-open`: Generate the dashboard without opening the browser.
+* `--output PATH`: Write the React dashboard JSON export to this path.
+* `--no-open`: Compatibility flag; export does not open a browser.
 
 ### Multi-Account & Session Management
 
@@ -65,23 +66,33 @@ When pre-existing history is found for an account, choose your sync mode:
 
 ### Local Analytics Database & Dashboard
 
-After syncing, orders are automatically ingested into `.food-khata/food_analytics.db`.
-The CLI then prompts to open the unified visual dashboard (`dashboard.html`), featuring:
-* **Macro KPIs**: Delivered spend, total savings (food discounts + waived delivery), orders, and AOV.
-* **Platform Battle**: Side-by-side comparison of Swiggy vs Zomato metrics.
-* **Monthly & Fee Creep Timelines**: Historical spend curves and platform fee evolution.
-* **Dietary & Cuisine Split**: Veg vs Non-Veg spending and dish distribution.
-* **Ordering Habit Patterns**: 7x24 density heatmap and meal-time slots (Breakfast to Late Night).
-* **Favorites**: Top 10 most visited restaurants and most ordered dishes.
-* **Household Multi-Account Filter**: Switch between all accounts combined or individual phone numbers.
+Python owns syncing, normalization and financial parsing in SQLite. The React app
+loads a versioned JSON export; Python does not generate HTML or serve the UI.
 
+```powershell
+food-khata ingest
+food-khata export --output dashboard-ui/public/data/dashboard.json
+cd dashboard-ui
+npm ci
+npm run dev
+```
+
+Open the local URL printed by Vite. The app automatically loads that JSON file.
+You can also export to the default `.food-khata/dashboard.json` and choose **Load data**
+in the app. Run the export again after syncing, then refresh or reload the file.
+
+The dashboard is one continuous page: no routes or section tabs. It provides
+shared customer/date/platform/restaurant/payment filters, chart tooltips, a
+weekday/hour heatmap, searchable complete order history and receipt-style order
+details. Light/dark themes persist locally. shadcn/ui components provide the controls,
+tables, charts, calendars, cards, tooltips and receipt sheet.
 
 ## Your data
 
 ```text
 food-khata/.food-khata/
   food_analytics.db     <-- Normalized SQLite relational analytics database
-  dashboard.html        <-- Standalone interactive visual analytics app
+  dashboard.json       <-- Versioned data input for the separate React app
   accounts/
     <local-account-id>/
       account.json
@@ -166,33 +177,26 @@ The integrations were adapted from Jomato (MIT, copyright 2026 jatin-dot-py).
 See [LICENSE](LICENSE). This repository is independent and imports no parent project
 modules, configuration, sessions, or exports. Use only for accounts you control.
 
-## Local analytics and history
+## Dashboard development
 
-Run `food-khata ingest` to import saved archives, then `food-khata dashboard --no-open`
-to generate `.food-khata/dashboard.html`. Open that file to explore all customers,
-filter the timeline and search the complete paginated history. Each order exposes
-its stored bill, items, restaurant and delivery address. The generated HTML contains
-personal order/address data for every imported account; keep it private.
-
-Ingestion migrates the SQLite schema additively and rolls back an account import
-if a record fails, leaving source archives untouched. Bill discounts are stored
-separately from provider-advertised savings. A delivered bill is marked reconciled
-when known components match its total within INR 1 (provider rounding); mismatches,
-missing dates and incomplete sources remain visible for review. Reconciled means
-arithmetically consistent, not independently verified against bank transactions.
-Address groups describe geography; original personal annotations remain available.
-The dashboard uses React, Tailwind and shadcn/ui with animated Recharts charts,
-light/dark themes and an embedded Inter font. Compiled assets ship in the Python
-package and are embedded in the HTML: opening it needs no server or internet.
-Node.js is only required when changing the frontend:
+The React app lives in `dashboard-ui/` and uses Vite, Tailwind, shadcn/ui and Recharts.
+Node.js 22 or newer is recommended. In that directory:
 
 ```sh
-cd dashboard-ui
 npm ci
 npm test
 npm run build
+npm run preview
 ```
 
-After rebuilding, run `food-khata dashboard --no-open` to refresh the local snapshot.
-Frontend source is under `dashboard-ui/src`; checked-in compiled assets live under
-`food_khata/dashboard_assets`. CI checks that these stay in sync.
+`npm run build` creates a normal static web app in `dashboard-ui/dist`.
+`npm run test:browser` tests the built app; install Chromium with
+`npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+Vite binds to loopback by default. Exported JSON contains private account/address
+information: keep it private and do not publish `public/data` or a build containing it.
+
+Ingestion migrates SQLite additively and rolls back a failed account import.
+Source archives remain untouched. Advertised savings remain distinct from explicit
+bill discounts. Reconciliation means the known components balance within INR 1;
+it does not independently verify bank transactions. Unreconciled bills retain
+provider totals and show a concise notice in the receipt.

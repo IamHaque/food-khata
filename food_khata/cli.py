@@ -9,7 +9,7 @@ from typing import Any
 import questionary
 
 from .contracts import AuthenticationError, KhataError, Provider
-from .dashboard import generate_dashboard, open_dashboard
+from .dashboard import export_dashboard_data
 from .db import AnalyticsDB
 from .providers.swiggy import Swiggy
 from .providers.zomato import Zomato
@@ -216,13 +216,12 @@ def run(
 
         if prompt_dashboard:
             should_open = answer(
-                questionary.confirm("Generate and view analytics dashboard?", default=True)
+                questionary.confirm("Export data for the React dashboard?", default=True)
             )
             if should_open:
-                dash_path = generate_dashboard(db.path)
-                print(f"Dashboard generated: {dash_path}")
-                if open_browser:
-                    open_dashboard(dash_path)
+                dash_path = export_dashboard_data(db.path)
+                print(f"Dashboard data exported: {dash_path}")
+                print("Load this JSON file in the React app (dashboard-ui: npm run dev).")
 
         return 0
 
@@ -234,9 +233,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "action",
         nargs="?",
-        choices=["sync", "ingest", "dashboard"],
+        choices=["sync", "ingest", "export", "dashboard"],
         default="sync",
-        help="Action: sync (default), ingest (update local DB), or dashboard (generate & open UI)",
+        help="Action: sync, ingest (update local DB), or export (React dashboard JSON; dashboard is an alias)",
     )
     parser.add_argument(
         "--data-dir",
@@ -258,18 +257,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-open",
         action="store_true",
-        help="Generate dashboard without launching browser",
+        help="Compatibility flag; JSON export never launches a browser",
     )
+    parser.add_argument("--output", type=Path, default=None, help="Dashboard JSON export path")
     args = parser.parse_args(argv)
     storage = Storage(args.data_dir.expanduser().resolve())
     db_file = args.db_path or (storage.root / "food_analytics.db")
 
     try:
-        if args.action == "dashboard":
-            dash_path = generate_dashboard(db_file)
-            print(f"Dashboard generated: {dash_path}")
-            if not args.no_open:
-                open_dashboard(dash_path)
+        if args.action in {"dashboard", "export"}:
+            dash_path = export_dashboard_data(db_file, args.output)
+            print(f"Dashboard data exported: {dash_path}")
+            print("Load this JSON file in the React app (dashboard-ui: npm run dev).")
             return 0
         elif args.action == "ingest":
             db = AnalyticsDB(db_file)

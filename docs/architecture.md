@@ -142,36 +142,27 @@ Address variants retain raw labels; normalized groups describe geography rather
 than assuming a personal Home/Work context. Archive coverage is stored separately
 in `archive_imports`; API-visible completeness does not imply lifetime completeness.
 
-## Visual Dashboard (`dashboard.py`)
+## React dashboard data export
 
-The generator embeds all accounts, orders, related items, restaurants and addresses
-in a static HTML file. Customer/date/platform/status/place/payment/quality filters
-run locally and update metrics, charts and complete paginated history. Details
-expose every stored field. Source strings use text nodes and embedded JSON escapes
-script-closing markup. The file contains private order/address information for all
-accounts, including when initially opened with one customer selected.
+`dashboard.export_dashboard_data` reads SQLite and atomically writes a JSON file
+with `schema_version`, generation timestamp, accounts, complete nested orders,
+archive coverage and optional selected customer. Orders include their restaurant,
+delivery address, food items and parsed money fields. Raw provider bill JSON is
+kept in the database for audit but is not part of the dashboard export.
 
-React components in `dashboard-ui/src` use Tailwind, official shadcn/ui primitives,
-and Recharts. Vite compiles an IIFE and CSS with embedded fonts into
-`food_khata/dashboard_assets`. Python embeds these assets and escaped JSON into a
-single HTML file, requiring neither a local server nor runtime CDN access. Node
-is required only for frontend development; compiled assets ship with the package.
-Theme preference persists locally; animations respect reduced-motion preferences. Timeline gaps are
-filled from inception through today, with day/week/month/year grouping. Monetary
-metrics separate delivered orders from cancelled/incomplete attempts, and verified
-discounts from unresolved and advertised savings. Other views show fee composition,
-order-value distribution, cuisine/diet quantity, weekday/hour activity, complete
-restaurant/dish rankings, address variants and import/reconciliation quality.
+`food-khata export --output dashboard-ui/public/data/dashboard.json` supplies the
+React app's automatic data URL. The default output beside the database can instead
+be selected through the app's file picker. The loader validates the schema before
+replacing currently displayed records. Rendering uses React text interpolation.
 
-## Post-Sync Workflow and CLI Subcommands
+`dashboard-ui` is a normal independent Vite application with `dev`, `build` and
+`preview` scripts. The page has no routing or tabbed sections. shadcn components
+provide cards, dropdowns, calendars, tables, chart wrappers, tooltips and receipt
+sheets. Shared filters update all visualizations and the full paginated history.
+Heatmap cells expose day/hour counts and spending on hover and keyboard focus.
+Receipts show food items, amounts, charges, discounts, payment and address without
+internal IDs/field dumps. Financial uncertainty is indicated without altering totals.
 
-1. **`food-khata sync`** (default):
-   - Authenticates / refreshes session.
-   - Syncs orders incrementally or full scan.
-   - Automatically executes `ingest_account()` to update `food_analytics.db`.
-   - Prompts the user: `"Generate and view analytics dashboard? [Y/n]"`. If accepted, generates `dashboard.html` and launches the system browser.
-2. **`food-khata ingest`**:
-   - Standalone offline ingestion from local JSON archives into SQLite.
-3. **`food-khata dashboard`**:
-   - Directly compiles and launches `dashboard.html` from the SQLite database without syncing.
-
+Python neither bundles frontend assets nor generates an HTML dashboard. Production
+UI output is `dashboard-ui/dist`; Python distribution contains only backend code.
+After syncing/importing, regenerate the JSON and refresh or reload it in the UI.

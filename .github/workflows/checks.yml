@@ -34,4 +34,3 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
-      - run: git diff --exit-code -- ../food_khata/dashboard_assets

@@ -175,23 +175,20 @@ class CliTests(unittest.TestCase):
     def test_post_sync_ingestion_and_dashboard_prompt(self):
         account = self.saved()
         with (
-            patch("food_khata.cli.generate_dashboard") as mock_gen,
-            patch("food_khata.cli.open_dashboard") as mock_open,
+            patch("food_khata.cli.export_dashboard_data") as mock_gen,
         ):
-            mock_gen.return_value = Path("dashboard.html")
+            mock_gen.return_value = Path("dashboard.json")
             # User picks Yes for dashboard
             result, _ = self.invoke(
                 ["zomato", account, "Reuse session", True], prompt_dashboard=True
             )
             self.assertEqual(result, 0)
             mock_gen.assert_called_once()
-            mock_open.assert_called_once()
 
     def test_post_sync_dashboard_prompt_declined(self):
         account = self.saved()
         with (
-            patch("food_khata.cli.generate_dashboard") as mock_gen,
-            patch("food_khata.cli.open_dashboard") as mock_open,
+            patch("food_khata.cli.export_dashboard_data") as mock_gen,
         ):
             # User picks No for dashboard
             result, _ = self.invoke(
@@ -199,21 +196,23 @@ class CliTests(unittest.TestCase):
             )
             self.assertEqual(result, 0)
             mock_gen.assert_not_called()
-            mock_open.assert_not_called()
 
     def test_cli_subcommands(self):
         with (
             patch("builtins.print"),
             patch(
-                "food_khata.cli.generate_dashboard", return_value=Path("dashboard.html")
+                "food_khata.cli.export_dashboard_data", return_value=Path("dashboard.json")
             ) as mock_gen,
-            patch("food_khata.cli.open_dashboard") as mock_open,
         ):
             # Test dashboard action
             ret = main(["dashboard", "--data-dir", str(self.storage.root)])
             self.assertEqual(ret, 0)
             mock_gen.assert_called_once()
-            mock_open.assert_called_once()
+            mock_gen.reset_mock()
+            output = self.storage.root / "custom.json"
+            ret = main(["export", "--data-dir", str(self.storage.root), "--output", str(output)])
+            self.assertEqual(ret, 0)
+            mock_gen.assert_called_once_with(self.storage.root / "food_analytics.db", output)
 
             # Test ingest action
             ret_ingest = main(["ingest", "--data-dir", str(self.storage.root)])

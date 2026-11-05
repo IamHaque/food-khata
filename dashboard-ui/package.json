@@ -5,19 +5,25 @@
   "type": "module",
   "scripts": {
     "build": "vite build && node scripts/licenses.mjs",
-    "test": "node src/model.test.js",
-    "test:browser": "node scripts/browser-test.mjs"
+    "test": "node src/model.test.js && node src/loader.test.js",
+    "test:browser": "node scripts/browser-test.mjs",
+    "dev": "vite --host 127.0.0.1",
+    "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-select": "^2.4.1",
+    "@radix-ui/react-separator": "^1.2.0",
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-tooltip": "^1.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
+    "react-day-picker": "^9.14.0",
     "react-dom": "^18.3.1",
     "recharts": "^3.10.1",
     "tailwind-merge": "^2.6.0"

@@ -1,19 +1,19 @@
-"""Pure Python generator for interactive food order history visual dashboard."""
+"""Query SQLite analytics and export data for the independent React dashboard."""
 
-import json
 import sqlite3
-import webbrowser
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .db import DEFAULT_DB_PATH
+from .db import DEFAULT_DB_PATH, IST
+from .storage import save_json
 
-DEFAULT_DASHBOARD_PATH = DEFAULT_DB_PATH.parent / "dashboard.html"
+DEFAULT_DASHBOARD_PATH = DEFAULT_DB_PATH.parent / "dashboard.json"
 
 
 def fetch_analytics(db_path: Path | str, account_id: str | None = None) -> dict[str, Any]:
     """Execute aggregation queries across orders, restaurants, addresses, and line items."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
@@ -357,49 +357,32 @@ def fetch_analytics(db_path: Path | str, account_id: str | None = None) -> dict[
     }
 
 
-def render_dashboard_html(data: dict[str, Any]) -> str:
-    """Embed the compiled React application and data in one offline HTML file."""
-    assets = Path(__file__).with_name("dashboard_assets")
-    css = (assets / "app.css").read_text(encoding="utf-8")
-    js = (assets / "app.js").read_text(encoding="utf-8")
-    licenses = (
-        (assets / "THIRD-PARTY-LICENSES.txt").read_text(encoding="utf-8").replace("<", "\\u003c")
-    )
-    json_data = json.dumps(data, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c")
-    # Script closing tags must never terminate an inline bundle or data element.
-    js = js.replace("</script", "<\\/script")
-    return (
-        '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="color-scheme" content="light dark">'
-        "<title>Food Khata Analytics</title><style>" + css + "</style></head>"
-        '<body><div id="root"></div>'
-        "<noscript>Enable JavaScript to explore your local order history.</noscript>"
-        '<script id="analytics-data" type="application/json">' + json_data + "</script>"
-        '<script id="third-party-licenses" type="text/plain">' + licenses + "</script>"
-        "<script>" + js + "</script></body></html>"
-    )
-
-
-def generate_dashboard(
+def export_dashboard_data(
     db_path: Path | str | None = None,
     output_path: Path | str | None = None,
     account_id: str | None = None,
 ) -> Path:
-    """Generate a standalone local React dashboard with all assets embedded."""
+    """Atomically export complete business records for the React app's JSON input."""
     path = Path(db_path) if db_path is not None else DEFAULT_DB_PATH
-    out = Path(output_path) if output_path is not None else DEFAULT_DASHBOARD_PATH
-    out.parent.mkdir(parents=True, exist_ok=True)
-
+    out = Path(output_path) if output_path is not None else path.parent / "dashboard.json"
     data = fetch_analytics(path, account_id=account_id)
-    html_content = render_dashboard_html(data)
-
-    with out.open("w", encoding="utf-8") as f:
-        f.write(html_content)
-
+    orders = [
+        {
+            key: value
+            for key, value in order.items()
+            if key not in {"source_bill_json", "discount_breakdown_json"}
+        }
+        for order in data["orders"]
+    ]
+    save_json(
+        out,
+        {
+            "schema_version": 1,
+            "generated_at": datetime.now(IST).isoformat(),
+            "accounts": data["accounts"],
+            "selected_account": account_id,
+            "orders": orders,
+            "archive_imports": data["archive_imports"],
+        },
+    )
     return out
-
-
-def open_dashboard(html_path: Path) -> None:
-    """Open generated dashboard in user's default browser."""
-    webbrowser.open(html_path.resolve().as_uri())

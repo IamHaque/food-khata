@@ -1,8 +1,8 @@
 import { chromium } from "@playwright/test";
+import { preview } from "vite";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 const root = resolve(import.meta.dirname, ".."),
   output = resolve(root, "test-results");
 mkdirSync(output, { recursive: true });
@@ -25,6 +25,7 @@ const orders = Array.from({ length: 65 }, (_, i) => ({
   total_discount: 50,
   food_discount: 50,
   delivery_fee: 0,
+  delivery_fee_discount: 0,
   packaging_fee: 0,
   platform_fee: 0,
   total_tax: 0,
@@ -55,37 +56,17 @@ const orders = Array.from({ length: 65 }, (_, i) => ({
   ],
 }));
 const data = {
+  schema_version: 1,
+  generated_at: "2026-11-06T00:00:00+05:30",
   accounts,
   orders,
-  archive_imports: [
-    {
-      account_id: "a",
-      platform: "SWIGGY",
-      history_complete: 1,
-      details_complete: 1,
-      lifetime_complete: 0,
-    },
-  ],
+  archive_imports: [],
 };
-const css = readFileSync(
-    resolve(root, "../food_khata/dashboard_assets/app.css"),
-    "utf8",
-  ),
-  js = readFileSync(
-    resolve(root, "../food_khata/dashboard_assets/app.js"),
-    "utf8",
-  );
-const file = resolve(output, "fixture.html");
-writeFileSync(
-  file,
-  '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' +
-    css +
-    '</style></head><body><div id="root"></div><script id="analytics-data" type="application/json">' +
-    JSON.stringify(data).replaceAll("<", "\\u003c") +
-    "</script><script>" +
-    js.replaceAll("</script", "<\\/script") +
-    "</script></body></html>",
-);
+const server = await preview({
+  root,
+  preview: { host: "127.0.0.1", port: 0, open: false },
+});
+const url = server.resolvedUrls.local[0];
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
@@ -97,26 +78,37 @@ try {
     viewport: { width: 1440, height: 1100 },
     reducedMotion: "reduce",
     colorScheme: "light",
-    offline: true,
   });
   const page = await context.newPage(),
     errors = [],
     external = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("request", (r) => {
-    if (/^https?:/.test(r.url())) external.push(r.url());
+    if (/^https?:/.test(r.url()) && !r.url().startsWith(url))
+      external.push(r.url());
   });
-  await page.goto(pathToFileURL(file).href);
-  await page
-    .getByRole("heading", { name: "The big picture", exact: true })
-    .waitFor();
+  await page.route("**/data/dashboard.json", (route) =>
+    route.fulfill({ json: data }),
+  );
+  await page.goto(url);
+  await page.getByRole("combobox", { name: "Customer", exact: true }).waitFor();
+  assert.equal(await page.locator('[role="tab"]').count(), 0);
   assert.equal((await page.locator(".recharts-surface").count()) > 0, true);
   assert.equal(await page.evaluate(() => window.injected), undefined);
   assert.match(await page.locator("main").innerText(), /₹/);
+  assert.equal(await page.locator("tbody tr").count(), 20);
   await page
-    .getByRole("button", { name: "About Delivered spend", exact: true })
+    .getByRole("button", { name: /About Sum of amounts paid/ })
+    .first()
     .hover();
   await page.getByRole("tooltip").waitFor();
+  await page.mouse.move(0, 0);
+  const heatCell=page.getByRole("button", { name: /Thursday 12:00:/ });
+  await heatCell.scrollIntoViewIfNeeded();
+  await heatCell.focus();
+  await heatCell.hover();
+  await page.getByRole("tooltip").waitFor();
+  assert.match(await page.getByRole("tooltip").innerText(), /65 orders/);
   await page.mouse.move(0, 0);
   await page.screenshot({
     path: resolve(output, "overview-light.png"),
@@ -129,15 +121,12 @@ try {
   );
   await page.reload();
   await page.getByRole("button", { name: "Switch to light theme" }).waitFor();
+  await page.getByRole("combobox", { name: "Customer", exact: true }).waitFor();
   await page.screenshot({
     path: resolve(output, "overview-dark.png"),
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Order history", exact: true })
-    .click();
   assert.match(await page.locator("main").innerText(), /65 orders/);
-  assert.equal(await page.locator("tbody tr").count(), 20);
   await page.getByRole("button", { name: "Next", exact: true }).click();
   assert.match(await page.locator("main").innerText(), /Page 2 of 4/);
   await page
@@ -146,23 +135,61 @@ try {
   assert.equal(await page.locator("tbody tr").count(), 1);
   await page.getByRole("button", { name: "View", exact: true }).click();
   await page.getByRole("dialog").waitFor();
-  assert.match(await page.getByRole("dialog").innerText(), /order-64/);
+  const receipt = await page.getByRole("dialog").innerText();
+  for (const text of [
+    "order-64",
+    "Lunch 64",
+    "Amount paid",
+    "Payment breakdown",
+    "Example address",
+  ])
+    assert.ok(receipt.includes(text), text);
+  for (const field of [
+    "source_bill_json",
+    "final_amount_paid",
+    "reconciliation_difference",
+    "normalized_label",
+  ])
+    assert.ok(!receipt.includes(field), field);
   await page.keyboard.press("Escape");
   await page
     .getByRole("textbox", { name: "Search orders", exact: true })
     .fill("");
-  await page.getByLabel("Customer", { exact: true }).selectOption("b");
+  await page.getByRole("combobox", { name: "Customer", exact: true }).click();
+  await page.getByRole("option", { name: "Customer B", exact: true }).click();
   assert.equal(await page.locator("tbody tr").count(), 5);
   await page.getByRole("button", { name: /Filters/ }).click();
-  await page.getByLabel("From", { exact: true }).fill("2027-01-01");
+  await page.getByRole("button", { name: "From date", exact: true }).click();
+  await page.locator("[data-day]").first().click();
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   assert.match(await page.locator("main").innerText(), /No matching orders/);
-  await page.getByRole("button", { name: /Filters/ }).click();
+  if (!(await page.getByRole("button", { name: "Clear all", exact: true }).isVisible()))
+    await page.getByRole("button", { name: /Filters/ }).click();
   await page.getByRole("button", { name: "Clear all", exact: true }).click();
   await page.keyboard.press("Escape");
   assert.equal(await page.locator("tbody tr").count(), 5);
+  await page
+    .getByLabel("Choose data file")
+    .setInputFiles({
+      name: "bad.json",
+      mimeType: "application/json",
+      buffer: Buffer.from('{"schema_version":99}'),
+    });
+  await page.getByRole("alert").waitFor();
+  assert.equal(await page.locator("tbody tr").count(), 5);
+  await page
+    .getByLabel("Choose data file")
+    .setInputFiles({
+      name: "new.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({ ...data, orders: orders.slice(0, 2) }),
+      ),
+    });
+  await page.getByText("Page 1 of 1 · 2 orders",{exact:true}).waitFor();
+  assert.equal(await page.locator("tbody tr").count(), 2);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.screenshot({
     path: resolve(output, "overview-mobile.png"),
     fullPage: true,
@@ -177,8 +204,9 @@ try {
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   console.log(
-    "Browser checks passed: offline rendering, charts, injection safety, theme persistence, customer filters, full history search, pagination, detail dialog, date filters and mobile layout.",
+    "Browser checks passed: separate JSON fetch/import, single page, shadcn dropdown/calendar/table/charts, heatmap tooltip, themes, complete history, receipt summary, invalid-file recovery and mobile layout.",
   );
 } finally {
   await browser.close();
+  await new Promise((resolve) => server.httpServer.close(resolve));
 }

@@ -1,8 +1,11 @@
-"""Unit tests for the Food Khata visual dashboard generator."""
+"""Tests for the database-to-React JSON export boundary."""
 
+import json
 from pathlib import Path
 
-from food_khata.dashboard import fetch_analytics, generate_dashboard, render_dashboard_html
+import pytest
+
+from food_khata.dashboard import export_dashboard_data, fetch_analytics
 from food_khata.db import AnalyticsDB
 
 
@@ -75,19 +78,15 @@ def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
     assert len(analytics["top_restaurants"]) == 2
     assert len(analytics["top_dishes"]) == 2
 
-    html = render_dashboard_html(analytics)
-    assert "<!DOCTYPE html>" in html
-    assert '<div id="root">' in html
-    assert 'src="https://' not in html
-    assert 'href="https://' not in html
-    assert "Food Khata Analytics" in html
-    assert "Burger Spot" in html
-    assert "Pizza Spot" in html
-
-    out_file = tmp_path / "dashboard.html"
-    result_path = generate_dashboard(db_file, out_file)
-    assert result_path.exists()
-    assert result_path.stat().st_size > 0
+    out_file = tmp_path / "dashboard.json"
+    assert export_dashboard_data(db_file, out_file) == out_file
+    exported = json.loads(out_file.read_text(encoding="utf-8"))
+    assert exported["schema_version"] == 1
+    assert len(exported["orders"]) == 2
+    assert sum(o["final_amount_paid"] for o in exported["orders"]) == 450
+    assert len([i for o in exported["orders"] for i in o["items"]]) == 2
+    assert "source_bill_json" not in exported["orders"][0]
+    assert exported["generated_at"].endswith("+05:30")
 
 
 def test_complete_history_and_safe_embedded_data(tmp_path: Path):
@@ -116,24 +115,31 @@ def test_complete_history_and_safe_embedded_data(tmp_path: Path):
     assert len(analytics["recent_orders"]) == 54
     other = next(order for order in analytics["orders"] if order["account_id"] == "other")
     assert other["items"][0]["item_name"].startswith("</script>")
-    html = render_dashboard_html(analytics)
-    assert "</script><script>alert(1)</script>" not in html
-    assert r"\u003c/script>" in html
-    assert "textContent" in html
+    out = export_dashboard_data(db_file, account_id="first")
+    assert out == db_file.parent / "dashboard.json"
+    exported = json.loads(out.read_text(encoding="utf-8"))
+    assert len(exported["orders"]) == 55
+    assert exported["selected_account"] == "first"
+    other = next(o for o in exported["orders"] if o["account_id"] == "other")
+    assert other["items"][0]["item_name"] == "</script><script>alert(1)</script>"
 
 
-def test_embedded_assets_and_data_are_standalone():
-    import json
-    import re
+def test_export_does_not_create_a_missing_database(tmp_path):
+    import sqlite3
 
-    data = {"accounts": [], "orders": [], "selected_account": None}
-    html = render_dashboard_html(data)
-    match = re.search(
-        r'<script id="analytics-data" type="application/json">(.*?)</script>', html, re.S
-    )
-    assert json.loads(match.group(1)) == data
-    assert "<script src=" not in html
-    assert "@font-face" in html
-    assert "data:font/woff2;base64," in html
-    assert "cdn.tailwindcss.com" not in html
-    assert "cdn.jsdelivr.net" not in html
+    missing = tmp_path / "missing.db"
+    with pytest.raises(sqlite3.OperationalError):
+        export_dashboard_data(missing)
+    assert not missing.exists()
+
+
+def test_failed_export_preserves_existing_data(tmp_path):
+    from unittest.mock import patch
+
+    out = tmp_path / "dashboard.json"
+    out.write_text("previous data", encoding="utf-8")
+    data = {"orders": [{"final_amount_paid": float("nan")}], "accounts": [], "archive_imports": []}
+    with patch("food_khata.dashboard.fetch_analytics", return_value=data):
+        with pytest.raises(ValueError):
+            export_dashboard_data(tmp_path / "unused.db", out)
+    assert out.read_text(encoding="utf-8") == "previous data"
