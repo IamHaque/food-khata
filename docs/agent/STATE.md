@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T5 / Terra High / dashboard-v2: finish API gaps and complete contract. Root verified T4 core:72 tests+10 subtests, Ruff pass; one dependency deprecation warning. API integration remains partial.
+E1-T6 / Terra High: server chart datasets and comparison. UI-T1 / Terra High: typed routed foundation/account filters, preserving legacy. API core root verified79+10 tests/Ruff.
 ## Pending
 1. Verify E1-T1 serve/filter/metric/API tests and contract.
 2. DATA-02 proposed SQL measured against future query plans (Terra Medium).
@@ -43,10 +43,11 @@ Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/resu
 Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
 Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06 root: pytest 57 passed +10 subtests; Ruff lint/format pass; npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
+2026-11-06 root: pytest 79 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
-Lint script/tsc setup absent in existing frontend; establish in foundation phase. No new API/parity run yet.
+Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 

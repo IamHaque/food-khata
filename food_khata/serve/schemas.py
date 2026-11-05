@@ -12,7 +12,10 @@ class Filters(BaseModel):
     date_to: date | None = None
     account_ids: list[str] = Field(default_factory=list)
     platforms: list[str] = Field(default_factory=list)
-    statuses: list[str] = Field(default_factory=lambda: ["DELIVERED"])
+    statuses: list[str] = Field(
+        default_factory=lambda: ["DELIVERED"],
+        description="Repeat for multiple statuses; statuses= selects all statuses.",
+    )
     cities: list[str] = Field(default_factory=list)
     localities: list[str] = Field(default_factory=list)
     restaurant_ids: list[str] = Field(default_factory=list)
@@ -62,8 +65,15 @@ class AccountOption(BaseModel):
     date_to: str | None
 
 
+class RestaurantOption(BaseModel):
+    id: str
+    name: str
+
+
 class FilterOptions(Metadata):
     accounts: list[AccountOption]
+    all_accounts: list[AccountOption]
+    restaurants: list[RestaurantOption]
     platforms: list[str]
     statuses: list[str]
     cities: list[str]
@@ -88,6 +98,9 @@ class Health(Metadata):
     history_complete: bool
     details_complete: bool
     verified_percent: float | None
+    null_rates: dict[str, float | None]
+    duplicate_orders: int
+    reconciliation_anomalies: int
     note: str
 
 
@@ -129,6 +142,17 @@ class Dashboard(Metadata):
 class Order(BaseModel):
     id: str
     account_label: str
+    account_id: str
+    platform_order_id: str
+    order_timestamp: str
+    order_time: str
+    payment_method: str | None
+    user_rating: float | None
+    food_discount: float | None
+    delivery_fee_discount: float | None
+    other_charges: float | None
+    source_complete: bool
+    reconciliation_difference: float | None
     platform: str
     order_date: str
     order_status: str
@@ -175,7 +199,15 @@ class Bill(BaseModel):
     discount_breakdown: JsonValue = None
 
 
+class PriceMonth(BaseModel):
+    month: str | None
+    unit_price: float | None
+    quantity: int
+
+
 class Leader(BaseModel):
+    key: str
+    price_trend: list[PriceMonth] = []
     name: str
     quantity: int
     amount: float

@@ -4,17 +4,20 @@ import inspect
 import ipaddress
 import json
 import logging
+import math
 import sqlite3
+import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .db import connect_readonly, database_version
 from .filters import build_where
@@ -33,6 +36,7 @@ def create_app(
         else Path(__file__).resolve().parents[2] / "dashboard-ui" / "dist"
     )
     cache = {}
+    cache_lock = threading.Lock()
 
     @app.middleware("http")
     async def safety(request: Request, call_next):
@@ -73,7 +77,7 @@ def create_app(
             status_code=422,
         )
 
-    @app.exception_handler(HTTPException)
+    @app.exception_handler(StarletteHTTPException)
     async def http_error(request, exc):
         return JSONResponse(
             {
@@ -85,7 +89,7 @@ def create_app(
             status_code=exc.status_code,
         )
 
-    @app.exception_handler(sqlite3.OperationalError)
+    @app.exception_handler(sqlite3.DatabaseError)
     async def db_error(request, exc):
         return JSONResponse(
             {
@@ -97,30 +101,52 @@ def create_app(
             status_code=503,
         )
 
+    @app.exception_handler(Exception)
+    async def internal_error(request, exc):
+        return JSONResponse(
+            {"error": {"code": "internal_error", "message": "Internal server error."}},
+            status_code=500,
+        )
+
+    def retry(action):
+        for attempt in range(3):
+            try:
+                return action()
+            except sqlite3.OperationalError as exc:
+                if attempt == 2 or not any(word in str(exc).lower() for word in ("locked", "busy")):
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+
     class RetryingConnection:
         def __init__(self, conn):
             self.conn = conn
 
         def execute(self, sql, params=()):
-            for attempt in range(3):
-                try:
-                    return self.conn.execute(sql, params)
-                except sqlite3.OperationalError as exc:
-                    if attempt == 2 or not (
-                        "locked" in str(exc).lower() or "busy" in str(exc).lower()
-                    ):
-                        raise
-                    time.sleep(0.05 * (attempt + 1))
+            return retry(lambda: self.conn.execute(sql, params))
 
     def connection():
-        conn = connect_readonly(db_path)
+        version = database_version(db_path)
+
+        def begin():
+            conn = connect_readonly(db_path)
+            try:
+                conn.execute("BEGIN")
+                return conn
+            except Exception:
+                conn.close()
+                raise
+
+        conn = retry(begin)
         try:
-            conn.execute("BEGIN")
-            yield RetryingConnection(conn)
+            wrapped = RetryingConnection(conn)
+            wrapped.version = version
+            yield wrapped
         finally:
             conn.close()
 
     def query_filters(**values) -> Filters:
+        if values.get("statuses") == [""]:
+            values["statuses"] = []
         try:
             return Filters.model_validate(
                 {key: value for key, value in values.items() if value is not None}
@@ -133,7 +159,12 @@ def create_app(
             inspect.Parameter(
                 name,
                 inspect.Parameter.KEYWORD_ONLY,
-                default=Query(None),
+                default=Query(
+                    None,
+                    description="Repeat values; statuses= selects all statuses."
+                    if name == "statuses"
+                    else None,
+                ),
                 annotation=field.annotation,
             )
             for name, field in Filters.model_fields.items()
@@ -146,20 +177,63 @@ def create_app(
 
     def health(conn, filters):
         where, params = build_where(filters)
+        clauses, scope = [], []
+        for column, values in (
+            ("account_id", filters.account_ids),
+            ("platform", filters.platforms),
+        ):
+            if values:
+                clauses.append(f"a.{column} IN ({','.join('?' for _ in values)})")
+                scope.extend(values)
         rows = conn.execute(
-            f"SELECT DISTINCT a.account_id, a.platform, a.history_complete, a.details_complete FROM archive_imports a WHERE EXISTS (SELECT 1 FROM orders o WHERE o.account_id=a.account_id AND o.platform=a.platform AND {where})",
-            params,
+            "SELECT a.account_id, a.platform, a.history_complete, a.details_complete FROM archive_imports a WHERE "
+            + (" AND ".join(clauses) or "1=1"),
+            scope,
         ).fetchall()
+        base = f" FROM orders o LEFT JOIN restaurants r ON r.id=o.restaurant_id LEFT JOIN delivery_addresses d ON d.id=o.delivery_address_id WHERE {where}"
         verified = conn.execute(
-            f"SELECT AVG(CASE WHEN o.financial_verified=1 THEN 100.0 ELSE 0 END) FROM orders o WHERE {where}",
+            f"SELECT AVG(CASE WHEN o.financial_verified=1 THEN 100.0 ELSE 0 END) {base}", params
+        ).fetchone()[0]
+        columns = {
+            "user_rating": "o.user_rating",
+            "payment_method": "o.payment_method",
+            "discount_breakdown_json": "o.discount_breakdown_json",
+            "source_bill_json": "o.source_bill_json",
+            "restaurant_cuisine": "r.cuisine",
+            "restaurant_locality": "r.locality",
+            "restaurant_city": "r.city",
+            "address_latitude": "d.latitude",
+            "address_longitude": "d.longitude",
+        }
+        null_rates = {}
+        for name, column in columns.items():
+            value = conn.execute(
+                f"SELECT AVG(CASE WHEN {column} IS NULL THEN 100.0 ELSE 0 END) {base}", params
+            ).fetchone()[0]
+            null_rates[name] = round(value, 2) if value is not None else None
+        for name in ("is_veg", "category"):
+            value = conn.execute(
+                f"SELECT AVG(CASE WHEN i.{name} IS NULL THEN 100.0 ELSE 0 END) FROM order_items i JOIN orders o ON o.id=i.order_id WHERE {where}",
+                params,
+            ).fetchone()[0]
+            null_rates[name] = round(value, 2) if value is not None else None
+        duplicates = conn.execute(
+            f"SELECT COALESCE(SUM(n-1),0) FROM (SELECT COUNT(*) n FROM orders o WHERE {where} GROUP BY o.account_id,o.platform,o.platform_order_id HAVING COUNT(*)>1)",
+            params,
+        ).fetchone()[0]
+        anomalies = conn.execute(
+            f"SELECT COUNT(*) FROM orders o WHERE {where} AND ABS(o.reconciliation_difference)>1",
             params,
         ).fetchone()[0]
         return {
             **metadata(filters),
-            "imports": [dict(r) for r in rows],
+            "imports": [rounded(r) for r in rows],
             "history_complete": all(r[2] for r in rows),
             "details_complete": all(r[3] for r in rows),
             "verified_percent": round(verified, 2) if verified is not None else None,
+            "null_rates": null_rates,
+            "duplicate_orders": duplicates,
+            "reconciliation_anomalies": anomalies,
             "note": "Food orders only; Instamart/Dineout excluded; API-visible history only. Saved details are snapshots; later refunds or status changes may be missing.",
         }
 
@@ -175,7 +249,7 @@ def create_app(
         filters: Annotated[Filters, Depends(query_filters)],
         conn: Annotated[object, Depends(connection)],
     ):
-        where, params = build_where(filters)
+        where, params = build_where(Filters(account_ids=filters.account_ids, statuses=[]))
         base = f" FROM orders o LEFT JOIN restaurants r ON r.id=o.restaurant_id LEFT JOIN delivery_addresses d ON d.id=o.delivery_address_id WHERE {where}"
 
         def distinct(column):
@@ -187,14 +261,13 @@ def create_app(
             ]
 
         accounts = conn.execute(
-            f"SELECT a.id, a.phone, GROUP_CONCAT(DISTINCT o.platform), COUNT(*), MIN(o.order_date), MAX(o.order_date) FROM orders o JOIN accounts a ON a.id=o.account_id WHERE {where} GROUP BY a.id, a.phone ORDER BY a.id",
-            params,
+            "SELECT a.id, a.phone, GROUP_CONCAT(DISTINCT o.platform), COUNT(o.id), MIN(o.order_date), MAX(o.order_date) FROM accounts a LEFT JOIN orders o ON a.id=o.account_id GROUP BY a.id, a.phone ORDER BY a.id"
         )
         account_rows = [
             {
                 "id": r[0],
                 "label": "••••" + r[1][-4:],
-                "platforms": r[2].split(","),
+                "platforms": r[2].split(",") if r[2] else [],
                 "order_count": r[3],
                 "date_from": r[4],
                 "date_to": r[5],
@@ -207,7 +280,17 @@ def create_app(
         ).fetchone()
         return {
             **metadata(filters),
-            "accounts": account_rows,
+            "accounts": [
+                a for a in account_rows if not filters.account_ids or a["id"] in filters.account_ids
+            ],
+            "all_accounts": account_rows,
+            "restaurants": [
+                dict(r)
+                for r in conn.execute(
+                    f"SELECT DISTINCT r.id, r.name {base} AND r.id IS NOT NULL ORDER BY r.name, r.id",
+                    params,
+                )
+            ],
             "platforms": distinct("o.platform"),
             "statuses": distinct("o.order_status"),
             "cities": sorted(set(distinct("r.city") + distinct("d.city"))),
@@ -216,34 +299,68 @@ def create_app(
             "payment_methods": distinct("o.payment_method"),
             "date_from": bounds[0],
             "date_to": bounds[1],
-            "amount_min": bounds[2],
-            "amount_max": bounds[3],
+            "amount_min": round(bounds[2], 2) if bounds[2] is not None else None,
+            "amount_max": round(bounds[3], 2) if bounds[3] is not None else None,
         }
 
     @app.post("/api/dashboard", response_model=Dashboard)
     def dashboard(filters: Filters, conn: Annotated[object, Depends(connection)]):
-        key = (filters.model_dump_json(), database_version(db_path))
-        cached = cache.get(key)
-        if cached is not None:
-            return cached
-        h = health(conn, filters)
-        result = {
-            **metadata(filters),
-            "kpis": compute_metrics(conn, filters),
-            "charts": {"monthly": monthly_totals(conn, filters)},
-            "data_complete": h["history_complete"] and h["details_complete"],
-        }
-        cache.clear()
-        if key[1] == database_version(db_path):
-            cache[key] = result
-        return result
+        for attempt in range(3):
+            key = (filters.model_dump_json(), conn.version)
+            with cache_lock:
+                cached = cache.get(key)
+            if cached is not None and key[1] == database_version(db_path):
+                return cached
+            h = health(conn, filters)
+            result = {
+                **metadata(filters),
+                "kpis": compute_metrics(conn, filters),
+                "charts": {"monthly": monthly_totals(conn, filters)},
+                "data_complete": h["history_complete"] and h["details_complete"],
+            }
+            with cache_lock:
+                if key[1] == database_version(db_path):
+                    cache.clear()
+                    cache[key] = result
+                    return result
+            if attempt < 2:
+                conn.execute("ROLLBACK")
+                conn.version = database_version(db_path)
+                conn.execute("BEGIN")
+        raise sqlite3.OperationalError("database busy")
 
-    select_order = """o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
+    select_order = """o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
         o.order_status, r.name AS restaurant_name, d.label AS address_label, COALESCE(d.city,r.city) AS city,
         (SELECT GROUP_CONCAT(i.item_name, ', ') FROM order_items i WHERE i.order_id=o.id) AS items_summary,
         o.final_amount_paid, o.item_subtotal, o.total_discount, o.reported_savings, o.delivery_fee,
         o.packaging_fee, o.platform_fee, o.total_tax, o.tip, o.refund_amount, o.financial_verified"""
     joins = " FROM orders o JOIN accounts a ON a.id=o.account_id LEFT JOIN restaurants r ON r.id=o.restaurant_id LEFT JOIN delivery_addresses d ON d.id=o.delivery_address_id "
+
+    money_fields = {
+        "final_amount_paid",
+        "item_subtotal",
+        "total_discount",
+        "reported_savings",
+        "delivery_fee",
+        "delivery_fee_discount",
+        "food_discount",
+        "other_charges",
+        "packaging_fee",
+        "platform_fee",
+        "total_tax",
+        "tip",
+        "refund_amount",
+        "reconciliation_difference",
+        "unit_price",
+        "total_price",
+        "amount",
+    }
+
+    def rounded(row):
+        return {
+            k: round(v, 2) if k in money_fields and v is not None else v
+            for k, v in dict(row).items()
+        }
 
     @app.get("/api/orders/slim", response_model=Slim)
     def slim(
@@ -255,7 +372,7 @@ def create_app(
             f"SELECT o.id, o.order_date, o.platform, o.order_status, o.final_amount_paid FROM orders o WHERE {where} ORDER BY o.order_date DESC, o.id",
             params,
         )
-        return {**metadata(filters), "rows": [dict(r) for r in rows]}
+        return {**metadata(filters), "rows": [rounded(r) for r in rows]}
 
     @app.get("/api/orders", response_model=Orders)
     def orders(
@@ -288,7 +405,7 @@ def create_app(
         )
         return {
             **metadata(filters),
-            "rows": [dict(r) for r in rows],
+            "rows": [rounded(r) for r in rows],
             "total": count,
             "page": page,
             "page_size": page_size,
@@ -309,9 +426,23 @@ def create_app(
         if row is None:
             raise HTTPException(404, "Order not found.")
 
+        def finite_float(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError("non-finite JSON number")
+            return number
+
         def parse(value):
             try:
-                return json.loads(value) if value else None
+                return (
+                    json.loads(
+                        value,
+                        parse_float=finite_float,
+                        parse_constant=lambda _: (_ for _ in ()).throw(ValueError()),
+                    )
+                    if value
+                    else None
+                )
             except (ValueError, TypeError):
                 return None
 
@@ -320,31 +451,47 @@ def create_app(
             (order_id,),
         )
         return {
-            "order": dict(row),
-            "items": [dict(r) for r in items],
-            "reconciliation_difference": row["reconciliation_difference"],
+            "order": rounded(row),
+            "items": [rounded(r) for r in items],
+            "reconciliation_difference": round(row["reconciliation_difference"], 2)
+            if row["reconciliation_difference"] is not None
+            else None,
             "full_address": row["full_address"],
             "source_bill": parse(row["source_bill_json"]),
             "discount_breakdown": parse(row["discount_breakdown_json"]),
         }
 
-    def leaders(conn, filters, kind, minimum, page, page_size, sort, direction):
+    def leaders(conn, filters, kind, minimum, page, page_size, sort, direction, grouping="merged"):
         if sort not in {"name", "quantity", "amount"} or direction not in {"asc", "desc"}:
             raise HTTPException(422, "Invalid sort parameters.")
         where, params = build_where(filters)
         if kind == "restaurant":
-            sql = f"SELECT r.name AS name, COUNT(*) AS quantity, COALESCE(SUM(o.final_amount_paid),0) AS amount FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE {where} GROUP BY r.id HAVING COUNT(*) >= ?"
+            key = (
+                "r.id"
+                if grouping == "listing"
+                else "lower(trim(r.name)) || '|' || lower(trim(coalesce(r.locality,'')))"
+            )
+            sql = f"SELECT {key} AS key, MIN(r.name) AS name, COUNT(*) AS quantity, COALESCE(SUM(o.final_amount_paid),0) AS amount FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE {where} GROUP BY {key} HAVING COUNT(*) >= ?"
         else:
-            sql = f"SELECT i.item_name AS name, SUM(i.quantity) AS quantity, COALESCE(SUM(i.total_price),0) AS amount FROM orders o JOIN order_items i ON i.order_id=o.id WHERE {where} GROUP BY i.item_name HAVING SUM(i.quantity) >= ?"
-        params = [*params, minimum]
-        total = conn.execute(f"SELECT COUNT(*) FROM ({sql})", params).fetchone()[0]
-        rows = conn.execute(
-            f"SELECT * FROM ({sql}) ORDER BY {sort} {direction}, name ASC LIMIT ? OFFSET ?",
-            [*params, page_size, (page - 1) * page_size],
-        )
+            sql = f"SELECT i.item_name AS key, i.item_name AS name, SUM(i.quantity) AS quantity, COALESCE(SUM(i.total_price),0) AS amount FROM orders o JOIN order_items i ON i.order_id=o.id WHERE {where} GROUP BY i.item_name HAVING SUM(i.quantity) >= ?"
+        total = conn.execute(f"SELECT COUNT(*) FROM ({sql})", [*params, minimum]).fetchone()[0]
+        rows = [
+            rounded(r)
+            for r in conn.execute(
+                f"SELECT * FROM ({sql}) ORDER BY {sort} {direction}, key ASC LIMIT ? OFFSET ?",
+                [*params, minimum, page_size, (page - 1) * page_size],
+            )
+        ]
+        if kind == "item":
+            for row in rows:
+                trend = conn.execute(
+                    f"SELECT substr(o.order_date,1,7) AS month, SUM(i.quantity) AS quantity, SUM(i.total_price)*1.0/NULLIF(SUM(CASE WHEN i.total_price IS NOT NULL THEN i.quantity END),0) AS unit_price FROM orders o JOIN order_items i ON i.order_id=o.id WHERE {where} AND i.item_name=? GROUP BY month ORDER BY month",
+                    [*params, row["key"]],
+                )
+                row["price_trend"] = [rounded(r) for r in trend]
         return {
             **metadata(filters),
-            "rows": [dict(r) for r in rows],
+            "rows": rows,
             "total": total,
             "page": page,
             "page_size": page_size,
@@ -359,8 +506,14 @@ def create_app(
         page_size: int = Query(50, ge=1, le=200),
         sort: str = "amount",
         direction: str = "desc",
+        grouping: Literal["merged", "listing"] = Query(
+            "merged",
+            description="merged key is normalized name|locality; listing key is restaurant id.",
+        ),
     ):
-        return leaders(conn, filters, "restaurant", min_orders, page, page_size, sort, direction)
+        return leaders(
+            conn, filters, "restaurant", min_orders, page, page_size, sort, direction, grouping
+        )
 
     @app.get("/api/items", response_model=Leaders)
     def items(

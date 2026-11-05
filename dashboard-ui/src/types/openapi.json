@@ -77,8 +77,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -356,8 +358,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -673,8 +677,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -995,8 +1001,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -1283,8 +1291,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -1550,6 +1560,22 @@
             }
           },
           {
+            "name": "grouping",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "merged",
+                "listing"
+              ],
+              "type": "string",
+              "description": "merged key is normalized name|locality; listing key is restaurant id.",
+              "default": "merged",
+              "title": "Grouping"
+            },
+            "description": "merged key is normalized name|locality; listing key is restaurant id."
+          },
+          {
             "name": "date_from",
             "in": "query",
             "required": false,
@@ -1616,8 +1642,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -1949,8 +1977,10 @@
               "items": {
                 "type": "string"
               },
+              "description": "Repeat values; statuses= selects all statuses.",
               "title": "Statuses"
-            }
+            },
+            "description": "Repeat values; statuses= selects all statuses."
           },
           {
             "name": "cities",
@@ -2328,6 +2358,20 @@
             "type": "array",
             "title": "Accounts"
           },
+          "all_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOption"
+            },
+            "type": "array",
+            "title": "All Accounts"
+          },
+          "restaurants": {
+            "items": {
+              "$ref": "#/components/schemas/RestaurantOption"
+            },
+            "type": "array",
+            "title": "Restaurants"
+          },
           "platforms": {
             "items": {
               "type": "string"
@@ -2420,6 +2464,8 @@
           "filters_applied",
           "generated_at",
           "accounts",
+          "all_accounts",
+          "restaurants",
           "platforms",
           "statuses",
           "cities",
@@ -2478,7 +2524,8 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Statuses"
+            "title": "Statuses",
+            "description": "Repeat for multiple statuses; statuses= selects all statuses."
           },
           "cities": {
             "items": {
@@ -2652,6 +2699,28 @@
             ],
             "title": "Verified Percent"
           },
+          "null_rates": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Null Rates"
+          },
+          "duplicate_orders": {
+            "type": "integer",
+            "title": "Duplicate Orders"
+          },
+          "reconciliation_anomalies": {
+            "type": "integer",
+            "title": "Reconciliation Anomalies"
+          },
           "note": {
             "type": "string",
             "title": "Note"
@@ -2665,6 +2734,9 @@
           "history_complete",
           "details_complete",
           "verified_percent",
+          "null_rates",
+          "duplicate_orders",
+          "reconciliation_anomalies",
           "note"
         ],
         "title": "Health"
@@ -2889,6 +2961,18 @@
       },
       "Leader": {
         "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "price_trend": {
+            "items": {
+              "$ref": "#/components/schemas/PriceMonth"
+            },
+            "type": "array",
+            "title": "Price Trend",
+            "default": []
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -2904,6 +2988,7 @@
         },
         "type": "object",
         "required": [
+          "key",
           "name",
           "quantity",
           "amount"
@@ -2990,6 +3075,92 @@
           "account_label": {
             "type": "string",
             "title": "Account Label"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "platform_order_id": {
+            "type": "string",
+            "title": "Platform Order Id"
+          },
+          "order_timestamp": {
+            "type": "string",
+            "title": "Order Timestamp"
+          },
+          "order_time": {
+            "type": "string",
+            "title": "Order Time"
+          },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
+          "user_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Rating"
+          },
+          "food_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Discount"
+          },
+          "delivery_fee_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Fee Discount"
+          },
+          "other_charges": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Charges"
+          },
+          "source_complete": {
+            "type": "boolean",
+            "title": "Source Complete"
+          },
+          "reconciliation_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Difference"
           },
           "platform": {
             "type": "string",
@@ -3159,6 +3330,17 @@
         "required": [
           "id",
           "account_label",
+          "account_id",
+          "platform_order_id",
+          "order_timestamp",
+          "order_time",
+          "payment_method",
+          "user_rating",
+          "food_discount",
+          "delivery_fee_discount",
+          "other_charges",
+          "source_complete",
+          "reconciliation_difference",
           "platform",
           "order_date",
           "order_status",
@@ -3225,6 +3407,61 @@
           "filtered_total_amount"
         ],
         "title": "Orders"
+      },
+      "PriceMonth": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "unit_price",
+          "quantity"
+        ],
+        "title": "PriceMonth"
+      },
+      "RestaurantOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "RestaurantOption"
       },
       "Slim": {
         "properties": {

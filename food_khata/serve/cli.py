@@ -11,6 +11,9 @@ def serve(host: str, port: int, db_path: Path, dev: bool = False) -> int:
     except ValueError:
         print("Only loopback hosts are allowed.")
         return 1
+    if not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
+        print("Port must be between 1 and 65535.")
+        return 1
     try:
         import fastapi  # noqa: F401
         import uvicorn
@@ -24,5 +27,12 @@ def serve(host: str, port: int, db_path: Path, dev: bool = False) -> int:
     if not dist.is_file():
         print("Dashboard build missing; API only. Run the dashboard UI separately.")
     print(f"http://{host if ':' not in host else '[' + host + ']'}:{port}")
-    uvicorn.run(app, host=host, port=port, access_log=False)
+    try:
+        uvicorn.run(app, host=host, port=port, access_log=False)
+    except OSError:
+        print("Unable to start the server.")
+        return 1
+    except KeyboardInterrupt:
+        print("Server stopped.")
+        return 130
     return 0
