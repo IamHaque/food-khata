@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T6 and UI-T1 retry with Terra Medium only. Interrupted High calls created no new child threads (inventory confirmed). API core d422946 verified79+10 tests/Ruff.
+E1-T6A / Terra Medium: overview charts/comparisons running (backend edits attributed). UI-T1A partial proxy root verified7tests/build; UI-T1B / Terra Medium: typed entry/router/API hooks next.
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Complete typed frontend foundation/account filters (UI-T1, Terra Medium).
@@ -49,6 +49,7 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 
