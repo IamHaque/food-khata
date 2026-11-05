@@ -1,0 +1,770 @@
+"""SQLite analytics database ingestion and query models for Food Khata."""
+
+import hashlib
+import re
+import sqlite3
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from .storage import DEFAULT_DATA_DIR, Storage, read_json
+
+DEFAULT_DB_PATH = DEFAULT_DATA_DIR / "food_analytics.db"
+IST = timezone(timedelta(hours=5, minutes=30))
+
+# ==========================================
+# 1. NORMALIZATION UTILITIES
+# ==========================================
+
+
+def clean_num(val: Any, default: float = 0.0) -> float:
+    """Sanitize and parse numeric values, stripping currency symbols and formatting."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    cleaned = re.sub(r"[^0-9.-]", "", str(val))
+    try:
+        return float(cleaned) if cleaned else default
+    except ValueError:
+        return default
+
+
+def parse_date(
+    date_str: str | None = None, epoch_secs: int | float | str | None = None
+) -> tuple[str, str, str]:
+    """Return (iso_timestamp, YYYY-MM-DD, HH:MM:SS) in IST timezone."""
+    # If date_str is provided, it is already local time (IST) from Swiggy/Zomato
+    if date_str:
+        formats = [
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%SZ",
+            "%d %b %Y, %I:%M %p",
+            "%B %d, %Y at %I:%M %p",
+            "%B %d, %Y %I:%M %p",
+            "%d-%m-%Y %H:%M:%S",
+            "%Y-%m-%d",
+        ]
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(date_str.strip(), fmt).replace(tzinfo=IST)
+                return (
+                    dt.isoformat(),
+                    dt.strftime("%Y-%m-%d"),
+                    dt.strftime("%H:%M:%S"),
+                )
+            except ValueError:
+                pass
+
+    if epoch_secs is not None:
+        try:
+            sec = float(epoch_secs)
+            if sec > 0:
+                dt = datetime.fromtimestamp(sec, tz=IST)
+                return dt.isoformat(), dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
+        except (ValueError, OSError):
+            pass
+
+    now = datetime.now(IST)
+    return now.isoformat(), now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S")
+
+
+def normalize_payment(payment_str: str | None) -> str:
+    """Normalize payment gateway and instrument strings into uniform categories."""
+    if not payment_str:
+        return "Unknown"
+    p = payment_str.lower()
+    if "incomplete" in p:
+        return "Incomplete"
+    if "upi" in p:
+        return "UPI"
+    if "card" in p or "credit" in p or "debit" in p:
+        return "Card"
+    if "cash" in p or "cod" in p:
+        return "Cash"
+    if any(k in p for k in ["wallet", "paytm", "phonepe", "simpl", "lazy", "amazon"]):
+        return "Wallet"
+    if "netbanking" in p or "net_banking" in p:
+        return "NetBanking"
+    return payment_str.strip()
+
+
+def normalize_address(raw_label: str | None, address_text: str | None) -> str:
+    """Cluster raw delivery address texts and annotations into recognized habitat buckets."""
+    addr = (address_text or "").lower()
+    lbl = (raw_label or "").strip()
+
+    if "dubagga" in addr or "ayesha masjid" in addr or lbl.upper() == "DG":
+        return "Home (Dubagga)"
+    if (
+        "mahanagar" in addr
+        or "vigyanpuri" in addr
+        or "shadab colony" in addr
+        or "zara ghar" in lbl.lower()
+    ):
+        return "Family (Mahanagar)"
+    if "gachibowli" in addr or "hyderabad" in addr or "sunidhi" in addr:
+        return "Work/PG (Hyderabad)"
+    if "guwahati" in addr or "hatigaon" in addr or "aashirvad" in addr:
+        return "Travel (Guwahati)"
+    if any(
+        k in addr
+        for k in [
+            "chowk",
+            "aminabad",
+            "maulviganj",
+            "husainabad",
+            "daulatganj",
+            "raja bazar",
+            "sabzi mandi",
+        ]
+    ):
+        return "Lucknow (Old City / Chowk)"
+
+    if lbl and lbl.lower() not in [
+        "delivered",
+        "payment incomplete",
+        "processing refund",
+        "other",
+        "",
+    ]:
+        return lbl
+    return "Other"
+
+
+def hash_address(label: str | None, address: str | None) -> str:
+    """Generate deterministic 12-char identifier for delivery address."""
+    raw = f"{(label or '').strip()}_{(address or '').strip()}".lower()
+    return hashlib.md5(raw.encode("utf-8")).hexdigest()[:12]
+
+
+def infer_veg_tag(
+    name: str | None,
+    explicit_val: int | None = None,
+    tags: list[str] | None = None,
+) -> int | None:
+    """Classify 1 = Veg, 0 = Non-Veg, None = Unknown."""
+    if explicit_val is not None:
+        return explicit_val
+    if tags:
+        t_lower = [t.lower() for t in tags]
+        if any(k in t_lower for k in ["non-veg", "egg", "chicken", "mutton"]):
+            return 0
+        if "veg" in t_lower:
+            return 1
+
+    n = (name or "").lower()
+    if any(
+        k in n
+        for k in [
+            "chicken",
+            "mutton",
+            "egg",
+            "fish",
+            "prawn",
+            "wings",
+            "kebab",
+            "meat",
+            "pepperoni",
+            "seekh",
+            "tikka boti",
+            "shawarma",
+        ]
+    ):
+        return 0
+    if any(
+        k in n
+        for k in [
+            "veg",
+            "paneer",
+            "dal",
+            "soya",
+            "cheese",
+            "mushroom",
+            "aloo",
+            "paratha",
+            "chili garlic",
+            "garlic twisty",
+            "taco",
+            "margherita",
+            "corn",
+        ]
+    ):
+        return 1
+    return None
+
+
+def classify_cuisine(dish_name: str | None, rest_name: str | None) -> str:
+    """Classify dishes into high-level cuisine families for visualization."""
+    dn = (dish_name or "").lower()
+    rn = (rest_name or "").lower()
+
+    if any(k in dn for k in ["burger", "snacker", "nikku"]) or "burger" in rn:
+        return "Burgers & Sandwiches"
+    if (
+        any(k in dn for k in ["pizza", "pasta", "garlic bread", "calzone", "lasagna", "twisty", "taco"])
+        or "pizza" in rn
+        or "pino" in rn
+        or "rominus" in rn
+        or "domino" in rn
+    ):
+        return "Pizza & Italian"
+    if any(k in dn for k in ["momo", "wings", "fries", "parcel", "nugget", "popcorn", "crispy"]):
+        return "Fried Chicken & Finger Bites"
+    if (
+        any(k in dn for k in ["biryani", "paratha", "shawarma", "kebab", "tikka", "curry", "roti", "rice", "dal"])
+        or "al-baik" in rn
+        or "shah ghouse" in rn
+        or "dastarkhwan" in rn
+    ):
+        return "Mughlai, Shawarma & Desi"
+    if any(k in dn for k in ["noodle", "fried rice", "chowmein", "chilli paneer", "schezwan", "manchurian", "kimchi"]):
+        return "Chinese & Asian"
+    if (
+        any(k in dn for k in ["waffle", "shake", "cake", "ice cream", "dessert", "brownie", "cookie", "sweet", "mousse"])
+        or "sweet luscious" in rn
+    ):
+        return "Desserts & Shakes"
+    if any(k in dn for k in ["box", "thali", "meal", "combo"]):
+        return "Thalis & Value Meals"
+    return "Other Delicacies"
+
+
+# ==========================================
+# 2. DATABASE MANAGEMENT & INGESTION
+# ==========================================
+
+
+class AnalyticsDB:
+    """Manages SQLite schema and ingestion for multi-platform food order history."""
+
+    def __init__(self, db_path: Path | str | None = None) -> None:
+        self.path = Path(db_path) if db_path is not None else DEFAULT_DB_PATH
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.init_db()
+
+    def connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        return conn
+
+    def init_db(self) -> None:
+        with self.connect() as conn:
+            conn.executescript("""
+            CREATE TABLE IF NOT EXISTS accounts (
+                id TEXT PRIMARY KEY,
+                phone TEXT NOT NULL,
+                local_id TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS restaurants (
+                id TEXT PRIMARY KEY,
+                platform TEXT NOT NULL,
+                platform_restaurant_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                locality TEXT,
+                city TEXT,
+                address TEXT,
+                latitude REAL,
+                longitude REAL,
+                cuisine TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS delivery_addresses (
+                id TEXT PRIMARY KEY,
+                label TEXT,
+                normalized_label TEXT,
+                full_address TEXT NOT NULL,
+                city TEXT,
+                latitude REAL,
+                longitude REAL
+            );
+
+            CREATE TABLE IF NOT EXISTS orders (
+                id TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                platform_order_id TEXT NOT NULL,
+                order_timestamp TEXT NOT NULL,
+                order_date TEXT NOT NULL,
+                order_time TEXT NOT NULL,
+                order_status TEXT NOT NULL,
+                payment_method TEXT,
+                restaurant_id TEXT,
+                delivery_address_id TEXT,
+                final_amount_paid REAL NOT NULL,
+                item_subtotal REAL,
+                total_discount REAL DEFAULT 0,
+                discount_percentage REAL DEFAULT 0,
+                delivery_fee REAL DEFAULT 0,
+                delivery_fee_discount REAL DEFAULT 0,
+                packaging_fee REAL DEFAULT 0,
+                platform_fee REAL DEFAULT 0,
+                total_tax REAL DEFAULT 0,
+                user_rating REAL,
+                FOREIGN KEY (account_id) REFERENCES accounts(id),
+                FOREIGN KEY (restaurant_id) REFERENCES restaurants(id),
+                FOREIGN KEY (delivery_address_id) REFERENCES delivery_addresses(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                unit_price REAL,
+                total_price REAL,
+                is_veg INTEGER,
+                category TEXT,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);
+            CREATE INDEX IF NOT EXISTS idx_orders_platform ON orders(platform);
+            CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
+            CREATE INDEX IF NOT EXISTS idx_orders_account ON orders(account_id);
+            CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id);
+            CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
+            CREATE INDEX IF NOT EXISTS idx_items_name ON order_items(item_name);
+            """)
+
+    def ingest_swiggy_order(
+        self, cursor: sqlite3.Cursor, account_id: str, order_id: str, order_data: dict[str, Any]
+    ) -> bool:
+        """Parse and upsert a Swiggy mobile order record."""
+        details = order_data.get("details") or {}
+        orders_list = details.get("orders") or []
+        ord0 = orders_list[0] if orders_list else {}
+        history = order_data.get("history") or {}
+
+        unique_order_id = f"SWIGGY_{order_id}"
+        cursor.execute(
+            "INSERT OR IGNORE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
+            (account_id, "Unknown", account_id),
+        )
+
+        # 1. Timestamps
+        iso_ts, o_date, o_time = parse_date(
+            ord0.get("order_time") or history.get("orderedTime"),
+            ord0.get("ordered_time_in_seconds"),
+        )
+
+        # 2. Restaurant
+        rest_id_raw = str(ord0.get("restaurant_id") or history.get("restaurantId") or "unknown")
+        rest_id = f"SWIGGY_REST_{rest_id_raw}"
+        rest_name = ord0.get("restaurant_name") or history.get("restaurantName") or "Unknown Restaurant"
+        rest_locality = ord0.get("restaurant_locality") or history.get("restaurantAreaName")
+        rest_city = ord0.get("restaurant_city_name")
+        rest_address = ord0.get("restaurant_address")
+        lat_lng = str(ord0.get("restaurant_lat_lng") or "").split(",")
+        lat = float(lat_lng[0]) if len(lat_lng) > 0 and lat_lng[0] else None
+        lng = float(lat_lng[1]) if len(lat_lng) > 1 and lat_lng[1] else None
+        cuisines = ord0.get("restaurant_cuisine")
+        cuisine_str = ", ".join(cuisines) if isinstance(cuisines, list) else None
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO restaurants (
+                id, platform, platform_restaurant_id, name, locality, city, address, latitude, longitude, cuisine
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                rest_id,
+                "SWIGGY",
+                rest_id_raw,
+                rest_name,
+                rest_locality,
+                rest_city,
+                rest_address,
+                lat,
+                lng,
+                cuisine_str,
+            ),
+        )
+
+        # 3. Delivery Address
+        addr_info = ord0.get("delivery_address") or {}
+        raw_label = addr_info.get("annotation") or "Other"
+        addr_text = addr_info.get("address") or ""
+        norm_label = normalize_address(raw_label, addr_text)
+        addr_id = hash_address(norm_label, addr_text)
+        addr_city = addr_info.get("city")
+        addr_lat = clean_num(addr_info.get("lat"), None)
+        addr_lng = clean_num(addr_info.get("lng"), None)
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO delivery_addresses (
+                id, label, normalized_label, full_address, city, latitude, longitude
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (addr_id, raw_label, norm_label, addr_text, addr_city, addr_lat, addr_lng),
+        )
+
+        # 4. Financials
+        item_subtotal = clean_num(ord0.get("item_total"))
+        food_discount = clean_num(ord0.get("order_discount")) or clean_num(ord0.get("coupon_discount"))
+        deliv_disc = clean_num(
+            ord0.get("free_delivery_discount_hit")
+            or (ord0.get("deliveryFeeCouponBreakup") or {}).get("totalDeliveryFeeDiscount")
+        )
+        total_discount = food_discount + deliv_disc
+
+        final_paid = clean_num(
+            ord0.get("order_total_with_tip")
+            or ord0.get("order_total")
+            or ord0.get("net_total")
+            or history.get("orderTotal")
+        )
+        delivery_fee = clean_num(
+            ord0.get("discounted_total_delivery_fee") or ord0.get("order_delivery_charge")
+        )
+        packaging_fee = clean_num(ord0.get("restaurant_packing_charges"))
+        platform_fee = clean_num(ord0.get("convenience_fee") or ord0.get("platform_fee_tax"))
+        total_tax = clean_num(ord0.get("order_tax") or ord0.get("total_tax"))
+        rating = clean_num(ord0.get("restaurant_order_rating") or history.get("foodRating"), None)
+
+        gross_baseline = item_subtotal + delivery_fee + deliv_disc + packaging_fee
+        discount_pct = (
+            round((total_discount / gross_baseline) * 100, 2) if gross_baseline > 0 else 0.0
+        )
+
+        raw_status = str(
+            ord0.get("order_status")
+            or ord0.get("order_delivery_status")
+            or history.get("orderStatus")
+            or ""
+        ).upper()
+        if "DELIVER" in raw_status or "COMPLETE" in raw_status:
+            status = "DELIVERED"
+        elif "CANCEL" in raw_status:
+            status = "CANCELLED"
+        else:
+            status = raw_status or "OTHER"
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO orders (
+                id, account_id, platform, platform_order_id, order_timestamp, order_date, order_time,
+                order_status, payment_method, restaurant_id, delivery_address_id,
+                final_amount_paid, item_subtotal, total_discount, discount_percentage,
+                delivery_fee, delivery_fee_discount, packaging_fee, platform_fee, total_tax, user_rating
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                unique_order_id,
+                account_id,
+                "SWIGGY",
+                order_id,
+                iso_ts,
+                o_date,
+                o_time,
+                status,
+                normalize_payment(ord0.get("payment_method") or ord0.get("payment_method_involved")),
+                rest_id,
+                addr_id,
+                final_paid,
+                item_subtotal,
+                total_discount,
+                discount_pct,
+                delivery_fee,
+                deliv_disc,
+                packaging_fee,
+                platform_fee,
+                total_tax,
+                rating,
+            ),
+        )
+
+        # 5. Order Line Items
+        cursor.execute("DELETE FROM order_items WHERE order_id = ?", (unique_order_id,))
+        for it in ord0.get("order_items") or []:
+            qty = int(clean_num(it.get("quantity"), 1))
+            total_price = clean_num(it.get("final_price") or it.get("subtotal") or it.get("total"))
+            unit_price = clean_num(it.get("base_price")) or (
+                total_price / qty if qty > 0 else total_price
+            )
+
+            raw_veg = it.get("is_veg")
+            explicit_veg = (
+                1
+                if raw_veg in ("1", 1, True, "yes")
+                else (0 if raw_veg in ("0", 0, False, "no") else None)
+            )
+            item_name = it.get("name") or "Unknown Item"
+            is_veg = infer_veg_tag(item_name, explicit_val=explicit_veg)
+            category = classify_cuisine(item_name, rest_name)
+
+            cursor.execute(
+                """
+                INSERT INTO order_items (
+                    order_id, item_name, quantity, unit_price, total_price, is_veg, category
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (unique_order_id, item_name, qty, unit_price, total_price, is_veg, category),
+            )
+        return True
+
+    def ingest_zomato_order(
+        self, cursor: sqlite3.Cursor, account_id: str, order_id: str, order_data: dict[str, Any]
+    ) -> bool:
+        """Parse and upsert a Zomato mobile order record."""
+        details = order_data.get("details") or {}
+        order_meta = details.get("order") or {}
+        items_list = order_meta.get("items") or []
+        history = order_data.get("history") or {}
+
+        unique_order_id = f"ZOMATO_{order_id}"
+        cursor.execute(
+            "INSERT OR IGNORE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
+            (account_id, "Unknown", account_id),
+        )
+
+        # 1. Timestamps
+        iso_ts, o_date, o_time = parse_date(
+            details.get("created_at_str"),
+            details.get("created_at") or details.get("timestamp"),
+        )
+
+        # 2. Restaurant
+        res_info = details.get("restaurant") or {}
+        location_info = res_info.get("location") or {}
+        rest_id_raw = str(res_info.get("id") or "unknown")
+        rest_id = f"ZOMATO_REST_{rest_id_raw}"
+        rest_name = res_info.get("name") or history.get("top_container", {}).get("title") or "Unknown Restaurant"
+        rest_locality = location_info.get("locality")
+        rest_city = location_info.get("city")
+        rest_address = location_info.get("address")
+        lat = clean_num(location_info.get("latitude"), None)
+        lng = clean_num(location_info.get("longitude"), None)
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO restaurants (
+                id, platform, platform_restaurant_id, name, locality, city, address, latitude, longitude, cuisine
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                rest_id,
+                "ZOMATO",
+                rest_id_raw,
+                rest_name,
+                rest_locality,
+                rest_city,
+                rest_address,
+                lat,
+                lng,
+                None,
+            ),
+        )
+
+        # 3. Delivery Address
+        del_details = details.get("delivery_address_obj") or {}
+        raw_label = del_details.get("alias") or details.get("delivery_label") or "Other"
+        addr_text = del_details.get("full_address_text") or details.get("delivery_address") or ""
+        norm_label = normalize_address(raw_label, addr_text)
+        addr_id = hash_address(norm_label, addr_text)
+        addr_city = rest_city or del_details.get("subzone_name")
+        addr_lat = clean_num(del_details.get("latitude"), None)
+        addr_lng = clean_num(del_details.get("longitude"), None)
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO delivery_addresses (
+                id, label, normalized_label, full_address, city, latitude, longitude
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (addr_id, raw_label, norm_label, addr_text, addr_city, addr_lat, addr_lng),
+        )
+
+        # 4. Financials from items breakdown
+        dishes: list[dict[str, Any]] = []
+        delivery_fee = 0.0
+        deliv_disc = 0.0
+        packaging_fee = 0.0
+        platform_fee = 0.0
+        total_tax = 0.0
+        voucher_discounts = 0.0
+        savings_val = 0.0
+
+        for wrapper in items_list:
+            it = wrapper.get("item") or {}
+            itype = it.get("type")
+            cost = clean_num(it.get("total_cost"))
+            iname = (it.get("item_name") or "").lower()
+            dcost = (it.get("display_cost") or "").strip().upper()
+
+            if itype == "dish":
+                dishes.append(it)
+            elif itype in ("charge", "subtotal_charge"):
+                if "FREE" in dcost:
+                    actual = 0.0
+                    waived = cost
+                elif dcost:
+                    actual = clean_num(dcost, default=cost)
+                    waived = max(0.0, cost - actual)
+                else:
+                    actual = cost
+                    waived = 0.0
+
+                if "deliver" in iname or "rider" in iname:
+                    delivery_fee += actual
+                    deliv_disc += waived
+                elif "pack" in iname or "handling" in iname:
+                    packaging_fee += actual
+                else:
+                    delivery_fee += actual
+                    deliv_disc += waived
+            elif itype == "platform_charge":
+                platform_fee += cost
+            elif itype == "tax":
+                total_tax += cost
+            elif itype in ("voucher_discount", "discount"):
+                voucher_discounts += abs(cost)
+            elif itype == "savings":
+                savings_val = max(savings_val, abs(cost))
+
+        item_subtotal = sum(clean_num(d.get("total_cost")) for d in dishes)
+        total_discount = savings_val if savings_val > 0 else (voucher_discounts + deliv_disc)
+
+        final_paid = clean_num(order_meta.get("total_cost") or details.get("total_cost"))
+        gross_baseline = item_subtotal + delivery_fee + deliv_disc + packaging_fee
+        discount_pct = (
+            round((total_discount / gross_baseline) * 100, 2) if gross_baseline > 0 else 0.0
+        )
+
+        raw_status = (
+            details.get("current_status")
+            or details.get("status_text")
+            or str(details.get("status") or "")
+        ).upper()
+        if "INCOMPLETE" in raw_status or "PAYMENT_INCOMPLETE" in raw_status:
+            status = "PAYMENT_INCOMPLETE"
+        elif "CANCEL" in raw_status:
+            status = "CANCELLED"
+        elif "DELIVER" in raw_status or raw_status == "6":
+            status = "DELIVERED"
+        else:
+            status = raw_status or "OTHER"
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO orders (
+                id, account_id, platform, platform_order_id, order_timestamp, order_date, order_time,
+                order_status, payment_method, restaurant_id, delivery_address_id,
+                final_amount_paid, item_subtotal, total_discount, discount_percentage,
+                delivery_fee, delivery_fee_discount, packaging_fee, platform_fee, total_tax, user_rating
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                unique_order_id,
+                account_id,
+                "ZOMATO",
+                order_id,
+                iso_ts,
+                o_date,
+                o_time,
+                status,
+                normalize_payment(details.get("payment_method") or details.get("payment_category")),
+                rest_id,
+                addr_id,
+                final_paid,
+                item_subtotal,
+                total_discount,
+                discount_pct,
+                delivery_fee,
+                deliv_disc,
+                packaging_fee,
+                platform_fee,
+                total_tax,
+                None,
+            ),
+        )
+
+        # 5. Items
+        cursor.execute("DELETE FROM order_items WHERE order_id = ?", (unique_order_id,))
+        for d in dishes:
+            qty = int(clean_num(d.get("quantity"), 1))
+            total_price = clean_num(d.get("total_cost"))
+            unit_price = clean_num(d.get("unit_cost")) or (
+                total_price / qty if qty > 0 else total_price
+            )
+            item_name = d.get("item_name") or "Unknown Item"
+            tags = d.get("tag_slugs") or []
+            is_veg = infer_veg_tag(item_name, tags=tags)
+            category = classify_cuisine(item_name, rest_name)
+
+            cursor.execute(
+                """
+                INSERT INTO order_items (
+                    order_id, item_name, quantity, unit_price, total_price, is_veg, category
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (unique_order_id, item_name, qty, unit_price, total_price, is_veg, category),
+            )
+        return True
+
+    def ingest_account(self, storage: Storage, local_id: str) -> dict[str, int]:
+        """Ingest all platform histories saved under a specific local account."""
+        acc_path = storage.account_path(local_id)
+        if not acc_path.exists():
+            return {"swiggy": 0, "zomato": 0, "total": 0}
+
+        meta = read_json(acc_path / "account.json")
+        phone = meta.get("phone", "Unknown")
+
+        counts = {"swiggy": 0, "zomato": 0, "total": 0}
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
+                (local_id, phone, local_id),
+            )
+
+            # Ingest Swiggy
+            sw_file = acc_path / "swiggy-history.json"
+            if sw_file.exists():
+                try:
+                    sw_data = read_json(sw_file)
+                    orders = sw_data.get("orders") or {}
+                    for oid, oval in orders.items():
+                        if self.ingest_swiggy_order(cursor, local_id, str(oid), oval):
+                            counts["swiggy"] += 1
+                except Exception:
+                    pass
+
+            # Ingest Zomato
+            zm_file = acc_path / "zomato-history.json"
+            if zm_file.exists():
+                try:
+                    zm_data = read_json(zm_file)
+                    orders = zm_data.get("orders") or {}
+                    for oid, oval in orders.items():
+                        if self.ingest_zomato_order(cursor, local_id, str(oid), oval):
+                            counts["zomato"] += 1
+                except Exception:
+                    pass
+
+            conn.commit()
+
+        counts["total"] = counts["swiggy"] + counts["zomato"]
+        return counts
+
+    def ingest_all(self, storage: Storage) -> dict[str, int]:
+        """Ingest histories from all accounts found in storage."""
+        total_counts = {"swiggy": 0, "zomato": 0, "total": 0, "accounts": 0}
+        if not storage.accounts_dir.exists():
+            return total_counts
+
+        for path in storage.accounts_dir.iterdir():
+            if not path.is_dir() or not (path / "account.json").exists():
+                continue
+            acc_counts = self.ingest_account(storage, path.name)
+            total_counts["swiggy"] += acc_counts["swiggy"]
+            total_counts["zomato"] += acc_counts["zomato"]
+            total_counts["total"] += acc_counts["total"]
+            total_counts["accounts"] += 1
+
+        return total_counts

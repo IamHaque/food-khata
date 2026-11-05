@@ -11,8 +11,12 @@ dist/
 .env
 .zomato
 .swiggy
-.food-khata/
+.food-khata*/
 accounts/
 exports/
 *-history.json
 *.tmp
+*.db
+*.sqlite
+dashboard.html
+
