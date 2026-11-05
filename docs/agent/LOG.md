@@ -15,3 +15,5 @@
 2026-11-06: E-1 evidence committed 4b83f33; BASE-01/02/03 and DATA-01 done. STOP: waiting for MIGRATION_PLAN approval; no implementation/deletion authorized by this checkpoint.
 2026-11-06: User instructs continue until all done, approval at end; intermediate STOPs superseded. E1-T1 delegated locally to Terra Medium; final removals/protected changes still require explicit approval.
 2026-11-06: E1-T1 partial (DB helper/proposal only), not accepted as foundation complete. Root tests 2 pass, Ruff lint pass, normalized formatting. Narrow E1-T2 to filters/metrics; established uv works elevated.
+2026-11-06: E1-T2 returned no edits/tests; not accepted. Two unsuccessful implementation attempts trigger Terra High escalation E1-T3; scope filters/metrics core only. No application changes from T2.
+2026-11-06: E1-T3 implemented filters/metrics (6 tests); root full suite65+10 pass before corrections. Root corrected cuisine to restaurant cuisine rather than item category and raised Pydantic2.12/FastAPI0.118.3/Uvicorn0.38 minimums for3.14. API/CLI integration next.

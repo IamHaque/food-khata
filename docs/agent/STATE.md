@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T2 / Terra Medium / dashboard-v2: shared filters and metrics only (delegating). E1-T1 partial DB helper verified: 2 tests, Ruff pass after line-ending format.
+E1-T4 / Terra High / dashboard-v2: API/CLI integration next. Filter/metric core verified; root corrected cuisine mapping and runtime dependency minimums.
 ## Pending
 1. Verify E1-T1 serve/filter/metric/API tests and contract.
 2. DATA-02 proposed SQL measured against future query plans (Terra Medium).
@@ -47,6 +47,8 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. No new API/parity run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
+
 
 
 
