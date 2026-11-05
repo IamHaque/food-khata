@@ -56,8 +56,8 @@ def build_where(filters: Filters) -> tuple[str, list]:
     if filters.cuisines:
         placeholders = ", ".join("?" for _ in filters.cuisines)
         clauses.append(
-            "EXISTS (SELECT 1 FROM order_items i WHERE i.order_id = o.id "
-            f"AND i.category IN ({placeholders}))"
+            "EXISTS (SELECT 1 FROM restaurants r WHERE r.id = o.restaurant_id "
+            f"AND r.cuisine IN ({placeholders}))"
         )
         params.extend(filters.cuisines)
     if filters.veg != "all":
