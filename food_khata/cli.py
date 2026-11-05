@@ -46,9 +46,7 @@ def run(storage: Storage) -> int:
     factory = PROVIDERS[name]
     accounts = storage.accounts(name, include_unauthenticated=True)
     account = None
-    if len(accounts) == 1:
-        account = accounts[0]
-    elif len(accounts) > 1:
+    if accounts:
         choices = [
             questionary.Choice(
                 f"Account …{entry['phone'][-4:]} ({entry['local_id']})"
@@ -60,7 +58,10 @@ def run(storage: Storage) -> int:
         chosen = answer(
             questionary.select(
                 "Choose an account:",
-                choices=[*choices, questionary.Choice("Log in to another account", value="new")],
+                choices=[
+                    *choices,
+                    questionary.Choice("Log in to another account (add new)", value="new"),
+                ],
             )
         )
         if chosen == "new":
@@ -95,6 +96,7 @@ def run(storage: Storage) -> int:
                                 "Reuse session",
                                 "Refresh session",
                                 "Reauthenticate (SMS OTP)",
+                                "Switch account / Log in to another",
                                 "Logout and log in again",
                             ],
                         )
@@ -107,6 +109,9 @@ def run(storage: Storage) -> int:
                             print("Session refresh failed or not supported. Reauthenticate.")
                             provider = None
                     elif choice == "Reauthenticate (SMS OTP)":
+                        provider = None
+                    elif choice == "Switch account / Log in to another":
+                        account = None
                         provider = None
                     elif choice == "Logout and log in again":
                         provider.logout()

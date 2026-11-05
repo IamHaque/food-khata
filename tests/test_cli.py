@@ -25,7 +25,7 @@ class CliTests(unittest.TestCase):
             patch.object(fresh, "login", return_value="provider-id") as login,
             patch("food_khata.cli.questionary.select"),
             patch("food_khata.cli.questionary.text"),
-            patch("food_khata.cli.answer", side_effect=["swiggy", "9876543210"]),
+            patch("food_khata.cli.answer", side_effect=["swiggy", account, "9876543210"]),
             patch("food_khata.cli.sync", return_value=self.report),
             patch("builtins.print"),
         ):
@@ -79,8 +79,8 @@ class CliTests(unittest.TestCase):
         self.provider.close.assert_called_once()
 
     def test_reuse_skips_login(self):
-        self.saved()
-        result, _ = self.invoke(["zomato", "Reuse session"])
+        account = self.saved()
+        result, _ = self.invoke(["zomato", account, "Reuse session"])
         self.assertEqual(result, 0)
         self.provider.login.assert_not_called()
 
@@ -88,7 +88,7 @@ class CliTests(unittest.TestCase):
         account = self.saved()
         archive = self.storage.account_path(account["local_id"]) / "zomato-history.json"
         archive.write_text("existing archive")
-        self.invoke(["zomato", "Logout and log in again", "9876543210"])
+        self.invoke(["zomato", account, "Logout and log in again", "9876543210"])
         self.provider.logout.assert_called_once()
         self.provider.login.assert_called_once()
         self.assertEqual(archive.read_text(), "existing archive")
@@ -97,14 +97,14 @@ class CliTests(unittest.TestCase):
         account = self.saved()
         self.provider.profile.side_effect = KhataError("network failure")
         with self.assertRaises(KhataError):
-            self.invoke(["zomato"])
+            self.invoke(["zomato", account])
         self.assertIsNotNone(self.storage.session(account["local_id"], "zomato"))
         self.provider.login.assert_not_called()
 
     def test_expired_session_reauthenticates(self):
-        self.saved()
+        account = self.saved()
         self.provider.profile.side_effect = AuthenticationError("expired")
-        self.invoke(["zomato", "9876543210"])
+        self.invoke(["zomato", account, "9876543210"])
         self.provider.login.assert_called_once()
 
     def test_phone_validation_and_cancel(self):
@@ -118,7 +118,7 @@ class CliTests(unittest.TestCase):
         account = self.saved()
         self.provider.refresh_session.return_value = True
         self.provider.dump_session.return_value = {"access_token": "refreshed-token"}
-        result, _ = self.invoke(["zomato", "Refresh session"])
+        result, _ = self.invoke(["zomato", account, "Refresh session"])
         self.assertEqual(result, 0)
         self.provider.refresh_session.assert_called_once()
         self.assertEqual(
@@ -127,8 +127,8 @@ class CliTests(unittest.TestCase):
         )
 
     def test_reauthenticate_session_prompts_login(self):
-        self.saved()
-        result, _ = self.invoke(["zomato", "Reauthenticate (SMS OTP)", "9876543210"])
+        account = self.saved()
+        result, _ = self.invoke(["zomato", account, "Reauthenticate (SMS OTP)", "9876543210"])
         self.assertEqual(result, 0)
         self.provider.login.assert_called_once()
 
@@ -166,7 +166,7 @@ class CliTests(unittest.TestCase):
             },
         )
         result, sync_mock = self.invoke(
-            ["zomato", "Reuse session", "Check and repair missing details"]
+            ["zomato", account, "Reuse session", "Check and repair missing details"]
         )
         self.assertEqual(result, 0)
         self.assertEqual(sync_mock.call_args.kwargs.get("mode"), "repair")
