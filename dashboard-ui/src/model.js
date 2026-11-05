@@ -2,16 +2,6 @@ export const money = (n) =>
   "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 export const restaurant = (o) => o.restaurant?.name || "Unknown";
 export const location = (o) => o.address?.normalized_label || "Unknown";
-export const qualityChecks = {
-  unverified: (o) => o.financial_verified !== 1,
-  date: (o) => !o.order_date,
-  address: (o) => !o.address?.full_address,
-  items: (o) => !o.items?.length,
-  incomplete: (o) => o.source_complete !== 1,
-  reconciliation: (o) =>
-    o.reconciliation_difference == null ||
-    Math.abs(Number(o.reconciliation_difference)) > 1,
-};
 export function filterOrders(orders, f) {
   return orders.filter(
     (o) =>
@@ -22,8 +12,7 @@ export function filterOrders(orders, f) {
       (!f.status || o.order_status === f.status) &&
       (!f.restaurant || restaurant(o) === f.restaurant) &&
       (!f.location || location(o) === f.location) &&
-      (!f.payment || (o.payment_method || "Unknown") === f.payment) &&
-      (!f.quality || qualityChecks[f.quality](o)),
+      (!f.payment || (o.payment_method || "Unknown") === f.payment),
   );
 }
 export function totals(orders) {
@@ -44,14 +33,6 @@ export function totals(orders) {
     ),
     advertised: sum(delivered, "reported_savings"),
     refunds: sum(orders, "refund_amount"),
-    fees: [
-      "delivery_fee",
-      "platform_fee",
-      "packaging_fee",
-      "total_tax",
-      "tip",
-      "other_charges",
-    ].reduce((n, k) => n + sum(delivered, k), 0),
   };
 }
 export function paginate(orders, search, sort, descending, page, size = 20) {
@@ -130,18 +111,16 @@ export function timeline(orders, inception, end, interval) {
 }
 export function rank(orders, kind) {
   const grouped = new Map();
-  const add = (name, amount, qty = 1, detail = "") => {
+  const add = (name, amount, qty = 1) => {
     if (!name) return;
     const key = name.trim().toLowerCase(),
       row = grouped.get(key) || {
         name,
         count: 0,
         amount: 0,
-        details: new Set(),
       };
     row.count += Number(qty || 0);
     row.amount += Number(amount || 0);
-    if (detail) row.details.add(detail);
     grouped.set(key, row);
   };
   for (const o of orders) {
@@ -150,18 +129,10 @@ export function rank(orders, kind) {
         restaurant(o),
         o.order_status === "DELIVERED" ? o.final_amount_paid : 0,
         1,
-        o.restaurant?.locality,
       );
     else if (kind === "dishes")
       (o.items || []).forEach((i) =>
         add(i.item_name, i.total_price, i.quantity),
-      );
-    else
-      add(
-        location(o),
-        o.order_status === "DELIVERED" ? o.final_amount_paid : 0,
-        1,
-        [o.address?.label, o.address?.full_address].filter(Boolean).join(" · "),
       );
   }
   return [...grouped.values()].sort((a, b) => b.count - a.count);

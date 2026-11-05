@@ -46,7 +46,6 @@ def phone_valid(value: str) -> bool | str:
 def run(
     storage: Storage,
     prompt_dashboard: bool = True,
-    open_browser: bool = True,
     db_path: Path | None = None,
 ) -> int:
     name = answer(questionary.select("Choose a provider:", choices=["zomato", "swiggy"]))
@@ -282,7 +281,6 @@ def main(argv: list[str] | None = None) -> int:
             return run(
                 storage,
                 prompt_dashboard=not args.no_dashboard,
-                open_browser=not args.no_open,
                 db_path=args.db_path,
             )
     except KeyboardInterrupt:

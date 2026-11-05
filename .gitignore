@@ -26,3 +26,5 @@ dashboard-ui/test-results/
 dashboard-ui/playwright-report/
 
 dashboard-ui/public/data/
+
+.pytest_cache/

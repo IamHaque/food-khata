@@ -162,7 +162,7 @@ Exit codes: `0` complete, `1` failure/incomplete sync, `130` cancellation.
 
 ```sh
 python -m pip install -e ".[dev]"
-python -m unittest discover -s tests -v
+python -m pytest -q
 python -m ruff check .
 python -m ruff format --check .
 ```

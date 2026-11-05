@@ -28,7 +28,6 @@ test("filters all records and calculates delivered financials", () => {
   assert.equal(t.verified, 10);
   assert.equal(t.unverified, 180);
   assert.equal(t.advertised, 285);
-  assert.equal(filterOrders(rows, { quality: "unverified" }).length, 19);
 });
 test("pagination searches full history and bounds pages", () => {
   const result = paginate(orders, "", "id", false, 1, 20);

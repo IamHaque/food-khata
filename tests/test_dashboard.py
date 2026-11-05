@@ -9,7 +9,7 @@ from food_khata.dashboard import export_dashboard_data, fetch_analytics
 from food_khata.db import AnalyticsDB
 
 
-def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
+def test_fetch_records_and_export_dashboard(tmp_path: Path):
     db_file = tmp_path / "test_analytics.db"
     db = AnalyticsDB(db_file)
 
@@ -71,12 +71,10 @@ def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
         conn.commit()
 
     analytics = fetch_analytics(db_file)
-    assert analytics["macro"]["delivered_orders"] == 2
-    assert analytics["macro"]["delivered_spend"] == 450.0
-    assert "SWIGGY" in analytics["platforms"]
-    assert "ZOMATO" in analytics["platforms"]
-    assert len(analytics["top_restaurants"]) == 2
-    assert len(analytics["top_dishes"]) == 2
+    assert len(analytics["orders"]) == 2
+    assert sum(o["final_amount_paid"] for o in analytics["orders"]) == 450
+    assert {o["restaurant"]["name"] for o in analytics["orders"]} == {"Burger Spot", "Pizza Spot"}
+    assert sum(len(o["items"]) for o in analytics["orders"]) == 2
 
     out_file = tmp_path / "dashboard.json"
     assert export_dashboard_data(db_file, out_file) == out_file
@@ -89,7 +87,7 @@ def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
     assert exported["generated_at"].endswith("+05:30")
 
 
-def test_complete_history_and_safe_embedded_data(tmp_path: Path):
+def test_complete_history_and_selected_account_export(tmp_path: Path):
     db_file = tmp_path / "history.db"
     db = AnalyticsDB(db_file)
     with db.connection() as conn:
@@ -110,9 +108,8 @@ def test_complete_history_and_safe_embedded_data(tmp_path: Path):
         )
         conn.commit()
 
-    analytics = fetch_analytics(db_file, account_id="first")
+    analytics = fetch_analytics(db_file)
     assert len(analytics["orders"]) == 55
-    assert len(analytics["recent_orders"]) == 54
     other = next(order for order in analytics["orders"] if order["account_id"] == "other")
     assert other["items"][0]["item_name"].startswith("</script>")
     out = export_dashboard_data(db_file, account_id="first")
