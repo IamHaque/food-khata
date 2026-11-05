@@ -19,13 +19,13 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T6 / Terra High: server chart datasets and comparison. UI-T1 / Terra High: typed routed foundation/account filters, preserving legacy. API core root verified79+10 tests/Ruff.
+E1-T6 and UI-T1 retry with Terra Medium only. Interrupted High calls created no new child threads (inventory confirmed). API core d422946 verified79+10 tests/Ruff.
 ## Pending
-1. Verify E1-T1 serve/filter/metric/API tests and contract.
-2. DATA-02 proposed SQL measured against future query plans (Terra Medium).
-3. CLI-01 optional read-only serve contract/dispatch (Terra Medium).
-4. FILT-01/MET-01/MET-02 shared filtering and metrics (Terra Medium).
-5. API-01/CI-01 schemas/types and supported runtime checks (Terra Low/Medium).
+1. Complete server charts/comparisons (E1-T6, Terra Medium).
+2. Complete typed frontend foundation/account filters (UI-T1, Terra Medium).
+3. Implement and locally run parity harness (root).
+4. Ledger/modal then Overview and remaining pages.
+5. Final a11y/responsive/stress checks and removal proposals.
 ## Blocked
 No execution blocker. Destructive removals and protected parser/schema edits remain separately approval-gated.
 ## Done recently
@@ -36,6 +36,8 @@ No execution blocker. Destructive removals and protected parser/schema edits rem
 - BASE-02 4b83f33: final migration plan/source inventory; E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
 ## Open questions for the human
 Nothing during implementation; final review pending. No deletion approval inferred.
+## Worker constraint
+Use only GPT-6.1 Terra Medium or Low; never High/Max or automatic effort escalation (user override 2026-11-06).
 ## Environment notes
 Git/build/browser/uv execution needs sandbox escalation. Default Python lacks test tools; use temporary uv dependencies (pytest, ruff, requests, questionary, curl_cffi).
 Python 3.11 unavailable locally; covered by configured Windows/Linux CI, no remote pass asserted.
@@ -47,6 +49,8 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
+
 
 
 

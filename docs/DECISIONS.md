@@ -13,3 +13,4 @@
 12. 2026-11-06: Existing browser test gains network containment for safe synthetic-only functional baseline; all existing scenarios pass. No application behavior changed.
 13. 2026-11-06: User authorizes implementation through intermediate STOPs, final review at end. No specific removal list/schema/parser proposal approved; prepare replacements and evidence while retaining legacy/export.
 14. 2026-11-06: Cuisine filter uses restaurants.cuisine (item category is a different field). Serve minimums Pydantic2.12, FastAPI0.118.3, Uvicorn0.38 follow official Python3.14 support releases: https://pydantic.dev/articles/pydantic-v2-12-release https://fastapi.tiangolo.com/release-notes/ https://uvicorn.dev/release-notes/ .
+15. 2026-11-06: User overrides escalation policy: all future workers GPT-6.1 Terra Medium or Low only; never High/Max. Split tasks if needed.
