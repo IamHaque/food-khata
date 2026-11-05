@@ -28,3 +28,13 @@ dashboard-ui/playwright-report/
 dashboard-ui/public/data/
 
 .pytest_cache/
+
+# Local data and credentials
+*.db*
+*.sqlite*
+.env*
+public/data/
+exports/
+*screenshot*real*
+*real*screenshot*
+docs/agent/parity.local.md
