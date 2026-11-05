@@ -38,3 +38,11 @@ exports/
 *screenshot*real*
 *real*screenshot*
 docs/agent/parity.local.md
+.profile-test-tmp/
+# Raster captures cannot be classified safely by filename; keep generated images local.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp

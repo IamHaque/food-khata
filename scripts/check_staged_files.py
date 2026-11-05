@@ -15,7 +15,7 @@ def prohibited(path: str) -> bool:
         or ".db" in name
         or ".sqlite" in name
         or name.startswith(".env")
-        or ("screenshot" in name and "real" in name)
+        or PurePosixPath(name).suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
         or path.lower() == "docs/agent/parity.local.md"
     )
 
@@ -30,6 +30,8 @@ def main() -> int:
             "exports/out.csv",
             ".env.local",
             "screenshots/real-screenshot.png",
+            "screenshots/home.png",
+            "capture.jpg",
             "docs/agent/parity.local.md",
         ):
             assert prohibited(path), path

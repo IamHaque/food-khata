@@ -79,6 +79,15 @@ try {
     reducedMotion: "reduce",
     colorScheme: "light",
   });
+  await context.route("**/*", (route) => {
+    const target = new URL(route.request().url());
+    if (
+      target.origin === new URL(url).origin &&
+      (target.pathname === "/" || target.pathname.startsWith("/assets/"))
+    )
+      return route.continue();
+    return route.abort();
+  });
   const page = await context.newPage(),
     errors = [],
     external = [];
@@ -210,3 +219,4 @@ try {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));
 }
+

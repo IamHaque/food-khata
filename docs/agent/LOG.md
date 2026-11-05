@@ -6,3 +6,9 @@
 2026-11-06 Gemini delegation rejected by automatic approval review; no frontend report started.
 2026-11-06 npm build passed elevated after sandbox spawn EPERM; Vite JS 826.85 kB (gzip 248.28 kB), warning above 500 kB.
 2026-11-06: Root verified BASE-03 guard; Python 55+10 subtests and Ruff pass via uv, npm 7 pass/build pass. Draft MIGRATION_PLAN records source audit and missing evidence. Gemini transfer rejected by auto-review; no external worker ran.
+2026-11-06: User approved synthetic-only screenshots and local aggregate profiling. Gemini not used: harness shared checkout cannot enforce git-only access; no transfer/scan performed. BASE-03 already committed; stale STATE corrected. BRIEF.md user edits preserved; technical contents still absent.
+2026-11-06: Technical brief now present and re-read; precedence remains brownfield > orchestrator > technical. DATA-01 local aggregate audit delegated to Terra Medium; no Gemini transfer.
+2026-11-06: Python 3.11 interpreter not installed (uv inventory lists 3.13/3.14); covered by existing Windows/Linux CI matrix, not locally verified. Root npm test 7 and full pytest 56 +10 subtests pass during E-1.
+2026-11-06: E-1 independent review assigned Terra Medium: audit scripts, privacy isolation, guard, source boundaries and documented findings; no app modifications.
+2026-11-06: Root independently verified generator, live aggregate profile, 8 Playwright/axe states, contained existing browser functional suite, pytest 57 +10 subtests, Ruff, guard self-check/tracked scan. Existing a11y/contrast defects documented, not fixed.
+2026-11-06: Terra Medium review found report-output DB alias risk and ordinary-filename screenshot guard gap. Root fixed both with regression checks; existing browser baseline gap closed with network containment and successful run.

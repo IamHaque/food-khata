@@ -1,34 +1,49 @@
 # Migration state
+## Sources (precedence order)
+- docs/BRIEF_BROWNFIELD.md
+- docs/agent/ORCHESTRATOR_PROMPT.md
+- docs/BRIEF.md (technical brief, re-read 2026-11-06)
 ## Standing rules
-- Precedence: BRIEF_BROWNFIELD > orchestrator (currently docs/BRIEF.md) > earlier brief.
+- Brownfield > orchestrator > technical brief; migrate in place, no redesign/scaffold.
 - Never modify login/session/sync/locking/archive/ingest or .food-khata/accounts/.
 - Never open, print, log or copy sessions/*.json.
-- No phones, addresses or order payloads in logs, reports, screenshots or commits.
-- Source DB read-only; schema/parse changes need an approved proposal.
-- Loopback only; no telemetry or external data requests.
-- Python 3.11 and 3.14; Windows/PowerShell primary.
-- Advertised savings and bill discounts stay separate.
-- lifetime_complete never triggers warnings; scope history/details warnings.
-- No deletions without approved REMOVALS.md and tested replacements.
-- Old UI/export stay working until parity and approved retirement.
+- No real phones, addresses or order payloads in logs/reports/screenshots/commits.
+- Source DB read-only; parser/schema changes need approved proposals.
+- Loopback only; no telemetry/external data requests.
+- Python 3.11/3.14 compatible; Windows/PowerShell primary.
+- Advertised savings and explicit bill discounts remain separate.
+- lifetime_complete never warns; history/details warnings scoped to account.
+- No deletion without approved REMOVALS and tested replacements.
+- Old UI/export remain working until parity and approved retirement.
+- Screenshots synthetic only; no .food-khata-derived captures or fixtures.
 ## Current phase / epic / story
-E-1 / BASE-03: safety guard prepared; baseline and audit pending.
+E-1 complete; DATA-01 pulled forward and complete. STOP for MIGRATION_PLAN approval.
 ## In progress
-BASE-03-T1 / safety worker / dashboard-v2: verify and commit safety guard.
+None. Local workers finished and root verification completed.
 ## Pending
-1. Supply missing technical brief and approve screenshot dataset.
-2. BASE-01 baseline checks and approved-data screenshots.
-3. BASE-02 inventories and migration plan.
-4. Human STOP: approve MIGRATION_PLAN.md.
+1. Human approval of docs/MIGRATION_PLAN.md (STOP; do not implement before approval).
+2. DATA-02 proposed SQL measured against future query plans (Terra Medium).
+3. CLI-01 optional read-only serve contract/dispatch (Terra Medium).
+4. FILT-01/MET-01/MET-02 shared filtering and metrics (Terra Medium).
+5. API-01/CI-01 schemas/types and supported runtime checks (Terra Low/Medium).
 ## Blocked
-Screenshot dataset approval not yet supplied; do not use private data.
-Full technical brief missing: docs/BRIEF.md contains the orchestrator prompt itself.
+No execution blocker; waiting at requested human approval checkpoint.
 ## Done recently
-BASE-03 committed 72dcc0b; safety tag and branch created; root reverified guard.
+- BASE-03 72dcc0b: guard, initial briefs/state/backlog; root reverified.
+- BASE-02 draft 689afa9: baseline/source inventory.
+- BASE-01: generated 3-account/36-month synthetic export, 8 screenshots/axe/contrast and existing functional browser suite; root reran.
+- DATA-01: local read-only aggregate profile plus privacy/output-alias tests; root reran.
+- E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
 ## Open questions for the human
-Provide the technical/design brief referred to by the orchestrator and approve a synthetic screenshot dataset.
+Approve MIGRATION_PLAN.md. No removal approval requested.
 ## Environment notes
-Git writes require sandbox escalation. Never inspect account/session files.
+Git/build/browser/uv execution needs sandbox escalation. Default Python lacks test tools; use temporary uv dependencies (pytest, ruff, requests, questionary, curl_cffi).
+Python 3.11 unavailable locally; covered by configured Windows/Linux CI, no remote pass asserted.
+Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/results: dashboard-ui/test-results/synthetic-baseline/ (ignored).
+Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
+Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06: Python 3.14 uv environment: 55 passed + 10 subtests; Ruff check/format pass (33 files); npm 7 pass; build passes (bundle warning). Guard self-check/staged/tracked scans pass. Python 3.11/browser/a11y not run. Git tree contains only attributed audit docs.
-
+2026-11-06 root: pytest 57 passed +10 subtests; Ruff lint/format pass; npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
+Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
+Lint script/tsc setup absent in existing frontend; establish in foundation phase. No new API/parity run yet.
+Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Final evidence commits pending immediately below this state update.
