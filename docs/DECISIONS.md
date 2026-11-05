@@ -11,3 +11,4 @@
 10. 2026-11-06: Local profile confirms existing reconciliation uses net stored delivery fee and food_discount, while the technical illustrative formula subtracts total_discount/refunds. Preserve ingestion and current INR1 flags. Future metrics/parity must explain this difference before changing displayed reconciliation; no parser changes authorized.
 11. 2026-11-06: Independent E-1 review safety findings fixed: report output cannot alias source DB; commit guard rejects all raster extensions because filenames cannot prove data provenance. Synthetic captures remain local/ignored.
 12. 2026-11-06: Existing browser test gains network containment for safe synthetic-only functional baseline; all existing scenarios pass. No application behavior changed.
+13. 2026-11-06: User authorizes implementation through intermediate STOPs, final review at end. No specific removal list/schema/parser proposal approved; prepare replacements and evidence while retaining legacy/export.

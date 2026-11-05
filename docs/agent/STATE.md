@@ -13,21 +13,21 @@
 - Python 3.11/3.14 compatible; Windows/PowerShell primary.
 - Advertised savings and explicit bill discounts remain separate.
 - lifetime_complete never warns; history/details warnings scoped to account.
-- No deletion without approved REMOVALS and tested replacements.
+- No deletion without approved REMOVALS and tested replacements; final approval retained.
 - Old UI/export remain working until parity and approved retirement.
 - Screenshots synthetic only; no .food-khata-derived captures or fixtures.
 ## Current phase / epic / story
-E-1 complete; DATA-01 pulled forward and complete. STOP for MIGRATION_PLAN approval.
+E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-None. Local workers finished and root verification completed.
+E1-T2 / Terra Medium / dashboard-v2: shared filters and metrics only (delegating). E1-T1 partial DB helper verified: 2 tests, Ruff pass after line-ending format.
 ## Pending
-1. Human approval of docs/MIGRATION_PLAN.md (STOP; do not implement before approval).
+1. Verify E1-T1 serve/filter/metric/API tests and contract.
 2. DATA-02 proposed SQL measured against future query plans (Terra Medium).
 3. CLI-01 optional read-only serve contract/dispatch (Terra Medium).
 4. FILT-01/MET-01/MET-02 shared filtering and metrics (Terra Medium).
 5. API-01/CI-01 schemas/types and supported runtime checks (Terra Low/Medium).
 ## Blocked
-No execution blocker; waiting at requested human approval checkpoint.
+No execution blocker. Destructive removals and protected parser/schema edits remain separately approval-gated.
 ## Done recently
 - BASE-03 72dcc0b: guard, initial briefs/state/backlog; root reverified.
 - BASE-02 draft 689afa9: baseline/source inventory.
@@ -35,7 +35,7 @@ No execution blocker; waiting at requested human approval checkpoint.
 - DATA-01 4b83f33: local read-only aggregate profile plus privacy/output-alias tests; root reran.
 - BASE-02 4b83f33: final migration plan/source inventory; E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
 ## Open questions for the human
-Approve MIGRATION_PLAN.md. No removal approval requested.
+Nothing during implementation; final review pending. No deletion approval inferred.
 ## Environment notes
 Git/build/browser/uv execution needs sandbox escalation. Default Python lacks test tools; use temporary uv dependencies (pytest, ruff, requests, questionary, curl_cffi).
 Python 3.11 unavailable locally; covered by configured Windows/Linux CI, no remote pass asserted.
@@ -47,4 +47,6 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. No new API/parity run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
+
 
