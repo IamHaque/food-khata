@@ -23,3 +23,4 @@
 2026-11-06: E1-T6/UI-T1 failed on provider usage limit; root confirmed clean tree/no partial edits. User says continue; retry same-provider tasks after capability check. No provider switch or completed work repeated.
 2026-11-06: User restricts all workers to Terra Medium or Low. Thread inventory confirms interrupted High retry requests created no new threads/runs. Existing chart/frontend tasks are failed, not running. Resume with Medium; no High/Max escalation.
 2026-11-06: UI-T1A partial proxy only. Root npm7tests/build pass; frontend foundation remains incomplete. Commit only proxy/handoff/state; concurrent backend chart edits belong E1-T6A and remain unstaged. Narrow UI-T1B to entry/router/types/API hooks.
+2026-11-06: E1-T6A partial calendar/compare verified80+10 fullsuite/Ruff. Root fixed fractional-paise calendar sum and minimum/unknown-date crashes;3 targeted tests pass. Remaining overview data narrowed E1-T6B; frontend running independently.

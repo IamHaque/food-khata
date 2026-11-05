@@ -129,13 +129,47 @@ class Month(BaseModel):
     spend: float
 
 
+class CalendarDay(BaseModel):
+    date: str | None
+    orders: int
+    spend: float
+
+
+class KPIDeltas(BaseModel):
+    orders: float | None
+    valid_order_count: float | None
+    spend: float | None
+    aov: float | None
+    total_discount: float | None
+    reported_savings: float | None
+    discount_rate: float | None
+    reported_savings_rate: float | None
+    fees: float | None
+    fee_percentage: float | None
+    tax: float | None
+    tips: float | None
+    refunds: float | None
+    unique_restaurants: float | None
+    unique_dishes: float | None
+    average_rating: float | None
+
+
+class Comparison(BaseModel):
+    date_from: date
+    date_to: date
+    kpis: KPIs
+    percent_change: KPIDeltas
+
+
 class Charts(BaseModel):
     monthly: list[Month]
+    calendar: list[CalendarDay]
 
 
 class Dashboard(Metadata):
     kpis: KPIs
     charts: Charts
+    comparison: Comparison | None
     data_complete: bool
 
 

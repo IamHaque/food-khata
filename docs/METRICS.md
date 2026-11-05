@@ -27,3 +27,10 @@ selected scope; monthly spend covers delivered orders.
 Monthly rounding remainder is assigned to the final month so the displayed
 series reconciles to the rounded KPI when stored values have fractional paise.
 
+
+Dashboard calendar counts selected orders and sums delivered spend by date.
+Comparisons retain all non-date filters. Previous period is the disjoint inclusive
+interval of equal length; previous year shifts each endpoint back one year,
+clamping leap day to February 28. Missing bounds come from the filtered scope.
+Percent changes are relative to the baseline and null when it is zero or absent.
+Calendar rounding remainder is assigned to its final bucket to match rounded spend. Unrepresentable prior dates or invalid derived bounds return no comparison rather than failing the dashboard.

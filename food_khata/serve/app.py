@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .charts import overview
 from .db import connect_readonly, database_version
 from .filters import build_where
 from .metrics import compute_metrics, monthly_totals
@@ -312,10 +313,12 @@ def create_app(
             if cached is not None and key[1] == database_version(db_path):
                 return cached
             h = health(conn, filters)
+            calendar, comparison = overview(conn, filters)
             result = {
                 **metadata(filters),
+                "comparison": comparison,
                 "kpis": compute_metrics(conn, filters),
-                "charts": {"monthly": monthly_totals(conn, filters)},
+                "charts": {"monthly": monthly_totals(conn, filters), "calendar": calendar},
                 "data_complete": h["history_complete"] and h["details_complete"],
             }
             with cache_lock:
