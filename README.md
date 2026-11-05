@@ -1,8 +1,8 @@
 # Food Khata
 
-A local CLI for saving your Zomato and Swiggy food order history. Choose a provider,
-reuse a saved session or log in with your phone and SMS OTP, then sync automatically.
-New orders and missing details are downloaded; valid saved details are reused.
+A local CLI for saving and visualizing your Zomato and Swiggy food order history.
+Log in or reuse active sessions, sync new orders incrementally, ingest order history
+into a local SQLite analytics database, and generate an interactive visual dashboard.
 
 ## Install and run
 
@@ -12,29 +12,76 @@ Requires Python 3.11 or newer and an existing Indian Zomato or Swiggy account.
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e .
-python food_khata.py
+food-khata
 ```
 
 On macOS/Linux activate with `source .venv/bin/activate`. The installed
-`food-khata` command runs the same flow. Run `python food_khata.py --help` for options.
-Use `--data-dir PATH` to choose a different private data directory.
-By default, data stays in `.food-khata/` inside this source checkout, regardless
-of the working directory you launch the command from. That directory is ignored by Git.
+`food-khata` command (or `python -m food_khata`) runs the flow.
 
-Select a provider. If there is a saved session, choose reuse or logout and login
-again. Enter your phone (10 digits or `+91` prefix) and the masked SMS OTP when
-prompted. Login does not create new provider accounts. Zomato requires at least
-one saved address in its app to supply history request context.
+### Commands & Subcommands
 
-When multiple saved accounts exist, select one or log in to another. To switch
-from a single saved account, choose logout and login again. Logout preserves all
-order history. Zomato requests server signout; Swiggy logout removes only the
-local session because remote session revocation is not implemented.
+* **`food-khata`** or **`food-khata sync`** *(Default)*:
+  Interactive account selection, login/refresh, smart order sync, automatic local
+  database update, and interactive prompt to view the visual dashboard.
+* **`food-khata ingest`**:
+  Migrates all saved order JSONs across all accounts into the local SQLite database
+  (`food_analytics.db`) without performing any network or login requests.
+* **`food-khata dashboard`**:
+  Compiles and opens the visual analytics dashboard (`dashboard.html`) in your default
+  browser directly from the local database.
+
+Flags:
+* `--data-dir PATH`: Override the private data directory (default: `.food-khata/`).
+* `--db-path PATH`: Override the SQLite database location (default: `.food-khata/food_analytics.db`).
+* `--no-dashboard`: Skip the post-sync dashboard prompt.
+* `--no-open`: Generate the dashboard without opening the browser.
+
+### Multi-Account & Session Management
+
+Select a provider (`zomato` or `swiggy`). When saved accounts exist, the CLI displays
+all accounts with clear status indicators (`[Active session]` or `[Unauthenticated]`),
+along with the option to `"Log in to another account (add new)"`.
+
+For any selected account:
+* **Reuse session**: Proceed directly to sync using the stored credentials.
+* **Refresh session**: Uses OAuth token refresh (Zomato) or silent profile verification (Swiggy)
+  to refresh credentials in-place without re-entering OTP.
+* **Reauthenticate (SMS OTP)**: Prompts for SMS OTP using the known phone number, updating
+  credentials without wiping history archives.
+* **Switch account**: Return to account selection without logging out.
+* **Logout and log in again**: Revokes credentials only when explicitly requested.
+
+### Sync Modes
+
+When pre-existing history is found for an account, choose your sync mode:
+1. **Sync new orders (incremental)** *(Default)*:
+   Scans newest orders first and stops immediately upon reaching previously saved orders,
+   fetching details only for newly discovered orders.
+2. **Check and repair missing details**:
+   Skips history pagination entirely and only scans existing saved orders to patch missing
+   or incomplete detail payloads.
+3. **Full history scan**:
+   Paginate to the very end for deep manual recovery.
+
+### Local Analytics Database & Dashboard
+
+After syncing, orders are automatically ingested into `.food-khata/food_analytics.db`.
+The CLI then prompts to open the unified visual dashboard (`dashboard.html`), featuring:
+* **Macro KPIs**: Delivered spend, total savings (food discounts + waived delivery), orders, and AOV.
+* **Platform Battle**: Side-by-side comparison of Swiggy vs Zomato metrics.
+* **Monthly & Fee Creep Timelines**: Historical spend curves and platform fee evolution.
+* **Dietary & Cuisine Split**: Veg vs Non-Veg spending and dish distribution.
+* **Ordering Habit Patterns**: 7x24 density heatmap and meal-time slots (Breakfast to Late Night).
+* **Favorites**: Top 10 most visited restaurants and most ordered dishes.
+* **Household Multi-Account Filter**: Switch between all accounts combined or individual phone numbers.
+
 
 ## Your data
 
 ```text
 food-khata/.food-khata/
+  food_analytics.db     <-- Normalized SQLite relational analytics database
+  dashboard.html        <-- Standalone interactive visual analytics app
   accounts/
     <local-account-id>/
       account.json
