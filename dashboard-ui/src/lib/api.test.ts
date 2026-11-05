@@ -24,7 +24,7 @@ it('retains extended dashboard fields and rejects invalid nested numbers', async
  const {defaultFilters}=await import('./filters');
  const kpis={orders:0,valid_order_count:0,spend:0,aov:null,total_discount:0,reported_savings:0,discount_rate:null,reported_savings_rate:null,fees:0,fee_percentage:null,tax:0,tips:0,refunds:0,unique_restaurants:0,unique_dishes:0,average_rating:null};
  const data={filters_applied:defaultFilters(),generated_at:'now',kpis,data_complete:true,comparison:null,
- charts:{monthly:[],calendar:[{date:'2025-01-01',orders:1,spend:2}],cost_waterfall:{subtotal:0,food_discount:0,net_delivery:0,packaging:0,platform:0,tax:0,tip:0,other:0,residual:0,provider_paid:0,refunds:0},top_restaurants:[],top_dishes:[],platforms:[],monthly_fee_components:[],insights:[]}};
+ charts:{behavior:{timing_unavailable_reason:null,date_unavailable_reason:null,hour_weekday:[],meals:[],day_type:[],aov_histogram:[],gaps:[],longest_streak:null,longest_gap:null,orders_per_week:null},monthly:[],calendar:[{date:'2025-01-01',orders:1,spend:2}],cost_waterfall:{subtotal:0,food_discount:0,net_delivery:0,packaging:0,platform:0,tax:0,tip:0,other:0,residual:0,provider_paid:0,refunds:0},top_restaurants:[],top_dishes:[],platforms:[],monthly_fee_components:[],insights:[]}};
  expect(DashboardSchema.parse(data).charts.calendar[0].spend).toBe(2);
  expect(DashboardSchema.parse(data).comparison).toBe(null);
  expect(DashboardSchema.safeParse({...data,charts:{...data.charts,calendar:[{date:'2025-01-01',orders:1,spend:'bad'}]}}).success).toBe(false);

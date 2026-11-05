@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './app/App';
@@ -10,3 +11,4 @@ if (window.location.pathname === '/legacy') {
   if (!root) throw new Error('Missing root element');
   createRoot(root).render(<Providers><BrowserRouter><App /></BrowserRouter></Providers>);
 }
+

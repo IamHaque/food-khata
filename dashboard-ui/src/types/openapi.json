@@ -2244,6 +2244,137 @@
         ],
         "title": "AccountOption"
       },
+      "Behavior": {
+        "properties": {
+          "timing_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Unavailable Reason"
+          },
+          "date_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Unavailable Reason"
+          },
+          "hour_weekday": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Hour Weekday"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Meals"
+          },
+          "day_type": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Day Type"
+          },
+          "aov_histogram": {
+            "items": {
+              "$ref": "#/components/schemas/HistogramRow"
+            },
+            "type": "array",
+            "title": "Aov Histogram"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapRow"
+            },
+            "type": "array",
+            "title": "Gaps"
+          },
+          "longest_streak": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Streak"
+          },
+          "longest_gap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Gap"
+          },
+          "orders_per_week": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders Per Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timing_unavailable_reason",
+          "date_unavailable_reason",
+          "hour_weekday",
+          "meals",
+          "day_type",
+          "aov_histogram",
+          "gaps",
+          "longest_streak",
+          "longest_gap",
+          "orders_per_week"
+        ],
+        "title": "Behavior"
+      },
+      "BehaviorRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "orders",
+          "spend"
+        ],
+        "title": "BehaviorRow"
+      },
       "Bill": {
         "properties": {
           "order": {
@@ -2354,6 +2485,9 @@
       },
       "Charts": {
         "properties": {
+          "behavior": {
+            "$ref": "#/components/schemas/Behavior"
+          },
           "monthly": {
             "items": {
               "$ref": "#/components/schemas/Month"
@@ -2409,6 +2543,7 @@
         },
         "type": "object",
         "required": [
+          "behavior",
           "monthly",
           "calendar",
           "cost_waterfall",
@@ -2854,6 +2989,24 @@
         "type": "object",
         "title": "Filters"
       },
+      "GapRow": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "orders"
+        ],
+        "title": "GapRow"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2944,6 +3097,24 @@
           "note"
         ],
         "title": "Health"
+      },
+      "HistogramRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "orders"
+        ],
+        "title": "HistogramRow"
       },
       "ImportHealth": {
         "properties": {

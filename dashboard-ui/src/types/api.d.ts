@@ -159,6 +159,38 @@ export interface components {
             /** Date To */
             date_to: string | null;
         };
+        /** Behavior */
+        Behavior: {
+            /** Timing Unavailable Reason */
+            timing_unavailable_reason: string | null;
+            /** Date Unavailable Reason */
+            date_unavailable_reason: string | null;
+            /** Hour Weekday */
+            hour_weekday: components["schemas"]["BehaviorRow"][];
+            /** Meals */
+            meals: components["schemas"]["BehaviorRow"][];
+            /** Day Type */
+            day_type: components["schemas"]["BehaviorRow"][];
+            /** Aov Histogram */
+            aov_histogram: components["schemas"]["HistogramRow"][];
+            /** Gaps */
+            gaps: components["schemas"]["GapRow"][];
+            /** Longest Streak */
+            longest_streak: number | null;
+            /** Longest Gap */
+            longest_gap: number | null;
+            /** Orders Per Week */
+            orders_per_week: number | null;
+        };
+        /** BehaviorRow */
+        BehaviorRow: {
+            /** Key */
+            key: string;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+        };
         /** Bill */
         Bill: {
             order: components["schemas"]["Order"];
@@ -193,6 +225,7 @@ export interface components {
         };
         /** Charts */
         Charts: {
+            behavior: components["schemas"]["Behavior"];
             /** Monthly */
             monthly: components["schemas"]["Month"][];
             /** Calendar */
@@ -349,6 +382,13 @@ export interface components {
              */
             compare: "none" | "previous_period" | "previous_year";
         };
+        /** GapRow */
+        GapRow: {
+            /** Days */
+            days: number;
+            /** Orders */
+            orders: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -380,6 +420,13 @@ export interface components {
             reconciliation_anomalies: number;
             /** Note */
             note: string;
+        };
+        /** HistogramRow */
+        HistogramRow: {
+            /** Key */
+            key: string;
+            /** Orders */
+            orders: number;
         };
         /** ImportHealth */
         ImportHealth: {

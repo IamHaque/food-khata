@@ -57,3 +57,6 @@ export function sanitizeAccountFilters(filters:FilterState, meta:components['sch
  if(filters.statuses.length && !next.statuses.length) next.statuses=['DELIVERED'];
  return {filters:next,removed};
 }
+
+export function validateFilters(value:unknown):FilterState{return schema.parse(value);}
+

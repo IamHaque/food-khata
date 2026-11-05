@@ -30,6 +30,7 @@ export const DashboardSchema:z.ZodType<components['schemas']['Dashboard']>=z.obj
  filters_applied:FiltersSchema,generated_at:z.string(),kpis:KPISchema,data_complete:z.boolean(),
  comparison:z.object({date_from:z.string(),date_to:z.string(),kpis:KPISchema,percent_change:DeltaSchema}).nullable(),
  charts:z.object({
+  behavior:z.object({timing_unavailable_reason:z.string().nullable(),date_unavailable_reason:z.string().nullable(),hour_weekday:z.array(z.object({key:z.string(),orders:z.number().int(),spend:z.number()})),meals:z.array(z.object({key:z.string(),orders:z.number().int(),spend:z.number()})),day_type:z.array(z.object({key:z.string(),orders:z.number().int(),spend:z.number()})),aov_histogram:z.array(z.object({key:z.string(),orders:z.number().int()})),gaps:z.array(z.object({days:z.number().int(),orders:z.number().int()})),longest_streak:z.number().int().nullable(),longest_gap:z.number().int().nullable(),orders_per_week:z.number().nullable()}),
   monthly:z.array(z.object({month:z.string().nullable(),orders:z.number().int(),spend:z.number()})),
   calendar:z.array(z.object({date:z.string().nullable(),orders:z.number().int(),spend:z.number()})),
   cost_waterfall:z.object({subtotal:z.number(),food_discount:z.number(),net_delivery:z.number(),packaging:z.number(),platform:z.number(),tax:z.number(),tip:z.number(),other:z.number(),residual:z.number(),provider_paid:z.number(),refunds:z.number()}),
