@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 
 class Filters(BaseModel):
@@ -46,3 +46,155 @@ class Filters(BaseModel):
             if self.amount_min > self.amount_max:
                 raise ValueError("amount_min must not exceed amount_max")
         return self
+
+
+class Metadata(BaseModel):
+    filters_applied: Filters
+    generated_at: datetime
+
+
+class AccountOption(BaseModel):
+    id: str
+    label: str
+    platforms: list[str]
+    order_count: int
+    date_from: str | None
+    date_to: str | None
+
+
+class FilterOptions(Metadata):
+    accounts: list[AccountOption]
+    platforms: list[str]
+    statuses: list[str]
+    cities: list[str]
+    localities: list[str]
+    cuisines: list[str]
+    payment_methods: list[str]
+    date_from: str | None
+    date_to: str | None
+    amount_min: float | None
+    amount_max: float | None
+
+
+class ImportHealth(BaseModel):
+    account_id: str
+    platform: str
+    history_complete: bool
+    details_complete: bool
+
+
+class Health(Metadata):
+    imports: list[ImportHealth]
+    history_complete: bool
+    details_complete: bool
+    verified_percent: float | None
+    note: str
+
+
+class KPIs(BaseModel):
+    orders: int
+    valid_order_count: int
+    spend: float
+    aov: float | None
+    total_discount: float
+    reported_savings: float
+    discount_rate: float | None
+    reported_savings_rate: float | None
+    fees: float
+    fee_percentage: float | None
+    tax: float
+    tips: float
+    refunds: float
+    unique_restaurants: int
+    unique_dishes: int
+    average_rating: float | None
+
+
+class Month(BaseModel):
+    month: str | None
+    orders: int
+    spend: float
+
+
+class Charts(BaseModel):
+    monthly: list[Month]
+
+
+class Dashboard(Metadata):
+    kpis: KPIs
+    charts: Charts
+    data_complete: bool
+
+
+class Order(BaseModel):
+    id: str
+    account_label: str
+    platform: str
+    order_date: str
+    order_status: str
+    restaurant_name: str | None
+    address_label: str | None
+    city: str | None
+    items_summary: str | None
+    final_amount_paid: float
+    item_subtotal: float | None
+    total_discount: float | None
+    reported_savings: float | None
+    delivery_fee: float | None
+    packaging_fee: float | None
+    platform_fee: float | None
+    total_tax: float | None
+    tip: float | None
+    refund_amount: float | None
+    financial_verified: bool
+
+
+class Orders(Metadata):
+    rows: list[Order]
+    total: int
+    page: int
+    page_size: int
+    filtered_total_amount: float
+
+
+class Item(BaseModel):
+    item_name: str
+    quantity: int
+    unit_price: float | None
+    total_price: float | None
+    is_veg: bool | None
+    category: str | None
+
+
+class Bill(BaseModel):
+    order: Order
+    items: list[Item]
+    reconciliation_difference: float | None
+    full_address: str | None
+    source_bill: JsonValue = None
+    discount_breakdown: JsonValue = None
+
+
+class Leader(BaseModel):
+    name: str
+    quantity: int
+    amount: float
+
+
+class Leaders(Metadata):
+    rows: list[Leader]
+    total: int
+    page: int
+    page_size: int
+
+
+class SlimOrder(BaseModel):
+    id: str
+    order_date: str
+    platform: str
+    order_status: str
+    final_amount_paid: float
+
+
+class Slim(Metadata):
+    rows: list[SlimOrder]
