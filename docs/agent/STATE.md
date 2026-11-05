@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T6C / Terra Medium: chart edge tests/nonfinite safety next. UI-T1C / Terra Medium: API/Zod/hooks next. Root verified frontend shell typecheck/lint/build/7 Node tests and legacy browser pass.
+E1-T7 / Terra Medium: remaining page chart datasets next. MIG-01-T1 / Terra Medium: synthetic parity harness next. UI-T1C API/hooks running. Overview root87+10/Ruff verified.
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Complete typed frontend foundation/account filters (UI-T1, Terra Medium).
@@ -45,10 +45,11 @@ Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/resu
 Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
 Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06 root: pytest 79 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
+2026-11-06 root: pytest 87 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 

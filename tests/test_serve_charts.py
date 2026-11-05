@@ -55,3 +55,94 @@ def test_unknown_dates_do_not_crash_comparison(conn):
     conn.execute("UPDATE orders SET order_date='' WHERE id='1'")
     _, comparison = overview(conn, Filters(compare="previous_year"))
     assert comparison is None
+
+
+def test_remaining_scoped_financials(conn):
+    from food_khata.serve.charts import remaining
+    from food_khata.serve.metrics import compute_metrics
+
+    filters = Filters(account_ids=["a"], statuses=[])
+    charts = remaining(conn, filters)
+    kpis = compute_metrics(conn, filters)
+    waterfall = charts["cost_waterfall"]
+    assert (
+        round(
+            sum(
+                waterfall[k]
+                for k in (
+                    "subtotal",
+                    "food_discount",
+                    "net_delivery",
+                    "packaging",
+                    "platform",
+                    "tax",
+                    "tip",
+                    "other",
+                    "residual",
+                )
+            ),
+            2,
+        )
+        == kpis["spend"]
+    )
+    assert waterfall["refunds"] == 7
+    assert sum(m["total_fees"] for m in charts["monthly_fee_components"]) == kpis["fees"]
+    assert charts["top_restaurants"][0]["amount"] == kpis["spend"]
+    assert charts["insights"] == []
+    assert remaining(conn, Filters(account_ids=["missing"]))["top_dishes"] == []
+
+
+def test_fee_rounding_keeps_components(conn):
+    from food_khata.serve.charts import remaining
+    from food_khata.serve.metrics import compute_metrics
+
+    conn.execute("UPDATE orders SET delivery_fee=0.006, packaging_fee=0.006, platform_fee=0.006")
+    charts = remaining(conn, Filters())
+    months = charts["monthly_fee_components"]
+    assert all(m["platform"] == 0.01 for m in months)
+    assert (
+        round(sum(m["total_fees"] for m in months), 2) == compute_metrics(conn, Filters())["fees"]
+    )
+    assert any(m["rounding_adjustment"] for m in months)
+
+
+def test_insight_threshold(conn):
+    from food_khata.serve.charts import remaining
+
+    conn.execute("UPDATE orders SET order_status='DELIVERED'")
+    for n in range(4, 6):
+        conn.execute(
+            "INSERT INTO orders (id, account_id, platform, platform_order_id, order_timestamp, order_date, order_time, order_status, restaurant_id, final_amount_paid) VALUES (?, 'a', 'SWIGGY', ?, '2025-01-01', '2025-01-01', '12:00', 'DELIVERED', 'r1', 10)",
+            (str(n), str(n)),
+        )
+        insights = remaining(conn, Filters())["insights"]
+        assert len(insights) == (0 if n == 4 else 3)
+        for insight in insights:
+            Filters(**insight["filter_patch"])
+
+
+def test_chart_scope_multi_item_and_nulls(conn):
+    from food_khata.serve.charts import remaining
+    from food_khata.serve.metrics import compute_metrics
+
+    conn.execute(
+        "INSERT INTO order_items (order_id,item_name,quantity,total_price) VALUES ('1','Extra',2,25)"
+    )
+    conn.execute("UPDATE orders SET tip=NULL, total_tax=NULL, packaging_fee=NULL WHERE id='3'")
+    for account in ("a", "b", "missing"):
+        filters = Filters(account_ids=[account], statuses=[])
+        charts = remaining(conn, filters)
+        kpis = compute_metrics(conn, filters)
+        assert round(sum(p["spend"] for p in charts["platforms"]), 2) == kpis["spend"]
+        assert sum(p["orders"] for p in charts["platforms"]) == kpis["valid_order_count"]
+        assert sum(r["quantity"] for r in charts["top_restaurants"]) == kpis["valid_order_count"]
+        assert (
+            round(sum(m["total_fees"] for m in charts["monthly_fee_components"]), 2) == kpis["fees"]
+        )
+        assert charts["cost_waterfall"]["provider_paid"] == kpis["spend"]
+        if account == "a":
+            assert {dish["name"] for dish in charts["top_dishes"]} == {"Rice", "Bread", "Extra"}
+        if account == "b":
+            assert {dish["name"] for dish in charts["top_dishes"]} == {"Mystery"}
+        if account == "missing":
+            assert charts["top_restaurants"] == charts["top_dishes"] == charts["platforms"] == []

@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .charts import overview
+from .charts import overview, remaining
 from .db import connect_readonly, database_version
 from .filters import build_where
 from .metrics import compute_metrics, monthly_totals
@@ -318,9 +318,19 @@ def create_app(
                 **metadata(filters),
                 "comparison": comparison,
                 "kpis": compute_metrics(conn, filters),
-                "charts": {"monthly": monthly_totals(conn, filters), "calendar": calendar},
+                "charts": {
+                    "monthly": monthly_totals(conn, filters),
+                    "calendar": calendar,
+                    **remaining(conn, filters),
+                },
                 "data_complete": h["history_complete"] and h["details_complete"],
             }
+            try:
+                json.dumps(result, allow_nan=False, default=str)
+            except ValueError:
+                raise HTTPException(
+                    422, "Dashboard data contains invalid numeric values."
+                ) from None
             with cache_lock:
                 if key[1] == database_version(db_path):
                     cache.clear()

@@ -276,3 +276,16 @@ def test_health_duplicate_counts_follow_order_scope(conn):
         ]
         == 0
     )
+
+
+def test_nonfinite_dashboard_recovers(conn):
+    path = conn.execute("PRAGMA database_list").fetchone()[2]
+    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    conn.execute("UPDATE orders SET final_amount_paid=? WHERE id='1'", (float("inf"),))
+    conn.commit()
+    response = client.post("/api/dashboard", json={})
+    assert response.status_code == 422
+    assert "Infinity" not in response.text and "NaN" not in response.text
+    conn.execute("UPDATE orders SET final_amount_paid=100 WHERE id='1'")
+    conn.commit()
+    assert client.post("/api/dashboard", json={}).status_code == 200

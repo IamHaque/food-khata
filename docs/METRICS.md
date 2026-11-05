@@ -34,3 +34,10 @@ interval of equal length; previous year shifts each endpoint back one year,
 clamping leap day to February 28. Missing bounds come from the filtered scope.
 Percent changes are relative to the baseline and null when it is zero or absent.
 Calendar rounding remainder is assigned to its final bucket to match rounded spend. Unrepresentable prior dates or invalid derived bounds return no comparison rather than failing the dashboard.
+
+Overview waterfall uses delivered order components, with food discount negative and a
+residual to match provider paid. Refunds are shown separately and are not subtracted.
+Restaurant totals use order sums; dish totals use item sums. Platform savings are
+advertised savings, distinct from explicit discounts. Monthly fee totals exclude tax
+and reconcile to the fees KPI; the rounding remainder is shown as a separate adjustment in the final month.
+Insights require at least five delivered orders.

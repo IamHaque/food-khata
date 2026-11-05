@@ -161,9 +161,68 @@ class Comparison(BaseModel):
     percent_change: KPIDeltas
 
 
+class Waterfall(BaseModel):
+    subtotal: float
+    food_discount: float
+    net_delivery: float
+    packaging: float
+    platform: float
+    tax: float
+    tip: float
+    other: float
+    residual: float
+    provider_paid: float
+    refunds: float
+
+
+class ChartLeader(BaseModel):
+    key: str
+    name: str
+    quantity: int
+    amount: float
+
+
+class PlatformChart(BaseModel):
+    platform: str
+    orders: int
+    spend: float
+    discounts: float
+    advertised_savings: float
+    fees: float
+
+
+class FeeMonth(BaseModel):
+    month: str | None
+    order_count: int
+    net_delivery: float
+    packaging: float
+    platform: float
+    tax: float
+    total_fees: float
+    rounding_adjustment: float
+
+
+class InsightPatch(BaseModel):
+    platforms: list[str] = []
+    restaurant_ids: list[str] = []
+
+
+class Insight(BaseModel):
+    key: Literal["most_frequent_platform", "top_restaurant", "fee_percentage"]
+    text: str
+    value: str
+    filter_patch: InsightPatch
+
+
 class Charts(BaseModel):
     monthly: list[Month]
     calendar: list[CalendarDay]
+    cost_waterfall: Waterfall
+    top_restaurants: list[ChartLeader]
+    top_dishes: list[ChartLeader]
+    platforms: list[PlatformChart]
+    monthly_fee_components: list[FeeMonth]
+    insights: list[Insight]
 
 
 class Dashboard(Metadata):

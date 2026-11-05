@@ -1,9 +1,9 @@
-# E1-T6A result — incomplete
+# E1 chart result
 
-- Added typed calendar and comparison response models; comparisons include baseline KPIs and percentage changes.
-- Synthetic test covers leap day, account isolation, multi-item order count, zero baseline and previous period.
-- Full suite: 80 passed, 10 subtests passed; Ruff check and format passed.
-- Remaining: waterfall, restaurant/dish leaders, platform/monthly fee components, insights, and broader edge/reconciliation tests.
-- Behavior, food and places datasets remain for the next task.
-- Root added rounding remainder and invalid/minimum date guards; three targeted calendar/comparison tests pass. No comparison is returned when derived bounds are invalid or prior range is unrepresentable.
-
+- Added separate monthly fee rounding adjustment; refunds remain separate from provider paid.
+- Added top-restaurant and fee-percentage insights alongside platform, gated at five delivered orders.
+- Dashboard rejects non-finite output before caching; synthetic recovery test passes.
+- Full synthetic suite: 86 passed, 10 subtests passed, 1 warning; Ruff check and format passed before final schema default adjustment.
+- Remaining: account-isolation coverage for every chart, multi-item order-count coverage, and empty/one/NULL coverage need expansion; finite safety outside dashboard is not verified.
+- Behavior, Food and Places page work remains outside this task. No real database used; changes uncommitted.
+Root final verification:87tests+10subtests/Ruff pass, including expanded account/multiitem/NULL assertions. Finite data guard verified for dashboard; other endpoints require final API review.
