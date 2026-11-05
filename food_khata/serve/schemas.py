@@ -214,7 +214,37 @@ class Insight(BaseModel):
     filter_patch: InsightPatch
 
 
+class BehaviorRow(BaseModel):
+    key: str
+    orders: int
+    spend: float
+
+
+class HistogramRow(BaseModel):
+    key: str
+    orders: int
+
+
+class GapRow(BaseModel):
+    days: int
+    orders: int
+
+
+class Behavior(BaseModel):
+    timing_unavailable_reason: str | None
+    date_unavailable_reason: str | None
+    hour_weekday: list[BehaviorRow]
+    meals: list[BehaviorRow]
+    day_type: list[BehaviorRow]
+    aov_histogram: list[HistogramRow]
+    gaps: list[GapRow]
+    longest_streak: int | None
+    longest_gap: int | None
+    orders_per_week: float | None
+
+
 class Charts(BaseModel):
+    behavior: Behavior
     monthly: list[Month]
     calendar: list[CalendarDay]
     cost_waterfall: Waterfall

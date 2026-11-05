@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .behavior import behavior
 from .charts import overview, remaining
 from .db import connect_readonly, database_version
 from .filters import build_where
@@ -319,6 +320,7 @@ def create_app(
                 "comparison": comparison,
                 "kpis": compute_metrics(conn, filters),
                 "charts": {
+                    "behavior": behavior(conn, filters),
                     "monthly": monthly_totals(conn, filters),
                     "calendar": calendar,
                     **remaining(conn, filters),

@@ -41,3 +41,5 @@ Restaurant totals use order sums; dish totals use item sums. Platform savings ar
 advertised savings, distinct from explicit discounts. Monthly fee totals exclude tax
 and reconcile to the fees KPI; the rounding remainder is shown as a separate adjustment in the final month.
 Insights require at least five delivered orders.
+
+Behavior counts use selected statuses; spend includes delivered orders only. Hour/weekday and meal rows require valid local dates and times; day type and gaps require valid dates. Hour-weekday keys are Monday-based weekday × 24 + hour. More than 80% missing required values sets the corresponding unavailable reason. Histogram lower bounds are 0, 100, 250, 500 and 1000, with the first bin also including negative values. Gaps are between consecutive orders, including same-day zero gaps; streaks count consecutive distinct order dates. Orders per week uses the inclusive observed date span.
