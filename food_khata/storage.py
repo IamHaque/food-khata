@@ -12,6 +12,8 @@ from typing import Any
 
 from .contracts import KhataError
 
+DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / ".food-khata"
+
 
 def read_json(path: Path) -> Any:
     try:
@@ -83,7 +85,7 @@ def _provider(value: str) -> str:
 
 class Storage:
     def __init__(self, root: Path | None = None) -> None:
-        self.root = Path(root) if root is not None else Path.home() / ".food-khata"
+        self.root = Path(root).expanduser().resolve() if root is not None else DEFAULT_DATA_DIR
         self.accounts_dir = self.root / "accounts"
 
     def account_path(self, local_id: str) -> Path:

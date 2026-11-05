@@ -4,10 +4,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from food_khata.contracts import KhataError
-from food_khata.storage import Storage, lock, read_json, save_json
+from food_khata.storage import DEFAULT_DATA_DIR, Storage, lock, read_json, save_json
 
 
 class StorageTests(unittest.TestCase):
+    def test_default_data_directory_is_inside_checkout(self):
+        self.assertEqual(DEFAULT_DATA_DIR, Path(__file__).resolve().parents[1] / ".food-khata")
+        self.assertEqual(Storage().root, DEFAULT_DATA_DIR)
+
     def test_lock_exclusion_and_release(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".lock"

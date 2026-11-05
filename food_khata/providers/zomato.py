@@ -37,7 +37,12 @@ def order_id(action: Any) -> str | None:
             if found:
                 return found
     elif isinstance(action, str) and "://" in action:
-        for key, values in parse_qs(urlparse(action).query).items():
+        parsed = urlparse(action)
+        if parsed.scheme == "zomato" and parsed.netloc == "delivery":
+            match = re.fullmatch(r"/([0-9]+)/?", parsed.path)
+            if match:
+                return match[1]
+        for key, values in parse_qs(parsed.query).items():
             if key.lower().replace("_", "") in ("tabid", "orderid"):
                 if values and re.fullmatch(r"[0-9]+", values[0]):
                     return values[0]
@@ -111,12 +116,20 @@ class Zomato:
 
     def _auth_request(self, auth: Any, method: str, url: str, **kwargs: Any) -> Any:
         url = self._auth_url(url)
+        stage = {
+            "/oauth2/auth": "authorization",
+            "/login/phone": "OTP verification"
+            if kwargs.get("data", {}).get("type") == "verify"
+            else "OTP request",
+            "/consent": "consent",
+            "/token": "token exchange",
+        }.get(urlparse(url).path, "authentication redirect")
         for _ in range(10):
             try:
                 response = auth.request(method, url, timeout=25, allow_redirects=False, **kwargs)
             except curl_requests.RequestsError:
                 raise KhataError(
-                    "Zomato authentication network failure; OTP was not retried."
+                    f"Zomato authentication network failure during {stage}; no request was retried."
                 ) from None
             if response.status_code in (301, 302, 303, 307, 308):
                 target = response.headers.get("Location")
@@ -127,12 +140,17 @@ class Zomato:
                     method, kwargs = "GET", {}
                 continue
             if response.status_code != 200:
-                raise KhataError(f"Zomato authentication returned HTTP {response.status_code}.")
+                raise KhataError(
+                    f"Zomato authentication returned HTTP {response.status_code} during {stage}."
+                )
             return response
         raise KhataError("Zomato authentication redirected too many times.")
 
     def _auth_json(self, auth: Any, path: str, data: dict[str, Any]) -> dict[str, Any]:
-        response = self._auth_request(auth, "POST", ACCOUNTS + path, data=data)
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        if path == "/token":
+            headers["Accept"] = "application/json, text/plain, */*"
+        response = self._auth_request(auth, "POST", ACCOUNTS + path, data=data, headers=headers)
         try:
             result = response.json()
         except ValueError:
@@ -210,7 +228,7 @@ class Zomato:
             consent = parse_qs(urlparse(response.url).query).get("consent_challenge", [None])[0]
             if not consent:
                 raise KhataError("Zomato did not supply a consent challenge.")
-            approved = self._auth_json(auth, "/consent", {"consent_challenge": consent})
+            approved = self._auth_json(auth, "/consent", {"cc": consent})
             response = self._follow_result(auth, approved)
             query = parse_qs(urlparse(response.url).query)
             if urlparse(response.url).path != "/zoauth/callback" or query.get("state") != [state]:
@@ -352,8 +370,17 @@ class Zomato:
                     identity = (
                         order_id(card.get("click_action")) if isinstance(card, dict) else None
                     )
+                    if (
+                        not identity
+                        and key == "order_history_snippet_type_2"
+                        and isinstance(card, dict)
+                    ):
+                        # Older order cards omit navigation; their top-level identifier is the order ID.
+                        identifier = str(card.get("identifier", ""))
+                        if re.fullmatch(r"[0-9]+", identifier):
+                            identity = identifier
                     if not identity:
-                        raise KhataError("Zomato order card is missing its navigation ID.")
+                        raise KhataError("Zomato order card is missing a usable order ID.")
                     recognized = True
                     if identity not in seen:
                         seen.add(identity)

@@ -25,6 +25,11 @@ OTP authentication binds a new provider. Reusing a session rechecks its provider
 against the mapping. The sync engine also checks identity before mutation and at
 completion. A conflicting mapping fails rather than combining histories.
 
+The default root is `.food-khata/` inside the source checkout, anchored to the
+module location rather than the current working directory. Both `Storage()` and
+the CLI share this default; `--data-dir` explicitly overrides it. The full data
+directory, including sessions, is ignored by Git.
+
 `account.json` version 1:
 
 ```json
@@ -57,6 +62,11 @@ Absent or invalid `details` triggers a detail request. Other invalid archive
 structure, a wrong schema version, or mismatched identity fails without replacement.
 Orders are keyed by ID to deduplicate overlaps without discarding downloaded details.
 
+Zomato IDs are parsed from order navigation parameters or the observed
+`zomato://delivery/<id>` path. Type-2 order cards without navigation can use their
+top-level numeric `identifier`; arbitrary nested UI identifiers are not parsed as
+order IDs. Downloaded details must match the requested ID and contain item data.
+
 ## Durability and concurrency
 
 JSON is written to a private temporary file in the destination directory, flushed,
@@ -76,6 +86,8 @@ token exchange. HTTP 403 remains an access failure, not proof of an expired sess
 
 Full list-page scans prioritize coverage over request reduction. Valid cached
 details are immutable snapshots; refreshing changes to an already complete order
-is outside this version's scope. Old Jomato exports and credentials are not imported.
+is outside this version's scope. There is no automatic import of old Jomato exports
+or credentials. Validated exports can be converted and merged offline after an
+explicit account mapping, preserving valid saved details and backing up prior archives.
 There is no automatic schema migration: future schema changes must include an
 explicit migration before an old archive can be updated.

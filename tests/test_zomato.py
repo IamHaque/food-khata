@@ -13,6 +13,34 @@ from food_khata.sync import sync
 
 
 class ZomatoTests(unittest.TestCase):
+    def test_order_card_identifier_when_navigation_is_absent(self):
+        page = {
+            "status": "success",
+            "has_more": False,
+            "results": [
+                {"order_history_snippet_type_2": {"identifier": "123", "top_container": {}}},
+                {
+                    "order_history_snippet_type_2": {
+                        "identifier": "456",
+                        "click_action": {"tab_id": "789"},
+                    }
+                },
+            ],
+        }
+        with (
+            patch.object(self.provider, "_location", return_value={"address_id": "1"}),
+            patch.object(self.provider, "_api", return_value=page),
+        ):
+            records = list(self.provider.pages())[0]
+        self.assertEqual([r["order_id"] for r in records], ["123", "789"])
+        page["results"] = [{"order_history_snippet_type_2": {"identifier": "ui-only"}}]
+        with (
+            patch.object(self.provider, "_location", return_value={"address_id": "1"}),
+            patch.object(self.provider, "_api", return_value=page),
+            self.assertRaises(KhataError),
+        ):
+            list(self.provider.pages())
+
     def test_unknown_final_page_keeps_archive_incomplete(self):
         first = {
             "status": "success",
@@ -45,6 +73,51 @@ class ZomatoTests(unittest.TestCase):
         self.assertEqual(order_id({"nested": "zomato://order?tab_id=123"}), "123")
         self.assertTrue(self.provider.valid_details("123", {"id": 123, "order": {"items": []}}))
         self.assertFalse(self.provider.valid_details("12", {"id": 123, "order": {"items": []}}))
+
+    def test_delivery_path_navigation_id(self):
+        self.assertEqual(
+            order_id({"deeplink": {"url": "zomato://delivery/123?source=order_history"}}), "123"
+        )
+        for link in (
+            "zomato://restaurant/123",
+            "https://example.test/123",
+            "zomato://delivery/../123",
+            "zomato://delivery/not-an-id",
+            "zomato://delivery/123/456",
+        ):
+            with self.subTest(link=link):
+                self.assertIsNone(order_id(link))
+
+    def test_delivery_path_orders_are_saved_with_details(self):
+        page = {
+            "status": "success",
+            "has_more": False,
+            "results": [
+                {
+                    "order_history_snippet_type_2": {
+                        "click_action": {
+                            "deeplink": {"url": "zomato://delivery/123?source=order_history"}
+                        }
+                    }
+                }
+            ],
+        }
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(self.provider, "profile", return_value="account"),
+            patch.object(self.provider, "_location", return_value={"address_id": "1"}),
+            patch.object(self.provider, "_api", return_value=page),
+            patch.object(
+                self.provider, "details", return_value={"id": "123", "order": {"items": []}}
+            ),
+        ):
+            path = Path(directory) / "history.json"
+            report = sync(self.provider, path, "account", lambda _: None)
+            self.assertTrue(report["complete"])
+            self.assertEqual(report["counts"]["details"], 1)
+            from food_khata.storage import read_json
+
+            self.assertIn("123", read_json(path)["orders"])
 
     def test_pages_overlap_and_stall(self):
         def page(ids, more):
@@ -143,8 +216,46 @@ class ZomatoTests(unittest.TestCase):
         ):
             self.assertEqual(self.provider.login("9876543210", lambda: "123456"), "123")
         self.assertEqual(post.call_args_list[0].args[2]["verification_type"], "sms")
+        self.assertEqual(post.call_args_list[2].args[1:3], ("/consent", {"cc": "cc"}))
         self.assertEqual(post.call_args_list[-1].args[2]["state"], "expected")
         self.assertEqual(self.provider.dump_session()["access_token"], "new-token")
+
+    def test_auth_posts_preserve_original_form_and_token_accept_headers(self):
+        auth = Mock()
+        auth.request.return_value = Mock(status_code=200)
+        auth.request.return_value.json.return_value = {"status": True}
+        self.provider._auth_json(auth, "/consent", {"cc": "test-challenge"})
+        self.assertEqual(auth.request.call_args.kwargs["data"], {"cc": "test-challenge"})
+        self.assertEqual(
+            auth.request.call_args.kwargs["headers"]["Content-Type"],
+            "application/x-www-form-urlencoded",
+        )
+        self.provider._auth_json(auth, "/token", {"code": "test-code"})
+        self.assertEqual(
+            auth.request.call_args.kwargs["headers"]["Accept"], "application/json, text/plain, */*"
+        )
+
+    def test_auth_500_reports_stage_without_secrets_or_retry(self):
+        for path, body, stage in (
+            ("/oauth2/auth", {}, "authorization"),
+            ("/login/phone", {"type": "initiate"}, "OTP request"),
+            ("/login/phone", {"type": "verify", "otp": "123456"}, "OTP verification"),
+            ("/consent", {"cc": "private-challenge"}, "consent"),
+            ("/token", {"code": "private-code"}, "token exchange"),
+        ):
+            with self.subTest(stage=stage):
+                auth = Mock()
+                auth.request.return_value = Mock(status_code=500)
+                with self.assertRaises(KhataError) as caught:
+                    self.provider._auth_request(
+                        auth, "POST", ACCOUNTS + path + "?secret=private", data=body
+                    )
+                message = str(caught.exception)
+                self.assertIn("HTTP 500", message)
+                self.assertIn(stage, message)
+                self.assertNotIn("private", message)
+                self.assertNotIn("123456", message)
+                self.assertEqual(auth.request.call_count, 1)
 
     @patch("food_khata.providers.http.time.sleep")
     def test_network_auth_and_otp_retry_rules(self, sleep):

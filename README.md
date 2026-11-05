@@ -18,6 +18,8 @@ python food_khata.py
 On macOS/Linux activate with `source .venv/bin/activate`. The installed
 `food-khata` command runs the same flow. Run `python food_khata.py --help` for options.
 Use `--data-dir PATH` to choose a different private data directory.
+By default, data stays in `.food-khata/` inside this source checkout, regardless
+of the working directory you launch the command from. That directory is ignored by Git.
 
 Select a provider. If there is a saved session, choose reuse or logout and login
 again. Enter your phone (10 digits or `+91` prefix) and the masked SMS OTP when
@@ -32,7 +34,7 @@ local session because remote session revocation is not implemented.
 ## Your data
 
 ```text
-~/.food-khata/
+food-khata/.food-khata/
   accounts/
     <local-account-id>/
       account.json
@@ -53,7 +55,13 @@ Sessions contain reusable credentials. Metadata contains your phone number, and
 order payloads can contain addresses and other personal information. Keep this
 directory private and out of Git, cloud sharing, and public bug reports. Files
 are stored locally in plain JSON; this application does not encrypt them. On
-Windows they inherit your directory's ACLs; use a private user directory.
+Windows they inherit your directory's ACLs; keep the checkout private or use
+`--data-dir` to select another private location.
+
+Earlier builds used `~/.food-khata/`. If upgrading on another machine, stop running
+syncs and copy that directory into the checkout as `.food-khata/` before starting.
+Do not overwrite existing account folders. The CLI does not automatically move
+or delete the old home-directory copy.
 
 ## Sync and recovery
 
@@ -82,6 +90,9 @@ orders. Food history does not include Instamart, Dineout, or other service types
 Exit codes: `0` complete, `1` failure/incomplete sync, `130` cancellation.
 
 - **Expired session:** log in again. Network or access-block errors retain credentials.
+- **Zomato authentication HTTP error:** the message names the failing stage
+  (authorization, OTP request/verification, consent, token exchange, or redirect).
+  Report that stage; authentication requests are not automatically retried.
 - **Invalid JSON/schema:** the original is preserved. Back up the affected file,
   then restore a known-good copy or move it aside before retrying. Moving history
   aside triggers a full download. Moving a session aside triggers login.

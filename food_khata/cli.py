@@ -11,7 +11,7 @@ import questionary
 from .contracts import AuthenticationError, KhataError, Provider
 from .providers.swiggy import Swiggy
 from .providers.zomato import Zomato
-from .storage import Storage, lock
+from .storage import DEFAULT_DATA_DIR, Storage, lock
 from .sync import sync
 
 PROVIDERS = {"zomato": Zomato, "swiggy": Swiggy}
@@ -136,8 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path.home() / ".food-khata",
-        help="Private data directory (default: ~/.food-khata)",
+        default=DEFAULT_DATA_DIR,
+        help=f"Private data directory (default: {DEFAULT_DATA_DIR})",
     )
     args = parser.parse_args(argv)
     try:
