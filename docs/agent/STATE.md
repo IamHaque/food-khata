@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-E1-T7 / Terra Medium: remaining page chart datasets next. MIG-01-T1 / Terra Medium: synthetic parity harness next. UI-T1C API/hooks running. Overview root87+10/Ruff verified.
+MIG-01 harness implemented by root, local parity zero mismatches; values ignored. UI API request core verified, dashboard Zod contract sync pending; remaining page datasets worker returned no changes. Next UI contract sync and smaller behavior dataset task (Medium only).
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Complete typed frontend foundation/account filters (UI-T1, Terra Medium).
@@ -49,6 +49,7 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 
