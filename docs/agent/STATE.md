@@ -16,7 +16,7 @@ E-1 / BASE-03: safety guard prepared; baseline and audit pending.
 ## In progress
 BASE-03-T1 / safety worker / dashboard-v2: verify and commit safety guard.
 ## Pending
-1. BASE-03 safety guard and first commit (include authorized briefs).
+1. Supply missing technical brief and approve screenshot dataset.
 2. BASE-01 baseline checks and approved-data screenshots.
 3. BASE-02 inventories and migration plan.
 4. Human STOP: approve MIGRATION_PLAN.md.
@@ -24,10 +24,11 @@ BASE-03-T1 / safety worker / dashboard-v2: verify and commit safety guard.
 Screenshot dataset approval not yet supplied; do not use private data.
 Full technical brief missing: docs/BRIEF.md contains the orchestrator prompt itself.
 ## Done recently
-Safety tag pre-v2-dashboard and branch dashboard-v2 created.
+BASE-03 committed 72dcc0b; safety tag and branch created; root reverified guard.
 ## Open questions for the human
 Provide the technical/design brief referred to by the orchestrator and approve a synthetic screenshot dataset.
 ## Environment notes
 Git writes require sandbox escalation. Never inspect account/session files.
 ## Last verified
-2026-11-06: guard synthetic checks pass; npm test 7 pass; default Python lacks pytest/ruff; npm build passed after sandbox spawn EPERM (bundle warning >500 kB). Standalone Ruff available.
+2026-11-06: Python 3.14 uv environment: 55 passed + 10 subtests; Ruff check/format pass (33 files); npm 7 pass; build passes (bundle warning). Guard self-check/staged/tracked scans pass. Python 3.11/browser/a11y not run. Git tree contains only attributed audit docs.
+
