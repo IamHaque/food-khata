@@ -151,7 +151,12 @@ expose every stored field. Source strings use text nodes and embedded JSON escap
 script-closing markup. The file contains private order/address information for all
 accounts, including when initially opened with one customer selected.
 
-Tailwind and Chart.js load from CDNs; no local server is needed. Timeline gaps are
+React components in `dashboard-ui/src` use Tailwind, official shadcn/ui primitives,
+and Recharts. Vite compiles an IIFE and CSS with embedded fonts into
+`food_khata/dashboard_assets`. Python embeds these assets and escaped JSON into a
+single HTML file, requiring neither a local server nor runtime CDN access. Node
+is required only for frontend development; compiled assets ship with the package.
+Theme preference persists locally; animations respect reduced-motion preferences. Timeline gaps are
 filled from inception through today, with day/week/month/year grouping. Monetary
 metrics separate delivered orders from cancelled/incomplete attempts, and verified
 discounts from unresolved and advertised savings. Other views show fee composition,

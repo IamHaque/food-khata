@@ -77,7 +77,9 @@ def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
 
     html = render_dashboard_html(analytics)
     assert "<!DOCTYPE html>" in html
-    assert "Chart.js" in html or "chart.js" in html
+    assert '<div id="root">' in html
+    assert 'src="https://' not in html
+    assert 'href="https://' not in html
     assert "Food Khata Analytics" in html
     assert "Burger Spot" in html
     assert "Pizza Spot" in html
@@ -120,80 +122,18 @@ def test_complete_history_and_safe_embedded_data(tmp_path: Path):
     assert "textContent" in html
 
 
-def test_client_filters_and_pagination():
-    import shutil
-    import subprocess
-
-    node = shutil.which("node")
-    if not node:
-        return
-    data = {
-        "accounts": [{"id": "a", "phone": "1"}, {"id": "b", "phone": "2"}],
-        "orders": [
-            {
-                "id": str(i),
-                "account_id": "a" if i < 30 else "b",
-                "order_date": "2026-01-01",
-                "order_time": "12:00:00",
-                "order_status": "DELIVERED",
-                "platform": "SWIGGY",
-                "final_amount_paid": 10,
-                "total_discount": 2,
-                "reported_savings": 3,
-                "financial_verified": 1 if i == 0 else 0,
-                "items": [],
-            }
-            for i in range(35)
-        ],
-    }
-    data["orders"][1]["order_status"] = "CANCELLED"
-    data["archive_imports"] = [
-        {
-            "account_id": "a",
-            "platform": "SWIGGY",
-            "history_complete": 1,
-            "details_complete": 1,
-            "lifetime_complete": 0,
-        }
-    ]
-    html = render_dashboard_html(data)
-    script = html.split("</script><script>")[-1].split("</script>")[0]
+def test_embedded_assets_and_data_are_standalone():
     import json
+    import re
 
-    mock = r"""
-class Element {
-  constructor() { this.children=[]; this.value=''; this.dataset={}; this.disabled=false; }
-  append(...nodes) { this.children.push(...nodes); }
-  replaceChildren(...nodes) { this.children=[...nodes]; }
-  get firstChild() { return this.children[0]; }
-  addEventListener() {}
-  showModal() {}
-  close() {}
-}
-const elements={};
-const document={getElementById(id) { return elements[id] ||= new Element(); },
-  createElement() { return new Element(); }, querySelectorAll() { return []; }};
-elements['analytics-data']=new Element();
-elements['analytics-data'].textContent=DATA;
-elements.interval=new Element(); elements.interval.value='month';
-elements.measure=new Element(); elements.measure.value='spend';
-const chartData={};
-class Chart { constructor(element, config) { chartData[element.id]=config; } destroy() {} }
-const oldGet=document.getElementById; document.getElementById=function(id) { const e=oldGet(id); e.id=id; return e; };
-""".replace("DATA;", json.dumps(json.dumps(data)) + ";")
-    checks = r"""
-if (selected().length !== 35 || $('rows').children.length !== 25) throw Error('full history');
-if ($('spend').textContent !== '₹340' || $('saved').textContent !== '₹2' || $('advertised').textContent !== '₹102') throw Error('financial totals');
-if (chartData.platformChart.data.datasets[0].data[0] !== 340) throw Error('cancelled spend');
-$('measure').value='orders'; render();
-if (chartData.platformChart.data.datasets[0].data[0] !== 35) throw Error('all order counts');
-if (!$('coverage').textContent.includes('Lifetime coverage unconfirmed')) throw Error('coverage');
-$('qualityFilter').value='unverified';
-if (selected().length !== 34) throw Error('quality filter');
-$('qualityFilter').value='';
-$('account').value='b'; page=0; render();
-if (selected().length !== 5 || $('rows').children.length !== 5) throw Error('account filter');
-$('from').value='2027-01-01'; render();
-if (selected().length !== 0) throw Error('date filter');
-"""
-    subprocess.run([node, "-e", mock + script + checks], check=True, capture_output=True, text=True)
+    data = {"accounts": [], "orders": [], "selected_account": None}
+    html = render_dashboard_html(data)
+    match = re.search(
+        r'<script id="analytics-data" type="application/json">(.*?)</script>', html, re.S
+    )
+    assert json.loads(match.group(1)) == data
+    assert "<script src=" not in html
+    assert "@font-face" in html
+    assert "data:font/woff2;base64," in html
+    assert "cdn.tailwindcss.com" not in html
+    assert "cdn.jsdelivr.net" not in html

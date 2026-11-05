@@ -12,7 +12,7 @@ license = "MIT"
 dependencies = ["requests>=2.32,<3", "curl_cffi>=0.7,<1", "questionary>=2,<3"]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.14,<1"]
+dev = ["ruff>=0.14,<1", "pytest>=8,<10"]
 
 [project.scripts]
 food-khata = "food_khata.cli:main"
@@ -26,3 +26,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.setuptools.package-data]
+food_khata = ["dashboard_assets/*.js", "dashboard_assets/*.css", "dashboard_assets/*LICENSE*"]

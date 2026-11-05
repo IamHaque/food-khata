@@ -181,4 +181,18 @@ when known components match its total within INR 1 (provider rounding); mismatch
 missing dates and incomplete sources remain visible for review. Reconciled means
 arithmetically consistent, not independently verified against bank transactions.
 Address groups describe geography; original personal annotations remain available.
-Chart.js and Tailwind load from CDNs and need an internet connection.
+The dashboard uses React, Tailwind and shadcn/ui with animated Recharts charts,
+light/dark themes and an embedded Inter font. Compiled assets ship in the Python
+package and are embedded in the HTML: opening it needs no server or internet.
+Node.js is only required when changing the frontend:
+
+```sh
+cd dashboard-ui
+npm ci
+npm test
+npm run build
+```
+
+After rebuilding, run `food-khata dashboard --no-open` to refresh the local snapshot.
+Frontend source is under `dashboard-ui/src`; checked-in compiled assets live under
+`food_khata/dashboard_assets`. CI checks that these stay in sync.
