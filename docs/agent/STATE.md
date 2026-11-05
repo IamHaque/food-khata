@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-Behavior committed ef22e50(root93+10/Ruff). Root completed account/filter UI:7Node+7Vitest/typecheck/lint/build/syntheticbrowser pass. Next Ledger table and privacy-safe Places data (Medium).
+Ledger table implemented by root after worker no-op;7Node+11Vitest/typecheck/lint/build+syntheticbrowser pass. Next centered modal. Places backend worker running disjoint files. Behavior ef22e50 verified93+10/Ruff; parity passed.
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Ledger table, then modal and Overview (Terra Medium).
@@ -49,6 +49,7 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+
 
 
 

@@ -16,3 +16,9 @@ it('drops unavailable account options without dropping dates or search',()=>{
  expect(result.filters.search).toBe('noodles');expect(result.filters.date_from).toBe('2025-01-01');
  expect(result.removed).toEqual(['platforms','restaurant_ids']);
 });
+
+it('preserves implicit versus explicitly selected delivered status',()=>{
+ const f={...defaultFilters(),search:'rice'};
+ expect(serializeFilters(f).has('statuses')).toBe(false);
+ expect(serializeFilters(f,new URLSearchParams('statuses=DELIVERED')).get('statuses')).toBe('DELIVERED');
+});

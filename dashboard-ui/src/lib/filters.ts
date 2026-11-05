@@ -38,6 +38,7 @@ export function serializeFilters(filters:FilterState, previous=new URLSearchPara
  const params=new URLSearchParams(previous);
  for(const [key,value] of Object.entries(valid)) {
   params.delete(key);
+  if(key==="statuses" && Array.isArray(value) && value.join()==="DELIVERED" && !previous.has(key)) continue;
   if(Array.isArray(value)) { if(key==='statuses' && !value.length) params.append(key,''); for(const item of value) params.append(key,item); }
   else if(value!==null) params.set(key,String(value));
  }
@@ -59,4 +60,5 @@ export function sanitizeAccountFilters(filters:FilterState, meta:components['sch
 }
 
 export function validateFilters(value:unknown):FilterState{return schema.parse(value);}
+
 
