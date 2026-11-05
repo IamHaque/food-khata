@@ -11,7 +11,7 @@ import questionary
 from .contracts import AuthenticationError, KhataError, Provider
 from .providers.swiggy import Swiggy
 from .providers.zomato import Zomato
-from .storage import DEFAULT_DATA_DIR, Storage, lock
+from .storage import DEFAULT_DATA_DIR, Storage, lock, read_json
 from .sync import sync
 
 PROVIDERS = {"zomato": Zomato, "swiggy": Swiggy}
@@ -44,23 +44,32 @@ def phone_valid(value: str) -> bool | str:
 def run(storage: Storage) -> int:
     name = answer(questionary.select("Choose a provider:", choices=["zomato", "swiggy"]))
     factory = PROVIDERS[name]
-    accounts = storage.accounts(name)
+    accounts = storage.accounts(name, include_unauthenticated=True)
     account = None
     if len(accounts) == 1:
         account = accounts[0]
-    elif accounts:
+    elif len(accounts) > 1:
         choices = [
-            questionary.Choice(f"Account …{entry['phone'][-4:]} ({entry['local_id']})", value=entry)
+            questionary.Choice(
+                f"Account …{entry['phone'][-4:]} ({entry['local_id']})"
+                + (" [Active session]" if entry.get("has_session") else " [Unauthenticated]"),
+                value=entry,
+            )
             for entry in accounts
         ]
-        account = answer(
+        chosen = answer(
             questionary.select(
                 "Choose an account:",
                 choices=[*choices, questionary.Choice("Log in to another account", value="new")],
             )
         )
-        if account == "new":
+        if chosen == "new":
             account = None
+        elif isinstance(chosen, dict):
+            account = chosen
+        else:
+            matches = [a for a in accounts if a["local_id"] == chosen]
+            account = matches[0] if matches else None
 
     with ExitStack() as stack:
         provider: Provider | None = None
@@ -82,10 +91,24 @@ def run(storage: Storage) -> int:
                     choice = answer(
                         questionary.select(
                             f"{name.title()} account {account['providers'][name]} (…{account['phone'][-4:]}):",
-                            choices=["Reuse session", "Logout and log in again"],
+                            choices=[
+                                "Reuse session",
+                                "Refresh session",
+                                "Reauthenticate (SMS OTP)",
+                                "Logout and log in again",
+                            ],
                         )
                     )
-                    if choice == "Logout and log in again":
+                    if choice == "Refresh session":
+                        if provider.refresh_session():
+                            storage.save_session(account["local_id"], name, provider.dump_session())
+                            print("Session refreshed successfully.")
+                        else:
+                            print("Session refresh failed or not supported. Reauthenticate.")
+                            provider = None
+                    elif choice == "Reauthenticate (SMS OTP)":
+                        provider = None
+                    elif choice == "Logout and log in again":
                         provider.logout()
                         storage.remove_session(account["local_id"], name)
                         if name == "swiggy":
@@ -95,7 +118,7 @@ def run(storage: Storage) -> int:
                         provider = None
 
         if provider is None:
-            # Release the old account's lock before a possible account switch.
+            # Release any previous account lock before prompting or logging in
             stack.close()
             phone = normalize_phone(answer(questionary.text("Phone number:", validate=phone_valid)))
             provider = factory()
@@ -103,6 +126,7 @@ def run(storage: Storage) -> int:
             identity = provider.login(phone, lambda: answer(questionary.password("Enter SMS OTP:")))
             account = storage.bind(phone, name, identity)
             stack.enter_context(lock(storage.account_path(account["local_id"]) / ".account.lock"))
+
         assert account is not None
         path = storage.account_path(account["local_id"]) / f"{name}-history.json"
 
@@ -110,8 +134,51 @@ def run(storage: Storage) -> int:
             storage.save_session(account["local_id"], name, provider.dump_session())
 
         checkpoint()
-        print("Checking history pages; saved order details will be reused.")
-        report = sync(provider, path, account["providers"][name], checkpoint_session=checkpoint)
+
+        sync_mode = "incremental"
+        if path.exists():
+            try:
+                data = read_json(path)
+                has_saved_orders = isinstance(data, dict) and bool(data.get("orders"))
+            except Exception:
+                has_saved_orders = False
+            if has_saved_orders:
+                choices = [
+                    "Sync new orders (incremental)",
+                    "Check and repair missing details",
+                    "Full history scan",
+                ]
+                selected = answer(
+                    questionary.select(
+                        "History archive found. Choose sync mode:",
+                        choices=choices,
+                    )
+                )
+                if selected in ("Check and repair missing details", "repair"):
+                    sync_mode = "repair"
+                elif selected in ("Full history scan", "full"):
+                    sync_mode = "full"
+                else:
+                    sync_mode = "incremental"
+
+        print(
+            "Syncing history in "
+            + (
+                "incremental mode (new orders only)"
+                if sync_mode == "incremental"
+                else "repair mode (missing details only)"
+                if sync_mode == "repair"
+                else "full mode"
+            )
+            + "..."
+        )
+        report = sync(
+            provider,
+            path,
+            account["providers"][name],
+            checkpoint_session=checkpoint,
+            mode=sync_mode,
+        )
         counts = report["counts"]
         print(f"Orders: {counts['orders']}; details saved: {counts['details']}")
         print(

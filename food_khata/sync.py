@@ -15,7 +15,10 @@ def sync(
     provider_id: str,
     progress: Callable[[str], None] = print,
     checkpoint_session: Callable[[], None] = lambda: None,
+    mode: str = "incremental",
 ) -> dict[str, Any]:
+    if mode not in ("incremental", "repair", "full"):
+        raise KhataError(f"Invalid sync mode: {mode}")
     if provider.profile() != provider_id:
         raise KhataError("Provider account identity mismatch")
     if path.exists():
@@ -59,6 +62,8 @@ def sync(
             "errors": [],
             "counts": {},
         }
+    prior_history_complete = archive.get("history_complete", False)
+    prior_orders = set(archive["orders"].keys())
     archive.update(
         history_complete=False,
         details_complete=False,
@@ -70,6 +75,7 @@ def sync(
     )
 
     new_orders = 0
+    new_order_ids: set[str] = set()
     details_downloaded = 0
 
     def persist() -> None:
@@ -85,28 +91,46 @@ def sync(
 
     persist()
     try:
-        for page in provider.pages():
-            if not isinstance(page, list):
-                raise KhataError("Invalid history page")
-            for record in page:
-                if (
-                    not isinstance(record, dict)
-                    or not isinstance(record.get("order_id"), str)
-                    or not record["order_id"]
-                    or not isinstance(record.get("history"), dict)
-                ):
-                    raise KhataError("Invalid history record")
-            for record in page:
-                if record["order_id"] not in archive["orders"]:
-                    archive["orders"][record["order_id"]] = {"history": record["history"]}
-                    new_orders += 1
-            archive["pages"] += 1
+        if mode != "repair":
+            for page in provider.pages():
+                if not isinstance(page, list):
+                    raise KhataError("Invalid history page")
+                for record in page:
+                    if (
+                        not isinstance(record, dict)
+                        or not isinstance(record.get("order_id"), str)
+                        or not record["order_id"]
+                        or not isinstance(record.get("history"), dict)
+                    ):
+                        raise KhataError("Invalid history record")
+                hit_existing = False
+                for record in page:
+                    oid = record["order_id"]
+                    if oid not in archive["orders"]:
+                        archive["orders"][oid] = {"history": record["history"]}
+                        new_order_ids.add(oid)
+                        new_orders += 1
+                    elif mode == "incremental" and prior_orders:
+                        hit_existing = True
+                archive["pages"] += 1
+                persist()
+                checkpoint_session()
+                progress(f"Fetched page {archive['pages']}")
+                if hit_existing:
+                    # In incremental mode, reaching previously saved orders completes discovery
+                    progress("Reached previously saved orders; incremental discovery complete.")
+                    archive["history_complete"] = True
+                    break
+            else:
+                archive["history_complete"] = True
             persist()
-            checkpoint_session()
-            progress(f"Fetched page {archive['pages']}")
-        archive["history_complete"] = True
-        persist()
-        for order_id, order in archive["orders"].items():
+        else:
+            # In repair mode, preserve previous history completeness without fetching pages
+            archive["history_complete"] = prior_history_complete
+
+        # Check all orders for missing/invalid details
+        for order_id in sorted(archive["orders"].keys()):
+            order = archive["orders"][order_id]
             if not provider.valid_details(order_id, order.get("details")):
                 details = provider.details(order_id)
                 if not provider.valid_details(order_id, details):
@@ -116,11 +140,15 @@ def sync(
                 persist()
                 checkpoint_session()
                 progress(f"Saved details for order {order_id}")
+
         if provider.profile() != provider_id:
             raise KhataError("Provider account identity mismatch")
         checkpoint_session()
-        archive["details_complete"] = True
-        archive["complete"] = True
+        all_details_valid = all(
+            provider.valid_details(k, v.get("details")) for k, v in archive["orders"].items()
+        )
+        archive["details_complete"] = all_details_valid
+        archive["complete"] = archive["history_complete"] and archive["details_complete"]
         persist()
     except BaseException as exc:
         archive["complete"] = False

@@ -113,3 +113,60 @@ class CliTests(unittest.TestCase):
             normalize_phone("123")
         with patch("food_khata.cli.run", side_effect=KeyboardInterrupt), patch("builtins.print"):
             self.assertEqual(main([]), 130)
+
+    def test_refresh_session_updates_saved_session(self):
+        account = self.saved()
+        self.provider.refresh_session.return_value = True
+        self.provider.dump_session.return_value = {"access_token": "refreshed-token"}
+        result, _ = self.invoke(["zomato", "Refresh session"])
+        self.assertEqual(result, 0)
+        self.provider.refresh_session.assert_called_once()
+        self.assertEqual(
+            self.storage.session(account["local_id"], "zomato"),
+            {"access_token": "refreshed-token"},
+        )
+
+    def test_reauthenticate_session_prompts_login(self):
+        self.saved()
+        result, _ = self.invoke(["zomato", "Reauthenticate (SMS OTP)", "9876543210"])
+        self.assertEqual(result, 0)
+        self.provider.login.assert_called_once()
+
+    def test_multi_account_selection(self):
+        self.saved()
+        a2 = self.storage.bind("9876543211", "zomato", "provider-id-2")
+        self.storage.save_session(a2["local_id"], "zomato", {"access_token": "token2"})
+        # User picks the second account, then reuses session
+        self.provider.profile.return_value = "provider-id-2"
+        result, sync_mock = self.invoke(["zomato", a2, "Reuse session"])
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            sync_mock.call_args.args[1].parent, self.storage.account_path(a2["local_id"])
+        )
+
+    def test_existing_history_prompts_sync_mode(self):
+        account = self.saved()
+        path = self.storage.account_path(account["local_id"]) / "zomato-history.json"
+        from food_khata.storage import save_json
+
+        save_json(
+            path,
+            {
+                "version": 1,
+                "provider": "zomato",
+                "provider_id": "provider-id",
+                "orders": {"1": {"history": {}}},
+                "history_complete": True,
+                "details_complete": True,
+                "complete": True,
+                "lifetime_complete": False,
+                "pages": 1,
+                "errors": [],
+                "counts": {},
+            },
+        )
+        result, sync_mock = self.invoke(
+            ["zomato", "Reuse session", "Check and repair missing details"]
+        )
+        self.assertEqual(result, 0)
+        self.assertEqual(sync_mock.call_args.kwargs.get("mode"), "repair")

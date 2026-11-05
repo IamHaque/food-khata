@@ -284,6 +284,45 @@ class Zomato:
         self.tokens.clear()
         self.http.headers.pop("X-Zomato-Access-Token", None)
 
+    def refresh_session(self) -> bool:
+        refresh_token = self.tokens.get("refresh_token")
+        if not refresh_token:
+            return False
+        with curl_requests.Session(
+            impersonate="chrome99_android",
+            default_headers=False,
+            akamai="1:65536;3:1000;4:6291456|15663105|0|m,a,s,p",
+        ) as auth:
+            auth.headers.update(AUTH_HEADERS)
+            try:
+                result = self._auth_json(
+                    auth,
+                    "/token",
+                    {
+                        "grant_type": "refresh_token",
+                        "refresh_token": refresh_token,
+                        "client_id": CLIENT_ID,
+                    },
+                )
+            except Exception:
+                return False
+            tokens = result.get("token")
+            if (
+                not isinstance(tokens, dict)
+                or not isinstance(tokens.get("access_token"), str)
+                or not tokens["access_token"]
+            ):
+                return False
+            self.tokens["access_token"] = tokens["access_token"]
+            if isinstance(tokens.get("refresh_token"), str) and tokens["refresh_token"]:
+                self.tokens["refresh_token"] = tokens["refresh_token"]
+            self.http.headers["X-Zomato-Access-Token"] = self.tokens["access_token"]
+            try:
+                self.profile()
+                return True
+            except Exception:
+                return False
+
     def dump_session(self) -> dict[str, Any]:
         return dict(self.tokens)
 

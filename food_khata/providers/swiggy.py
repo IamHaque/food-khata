@@ -232,6 +232,13 @@ class Swiggy:
         self.client.http.headers.clear()
         self.client.http.cookies.clear()
 
+    def refresh_session(self) -> bool:
+        try:
+            self.profile()
+            return True
+        except Exception:
+            return False
+
     def dump_session(self) -> dict[str, Any]:
         return {
             "headers": dict(self.client.http.headers),

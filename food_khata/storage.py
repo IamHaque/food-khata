@@ -125,13 +125,16 @@ class Storage:
             result.append(data)
         return result
 
-    def accounts(self, provider: str) -> list[dict[str, Any]]:
+    def accounts(
+        self, provider: str, include_unauthenticated: bool = False
+    ) -> list[dict[str, Any]]:
         _provider(provider)
-        return [
-            a
-            for a in self._metadata()
-            if provider in a["providers"] and self.session(a["local_id"], provider) is not None
-        ]
+        accounts = [a for a in self._metadata() if provider in a["providers"]]
+        for a in accounts:
+            a["has_session"] = self.session(a["local_id"], provider) is not None
+        if not include_unauthenticated:
+            return [a for a in accounts if a["has_session"]]
+        return accounts
 
     def bind(self, phone: str, provider: str, provider_id: str) -> dict[str, Any]:
         _provider(provider)
