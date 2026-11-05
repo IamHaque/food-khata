@@ -25,7 +25,11 @@ def fetch_analytics(db_path: Path | str, account_id: str | None = None) -> dict[
     accounts = [dict(r) for r in c.fetchall()]
 
     # 2. Macro KPIs
-    where_clause = f"{acc_filter} AND order_status = 'DELIVERED'" if acc_filter else "WHERE order_status = 'DELIVERED'"
+    where_clause = (
+        f"{acc_filter} AND order_status = 'DELIVERED'"
+        if acc_filter
+        else "WHERE order_status = 'DELIVERED'"
+    )
     c.execute(
         f"""
         SELECT 
@@ -312,7 +316,6 @@ def fetch_analytics(db_path: Path | str, account_id: str | None = None) -> dict[
         acc_params,
     )
     recent_orders = [dict(r) for r in c.fetchall()]
-
     conn.close()
 
     return {

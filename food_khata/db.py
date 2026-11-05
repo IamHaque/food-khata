@@ -3,6 +3,8 @@
 import hashlib
 import re
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -203,7 +205,10 @@ def classify_cuisine(dish_name: str | None, rest_name: str | None) -> str:
     if any(k in dn for k in ["burger", "snacker", "nikku"]) or "burger" in rn:
         return "Burgers & Sandwiches"
     if (
-        any(k in dn for k in ["pizza", "pasta", "garlic bread", "calzone", "lasagna", "twisty", "taco"])
+        any(
+            k in dn
+            for k in ["pizza", "pasta", "garlic bread", "calzone", "lasagna", "twisty", "taco"]
+        )
         or "pizza" in rn
         or "pino" in rn
         or "rominus" in rn
@@ -213,16 +218,53 @@ def classify_cuisine(dish_name: str | None, rest_name: str | None) -> str:
     if any(k in dn for k in ["momo", "wings", "fries", "parcel", "nugget", "popcorn", "crispy"]):
         return "Fried Chicken & Finger Bites"
     if (
-        any(k in dn for k in ["biryani", "paratha", "shawarma", "kebab", "tikka", "curry", "roti", "rice", "dal"])
+        any(
+            k in dn
+            for k in [
+                "biryani",
+                "paratha",
+                "shawarma",
+                "kebab",
+                "tikka",
+                "curry",
+                "roti",
+                "rice",
+                "dal",
+            ]
+        )
         or "al-baik" in rn
         or "shah ghouse" in rn
         or "dastarkhwan" in rn
     ):
         return "Mughlai, Shawarma & Desi"
-    if any(k in dn for k in ["noodle", "fried rice", "chowmein", "chilli paneer", "schezwan", "manchurian", "kimchi"]):
+    if any(
+        k in dn
+        for k in [
+            "noodle",
+            "fried rice",
+            "chowmein",
+            "chilli paneer",
+            "schezwan",
+            "manchurian",
+            "kimchi",
+        ]
+    ):
         return "Chinese & Asian"
     if (
-        any(k in dn for k in ["waffle", "shake", "cake", "ice cream", "dessert", "brownie", "cookie", "sweet", "mousse"])
+        any(
+            k in dn
+            for k in [
+                "waffle",
+                "shake",
+                "cake",
+                "ice cream",
+                "dessert",
+                "brownie",
+                "cookie",
+                "sweet",
+                "mousse",
+            ]
+        )
         or "sweet luscious" in rn
     ):
         return "Desserts & Shakes"
@@ -250,8 +292,16 @@ class AnalyticsDB:
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
+    @contextmanager
+    def connection(self) -> Iterator[sqlite3.Connection]:
+        conn = self.connect()
+        try:
+            yield conn
+        finally:
+            conn.close()
+
     def init_db(self) -> None:
-        with self.connect() as conn:
+        with self.connection() as conn:
             conn.executescript("""
             CREATE TABLE IF NOT EXISTS accounts (
                 id TEXT PRIMARY KEY,
@@ -354,7 +404,9 @@ class AnalyticsDB:
         # 2. Restaurant
         rest_id_raw = str(ord0.get("restaurant_id") or history.get("restaurantId") or "unknown")
         rest_id = f"SWIGGY_REST_{rest_id_raw}"
-        rest_name = ord0.get("restaurant_name") or history.get("restaurantName") or "Unknown Restaurant"
+        rest_name = (
+            ord0.get("restaurant_name") or history.get("restaurantName") or "Unknown Restaurant"
+        )
         rest_locality = ord0.get("restaurant_locality") or history.get("restaurantAreaName")
         rest_city = ord0.get("restaurant_city_name")
         rest_address = ord0.get("restaurant_address")
@@ -405,7 +457,9 @@ class AnalyticsDB:
 
         # 4. Financials
         item_subtotal = clean_num(ord0.get("item_total"))
-        food_discount = clean_num(ord0.get("order_discount")) or clean_num(ord0.get("coupon_discount"))
+        food_discount = clean_num(ord0.get("order_discount")) or clean_num(
+            ord0.get("coupon_discount")
+        )
         deliv_disc = clean_num(
             ord0.get("free_delivery_discount_hit")
             or (ord0.get("deliveryFeeCouponBreakup") or {}).get("totalDeliveryFeeDiscount")
@@ -462,7 +516,9 @@ class AnalyticsDB:
                 o_date,
                 o_time,
                 status,
-                normalize_payment(ord0.get("payment_method") or ord0.get("payment_method_involved")),
+                normalize_payment(
+                    ord0.get("payment_method") or ord0.get("payment_method_involved")
+                ),
                 rest_id,
                 addr_id,
                 final_paid,
@@ -533,7 +589,11 @@ class AnalyticsDB:
         location_info = res_info.get("location") or {}
         rest_id_raw = str(res_info.get("id") or "unknown")
         rest_id = f"ZOMATO_REST_{rest_id_raw}"
-        rest_name = res_info.get("name") or history.get("top_container", {}).get("title") or "Unknown Restaurant"
+        rest_name = (
+            res_info.get("name")
+            or history.get("top_container", {}).get("title")
+            or "Unknown Restaurant"
+        )
         rest_locality = location_info.get("locality")
         rest_city = location_info.get("city")
         rest_address = location_info.get("address")
@@ -716,7 +776,7 @@ class AnalyticsDB:
         phone = meta.get("phone", "Unknown")
 
         counts = {"swiggy": 0, "zomato": 0, "total": 0}
-        with self.connect() as conn:
+        with self.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT OR REPLACE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",

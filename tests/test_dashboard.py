@@ -61,7 +61,7 @@ def test_fetch_analytics_and_render_dashboard(tmp_path: Path):
         },
     }
 
-    with db.connect() as conn:
+    with db.connection() as conn:
         cursor = conn.cursor()
         db.ingest_swiggy_order(cursor, "acc-1", "sw_101", swiggy_order)
         db.ingest_zomato_order(cursor, "acc-1", "zm_202", zomato_order)

@@ -9,6 +9,8 @@ from typing import Any
 import questionary
 
 from .contracts import AuthenticationError, KhataError, Provider
+from .dashboard import generate_dashboard, open_dashboard
+from .db import AnalyticsDB
 from .providers.swiggy import Swiggy
 from .providers.zomato import Zomato
 from .storage import DEFAULT_DATA_DIR, Storage, lock, read_json
@@ -41,7 +43,12 @@ def phone_valid(value: str) -> bool | str:
     return True
 
 
-def run(storage: Storage) -> int:
+def run(
+    storage: Storage,
+    prompt_dashboard: bool = True,
+    open_browser: bool = True,
+    db_path: Path | None = None,
+) -> int:
     name = answer(questionary.select("Choose a provider:", choices=["zomato", "swiggy"]))
     factory = PROVIDERS[name]
     accounts = storage.accounts(name, include_unauthenticated=True)
@@ -198,12 +205,38 @@ def run(storage: Storage) -> int:
             for error in report["errors"]:
                 print(f"Sync error: {error}")
             return 1
+
+        # Ingest retrieved order history into local SQLite database
+        db = AnalyticsDB(db_path or (storage.root / "food_analytics.db"))
+        ingest_counts = db.ingest_account(storage, account["local_id"])
+        print(
+            f"Local DB updated: {ingest_counts['total']} orders recorded "
+            f"({ingest_counts['swiggy']} Swiggy, {ingest_counts['zomato']} Zomato)."
+        )
+
+        if prompt_dashboard:
+            should_open = answer(
+                questionary.confirm("Generate and view analytics dashboard?", default=True)
+            )
+            if should_open:
+                dash_path = generate_dashboard(db.path)
+                print(f"Dashboard generated: {dash_path}")
+                if open_browser:
+                    open_dashboard(dash_path)
+
         return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Log in and sync Zomato or Swiggy food order history."
+        description="Log in, sync, and visualize Zomato or Swiggy food order history."
+    )
+    parser.add_argument(
+        "action",
+        nargs="?",
+        choices=["sync", "ingest", "dashboard"],
+        default="sync",
+        help="Action: sync (default), ingest (update local DB), or dashboard (generate & open UI)",
     )
     parser.add_argument(
         "--data-dir",
@@ -211,9 +244,48 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_DATA_DIR,
         help=f"Private data directory (default: {DEFAULT_DATA_DIR})",
     )
+    parser.add_argument(
+        "--db-path",
+        type=Path,
+        default=None,
+        help="Custom SQLite analytics database path",
+    )
+    parser.add_argument(
+        "--no-dashboard",
+        action="store_true",
+        help="Skip post-sync dashboard prompt",
+    )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Generate dashboard without launching browser",
+    )
     args = parser.parse_args(argv)
+    storage = Storage(args.data_dir.expanduser().resolve())
+    db_file = args.db_path or (storage.root / "food_analytics.db")
+
     try:
-        return run(Storage(args.data_dir.expanduser().resolve()))
+        if args.action == "dashboard":
+            dash_path = generate_dashboard(db_file)
+            print(f"Dashboard generated: {dash_path}")
+            if not args.no_open:
+                open_dashboard(dash_path)
+            return 0
+        elif args.action == "ingest":
+            db = AnalyticsDB(db_file)
+            counts = db.ingest_all(storage)
+            print(
+                f"Ingestion complete: {counts['total']} orders recorded across "
+                f"{counts['accounts']} accounts ({counts['swiggy']} Swiggy, {counts['zomato']} Zomato)."
+            )
+            return 0
+        else:
+            return run(
+                storage,
+                prompt_dashboard=not args.no_dashboard,
+                open_browser=not args.no_open,
+                db_path=args.db_path,
+            )
     except KeyboardInterrupt:
         print("Cancelled. Completed downloads remain saved; run again to resume.")
         return 130
@@ -226,3 +298,9 @@ def main(argv: list[str] | None = None) -> int:
             "Unexpected failure. Saved checkpoints are preserved; run again or report this failure."
         )
         return 1
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main())

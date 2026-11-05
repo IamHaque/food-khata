@@ -29,7 +29,7 @@ class CliTests(unittest.TestCase):
             patch("food_khata.cli.sync", return_value=self.report),
             patch("builtins.print"),
         ):
-            self.assertEqual(run(self.storage), 0)
+            self.assertEqual(run(self.storage, prompt_dashboard=False), 0)
         login.assert_called_once()
 
     def setUp(self):
@@ -54,16 +54,17 @@ class CliTests(unittest.TestCase):
         self.storage.save_session(account["local_id"], "zomato", {"access_token": "fake"})
         return account
 
-    def invoke(self, answers):
+    def invoke(self, answers, prompt_dashboard: bool = False):
         with (
             patch("food_khata.cli.PROVIDERS", {"zomato": self.factory}),
             patch("food_khata.cli.questionary.select"),
             patch("food_khata.cli.questionary.text"),
+            patch("food_khata.cli.questionary.confirm"),
             patch("food_khata.cli.answer", side_effect=answers),
             patch("food_khata.cli.sync", return_value=self.report) as sync,
             patch("builtins.print"),
         ):
-            result = run(self.storage)
+            result = run(self.storage, prompt_dashboard=prompt_dashboard)
         return result, sync
 
     def test_first_login_and_shared_folder(self):
@@ -170,3 +171,50 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(result, 0)
         self.assertEqual(sync_mock.call_args.kwargs.get("mode"), "repair")
+
+    def test_post_sync_ingestion_and_dashboard_prompt(self):
+        account = self.saved()
+        with (
+            patch("food_khata.cli.generate_dashboard") as mock_gen,
+            patch("food_khata.cli.open_dashboard") as mock_open,
+        ):
+            mock_gen.return_value = Path("dashboard.html")
+            # User picks Yes for dashboard
+            result, _ = self.invoke(
+                ["zomato", account, "Reuse session", True], prompt_dashboard=True
+            )
+            self.assertEqual(result, 0)
+            mock_gen.assert_called_once()
+            mock_open.assert_called_once()
+
+    def test_post_sync_dashboard_prompt_declined(self):
+        account = self.saved()
+        with (
+            patch("food_khata.cli.generate_dashboard") as mock_gen,
+            patch("food_khata.cli.open_dashboard") as mock_open,
+        ):
+            # User picks No for dashboard
+            result, _ = self.invoke(
+                ["zomato", account, "Reuse session", False], prompt_dashboard=True
+            )
+            self.assertEqual(result, 0)
+            mock_gen.assert_not_called()
+            mock_open.assert_not_called()
+
+    def test_cli_subcommands(self):
+        with (
+            patch("builtins.print"),
+            patch(
+                "food_khata.cli.generate_dashboard", return_value=Path("dashboard.html")
+            ) as mock_gen,
+            patch("food_khata.cli.open_dashboard") as mock_open,
+        ):
+            # Test dashboard action
+            ret = main(["dashboard", "--data-dir", str(self.storage.root)])
+            self.assertEqual(ret, 0)
+            mock_gen.assert_called_once()
+            mock_open.assert_called_once()
+
+            # Test ingest action
+            ret_ingest = main(["ingest", "--data-dir", str(self.storage.root)])
+            self.assertEqual(ret_ingest, 0)

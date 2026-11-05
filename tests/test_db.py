@@ -48,7 +48,7 @@ def test_db_initialization_and_schema(tmp_path: Path):
     db = AnalyticsDB(db_file)
     assert db_file.exists()
 
-    with db.connect() as conn:
+    with db.connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = {row[0] for row in cursor.fetchall()}
@@ -179,7 +179,7 @@ def test_swiggy_and_zomato_ingestion(tmp_path: Path):
         },
     }
 
-    with db.connect() as conn:
+    with db.connection() as conn:
         cursor = conn.cursor()
         assert db.ingest_swiggy_order(cursor, "acc-1", "999111", swiggy_order)
         assert db.ingest_zomato_order(cursor, "acc-1", "888222", zomato_order)
@@ -188,7 +188,9 @@ def test_swiggy_and_zomato_ingestion(tmp_path: Path):
         cursor.execute("SELECT COUNT(*) FROM orders;")
         assert cursor.fetchone()[0] == 2
 
-        cursor.execute("SELECT id, platform, final_amount_paid, total_discount FROM orders ORDER BY platform;")
+        cursor.execute(
+            "SELECT id, platform, final_amount_paid, total_discount FROM orders ORDER BY platform;"
+        )
         rows = cursor.fetchall()
         assert rows[0]["platform"] == "SWIGGY"
         assert rows[0]["final_amount_paid"] == 150.0
@@ -235,7 +237,9 @@ def test_ingest_all_from_storage(tmp_path: Path):
                                 "order_total": 100,
                                 "order_time": "2026-10-10 12:00:00",
                                 "restaurant_name": "Test Café",
-                                "order_items": [{"name": "Coffee", "quantity": 1, "final_price": 100}],
+                                "order_items": [
+                                    {"name": "Coffee", "quantity": 1, "final_price": 100}
+                                ],
                             }
                         ]
                     },
