@@ -15,7 +15,7 @@ from food_khata.storage import Storage, save_json
 
 
 def test_normalization_utilities():
-    assert clean_num("₹ 149.50") == 149.50
+    assert clean_num("â‚¹ 149.50") == 149.50
     assert clean_num(None, default=10.0) == 10.0
     assert clean_num(250) == 250.0
 
@@ -32,8 +32,8 @@ def test_normalization_utilities():
     assert normalize_payment("COD") == "Cash"
     assert normalize_payment("Paytm Wallet") == "Wallet"
 
-    assert normalize_address("DG", "Begariya Road, Dubagga") == "Home (Dubagga)"
-    assert normalize_address("Work", "Gachibowli, Hyderabad") == "Work/PG (Hyderabad)"
+    assert normalize_address("DG", "Begariya Road, Dubagga") == "Dubagga, Lucknow"
+    assert normalize_address("Work", "Gachibowli, Hyderabad") == "Gachibowli, Hyderabad"
 
     assert infer_veg_tag("Chicken Burger") == 0
     assert infer_veg_tag("Paneer Pizza") == 1
@@ -236,7 +236,7 @@ def test_ingest_all_from_storage(tmp_path: Path):
                                 "order_status": "Delivered",
                                 "order_total": 100,
                                 "order_time": "2026-10-10 12:00:00",
-                                "restaurant_name": "Test Café",
+                                "restaurant_name": "Test CafÃ©",
                                 "order_items": [
                                     {"name": "Coffee", "quantity": 1, "final_price": 100}
                                 ],
@@ -260,3 +260,171 @@ def test_ingest_all_from_storage(tmp_path: Path):
     assert counts["swiggy"] == 1
     assert counts["total"] == 1
     assert counts["accounts"] == 1
+
+
+def test_dates_and_geographic_groups_do_not_invent_context():
+    assert parse_date("not a date") == ("", "", "")
+    assert parse_date("2026-10-01T22:00:00Z")[1:] == ("2026-10-02", "03:30:00")
+    assert clean_num(float("nan"), None) is None
+    assert normalize_address("Home", "") == "Unknown"
+    assert normalize_address("PG", "JV Colony, Hyderabad") == "JV Colony, Hyderabad"
+    assert normalize_address("Other", "Beltola, Guwahati") != normalize_address(
+        "AH", "Hatigaon, Guwahati"
+    )
+    assert normalize_address("LifeCare", "Jawahar Nagar, Qaisar Bagh") == normalize_address(
+        "Other", "Jawahar Nagar, Qaisar Bagh"
+    )
+    assert classify_cuisine("Chicken fried rice", "Test") == "Chinese & Asian"
+
+
+def test_swiggy_current_fees_zero_prices_and_reconciliation(tmp_path):
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    record = {
+        "details": {
+            "orders": [
+                {
+                    "order_time": "2026-11-01 12:00:00",
+                    "order_status": "Delivered",
+                    "item_total": 200,
+                    "order_discount": 100,
+                    "order_total": 147,
+                    "order_total_with_tip": 157,
+                    "discounted_total_delivery_fee": 0,
+                    "order_delivery_charge": 30,
+                    "restaurant_packing_charges": 25,
+                    "convenience_fee": "0",
+                    "convenience_fees": 15,
+                    "platform_fee_tax": 2,
+                    "total_tax_including_platform_fee": 7,
+                    "order_tax": 5,
+                    "free_delivery_discount_hit": 30,
+                    "order_items": [
+                        {"name": "Free item", "quantity": 1, "final_price": 0, "subtotal": 50}
+                    ],
+                }
+            ]
+        }
+    }
+    with db.connection() as conn:
+        for _ in range(2):
+            db.ingest_swiggy_order(conn.cursor(), "account", "one", record)
+            conn.commit()
+        row = conn.execute("SELECT * FROM orders").fetchone()
+        assert row["platform_fee"] == 15
+        assert row["total_tax"] == 7
+        assert row["delivery_fee"] == 0
+        assert row["tip"] == 10
+        assert row["total_discount"] == 130
+        assert row["reconciliation_difference"] == 0
+        assert row["financial_verified"] == 1
+        assert conn.execute("SELECT total_price FROM order_items").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM order_items").fetchone()[0] == 1
+
+
+def test_zomato_explicit_discounts_tax_and_other_charges(tmp_path):
+    def item(kind, name, cost, display=None):
+        return {
+            "item": {
+                "type": kind,
+                "item_name": name,
+                "total_cost": cost,
+                "display_cost": display or "",
+                "quantity": 1,
+            }
+        }
+
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    record = {
+        "details": {
+            "current_status": "DELIVERED",
+            "created_at_str": "2026-11-01",
+            "restaurant": {"id": 1, "location": {"city": "Restaurant City"}},
+            "delivery_address_obj": {"full_address_text": "Destination", "city": "Delivery City"},
+            "order": {
+                "total_cost": 98,
+                "items": [
+                    item("dish", "Food", 200),
+                    item("item_total", "Item total", 200),
+                    item("salt_discount", "Restaurant promo", 20),
+                    item("resell_discount", "Food rescue", 80),
+                    item("voucher_discount", "Coupon", -30),
+                    item("charge", "Delivery", 40, "FREE"),
+                    item("charge", "Packaging", 10),
+                    item("platform_charge", "Platform", 10),
+                    item("tax", "Taxes", 5, "Rs 6"),
+                    item("gold_subscription_charge", "Gold", 1),
+                    item("donations", "Donation", 1),
+                    item("savings", "Advertised savings", 999),
+                ],
+            },
+        }
+    }
+    with db.connection() as conn:
+        db.ingest_zomato_order(conn.cursor(), "account", "one", record)
+        row = conn.execute("SELECT * FROM orders").fetchone()
+        assert row["final_amount_paid"] == 98
+        assert row["food_discount"] == 130
+        assert row["total_discount"] == 170
+        assert row["reported_savings"] == 999
+        assert row["total_tax"] == 6
+        assert row["other_charges"] == 2
+        assert row["financial_verified"] == 1
+        assert conn.execute("SELECT city FROM delivery_addresses").fetchone()[0] == "Delivery City"
+
+
+def test_account_import_rolls_back_on_bad_order(tmp_path):
+    import pytest
+
+    from food_khata.contracts import KhataError
+
+    storage = Storage(tmp_path / "storage")
+    acc_id = "00000000-0000-0000-0000-000000000001"
+    directory = storage.account_path(acc_id)
+    save_json(directory / "account.json", {"phone": "test"})
+    save_json(
+        directory / "swiggy-history.json",
+        {"orders": {"good": {"details": {"orders": [{"order_total": 10}]}}, "bad": []}},
+    )
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    with pytest.raises(KhataError, match="rolled back"):
+        db.ingest_account(storage, acc_id)
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 0
+
+
+def test_ambiguous_diet_is_unknown_and_order_owner_is_preserved(tmp_path):
+    import pytest
+
+    from food_khata.contracts import KhataError
+
+    assert infer_veg_tag("Veggie Pizza") == 1
+    assert infer_veg_tag("Kebab") is None
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    with db.connection() as conn:
+        db.ingest_swiggy_order(conn.cursor(), "first", "same", {})
+        with pytest.raises(KhataError, match="another local account"):
+            db.ingest_swiggy_order(conn.cursor(), "second", "same", {})
+        assert conn.execute("SELECT account_id FROM orders").fetchone()[0] == "first"
+
+
+def test_named_zero_packing_uses_legacy_bill_charge(tmp_path):
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    record = {
+        "details": {
+            "orders": [
+                {
+                    "order_time": "2026-11-01",
+                    "order_status": "Delivered",
+                    "order_total": 110,
+                    "item_total": 100,
+                    "restaurant_packing_charges": 0,
+                    "charges": {"Packing Charges": "10"},
+                }
+            ]
+        }
+    }
+    with db.connection() as conn:
+        db.ingest_swiggy_order(conn.cursor(), "account", "one", record)
+        row = conn.execute("SELECT * FROM orders").fetchone()
+        assert row["packaging_fee"] == 10
+        assert row["financial_verified"] == 1

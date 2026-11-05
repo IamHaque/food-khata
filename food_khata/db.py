@@ -1,6 +1,8 @@
 """SQLite analytics database ingestion and query models for Food Khata."""
 
 import hashlib
+import json
+import math
 import re
 import sqlite3
 from collections.abc import Iterator
@@ -9,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .contracts import KhataError
 from .storage import DEFAULT_DATA_DIR, Storage, read_json
 
 DEFAULT_DB_PATH = DEFAULT_DATA_DIR / "food_analytics.db"
@@ -24,10 +27,10 @@ def clean_num(val: Any, default: float = 0.0) -> float:
     if val is None:
         return default
     if isinstance(val, (int, float)):
-        return float(val)
+        return float(val) if math.isfinite(val) else default
     cleaned = re.sub(r"[^0-9.-]", "", str(val))
     try:
-        return float(cleaned) if cleaned else default
+        return float(cleaned) if cleaned and math.isfinite(float(cleaned)) else default
     except ValueError:
         return default
 
@@ -36,8 +39,13 @@ def parse_date(
     date_str: str | None = None, epoch_secs: int | float | str | None = None
 ) -> tuple[str, str, str]:
     """Return (iso_timestamp, YYYY-MM-DD, HH:MM:SS) in IST timezone."""
-    # If date_str is provided, it is already local time (IST) from Swiggy/Zomato
     if date_str:
+        try:
+            dt = datetime.fromisoformat(date_str.strip().replace("Z", "+00:00"))
+            dt = dt.replace(tzinfo=IST) if dt.tzinfo is None else dt.astimezone(IST)
+            return dt.isoformat(), dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
+        except ValueError:
+            pass
         formats = [
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%dT%H:%M:%S",
@@ -65,11 +73,10 @@ def parse_date(
             if sec > 0:
                 dt = datetime.fromtimestamp(sec, tz=IST)
                 return dt.isoformat(), dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
-        except (ValueError, OSError):
+        except (ValueError, OSError, OverflowError):
             pass
 
-    now = datetime.now(IST)
-    return now.isoformat(), now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S")
+    return "", "", ""
 
 
 def normalize_payment(payment_str: str | None) -> str:
@@ -97,42 +104,34 @@ def normalize_address(raw_label: str | None, address_text: str | None) -> str:
     addr = (address_text or "").lower()
     lbl = (raw_label or "").strip()
 
-    if "dubagga" in addr or "ayesha masjid" in addr or lbl.upper() == "DG":
-        return "Home (Dubagga)"
-    if (
-        "mahanagar" in addr
-        or "vigyanpuri" in addr
-        or "shadab colony" in addr
-        or "zara ghar" in lbl.lower()
-    ):
-        return "Family (Mahanagar)"
-    if "gachibowli" in addr or "hyderabad" in addr or "sunidhi" in addr:
-        return "Work/PG (Hyderabad)"
-    if "guwahati" in addr or "hatigaon" in addr or "aashirvad" in addr:
-        return "Travel (Guwahati)"
-    if any(
-        k in addr
-        for k in [
-            "chowk",
-            "aminabad",
-            "maulviganj",
-            "husainabad",
-            "daulatganj",
-            "raja bazar",
-            "sabzi mandi",
-        ]
-    ):
-        return "Lucknow (Old City / Chowk)"
-
-    if lbl and lbl.lower() not in [
-        "delivered",
-        "payment incomplete",
-        "processing refund",
-        "other",
-        "",
-    ]:
-        return lbl
-    return "Other"
+    if not addr.strip():
+        return "Unknown"
+    # Geographic groups preserve personal Home/Work annotations in the raw label.
+    groups = [
+        (("dubagga", "ayesha masjid"), "Dubagga, Lucknow"),
+        (("mahanagar", "vigyanpuri", "shadab colony"), "Mahanagar, Lucknow"),
+        (("jv colony",), "JV Colony, Hyderabad"),
+        (("sunidhi", "chhota anjaiah"), "Chhota Anjaiah Nagar, Hyderabad"),
+        (("gachibowli",), "Gachibowli, Hyderabad"),
+        (("hatigaon", "aashirvad heritage"), "Hatigaon, Guwahati"),
+        (("beltola",), "Beltola, Guwahati"),
+        (("husainabad", "daulatganj"), "Husainabad, Lucknow"),
+        (("aminabad", "maulviganj"), "Aminabad, Lucknow"),
+        (("raja bazar", "chowk", "sabzi mandi"), "Chowk / Raja Bazar, Lucknow"),
+        (("qaisar bagh", "jawahar nagar"), "Jawahar Nagar / Qaisar Bagh, Lucknow"),
+        (("sector 49",), "Sector 49, Noida"),
+        (("sector 36",), "Sector 36, Noida"),
+        (("paharganj",), "Paharganj, Delhi"),
+    ]
+    for keywords, group in groups:
+        if any(k in addr for k in keywords):
+            return group
+    return (
+        lbl
+        if lbl.lower()
+        not in {"", "other", "oth", "delivered", "payment incomplete", "processing refund"}
+        else "Unreviewed"
+    )
 
 
 def hash_address(label: str | None, address: str | None) -> str:
@@ -157,23 +156,7 @@ def infer_veg_tag(
             return 1
 
     n = (name or "").lower()
-    if any(
-        k in n
-        for k in [
-            "chicken",
-            "mutton",
-            "egg",
-            "fish",
-            "prawn",
-            "wings",
-            "kebab",
-            "meat",
-            "pepperoni",
-            "seekh",
-            "tikka boti",
-            "shawarma",
-        ]
-    ):
+    if re.search(r"\b(chicken|mutton|egg|eggs|fish|prawn|prawns|meat|pepperoni)\b", n):
         return 0
     if any(
         k in n
@@ -202,6 +185,19 @@ def classify_cuisine(dish_name: str | None, rest_name: str | None) -> str:
     dn = (dish_name or "").lower()
     rn = (rest_name or "").lower()
 
+    if any(
+        k in dn
+        for k in [
+            "noodle",
+            "fried rice",
+            "chowmein",
+            "chilli paneer",
+            "schezwan",
+            "manchurian",
+            "kimchi",
+        ]
+    ):
+        return "Chinese & Asian"
     if any(k in dn for k in ["burger", "snacker", "nikku"]) or "burger" in rn:
         return "Burgers & Sandwiches"
     if (
@@ -237,19 +233,6 @@ def classify_cuisine(dish_name: str | None, rest_name: str | None) -> str:
         or "dastarkhwan" in rn
     ):
         return "Mughlai, Shawarma & Desi"
-    if any(
-        k in dn
-        for k in [
-            "noodle",
-            "fried rice",
-            "chowmein",
-            "chilli paneer",
-            "schezwan",
-            "manchurian",
-            "kimchi",
-        ]
-    ):
-        return "Chinese & Asian"
     if (
         any(
             k in dn
@@ -307,6 +290,13 @@ class AnalyticsDB:
                 id TEXT PRIMARY KEY,
                 phone TEXT NOT NULL,
                 local_id TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS archive_imports (
+                account_id TEXT NOT NULL, platform TEXT NOT NULL,
+                history_complete INTEGER NOT NULL, details_complete INTEGER NOT NULL,
+                lifetime_complete INTEGER NOT NULL, order_count INTEGER NOT NULL,
+                imported_at TEXT NOT NULL, PRIMARY KEY(account_id, platform)
             );
 
             CREATE TABLE IF NOT EXISTS restaurants (
@@ -380,6 +370,81 @@ class AnalyticsDB:
             CREATE INDEX IF NOT EXISTS idx_items_name ON order_items(item_name);
             """)
 
+            columns = {r[1] for r in conn.execute("PRAGMA table_info(orders)")}
+            for name, sql_type in {
+                "food_discount": "REAL DEFAULT 0",
+                "tip": "REAL DEFAULT 0",
+                "other_charges": "REAL DEFAULT 0",
+                "refund_amount": "REAL DEFAULT 0",
+                "reported_savings": "REAL DEFAULT 0",
+                "reconciliation_difference": "REAL",
+                "financial_verified": "INTEGER DEFAULT 0",
+                "source_complete": "INTEGER DEFAULT 0",
+                "source_bill_json": "TEXT",
+                "discount_breakdown_json": "TEXT",
+            }.items():
+                if name not in columns:
+                    conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}")
+            conn.commit()
+
+    def record_financials(
+        self,
+        cursor,
+        order_id,
+        *,
+        food_discount,
+        tip,
+        other_charges,
+        refund_amount,
+        reported_savings,
+        source_complete,
+        source_bill,
+        discounts,
+    ):
+        row = cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+        expected = (
+            row["item_subtotal"]
+            + row["delivery_fee"]
+            + row["packaging_fee"]
+            + row["platform_fee"]
+            + row["total_tax"]
+            + tip
+            + other_charges
+            - food_discount
+        )
+        difference = round(row["final_amount_paid"] - expected, 2)
+        verified = bool(
+            source_complete
+            and abs(difference) <= 1
+            and row["order_date"]
+            and row["order_status"] == "DELIVERED"
+        )
+        cursor.execute(
+            """UPDATE orders SET food_discount=?, tip=?, other_charges=?,
+            refund_amount=?, reported_savings=?, reconciliation_difference=?, financial_verified=?,
+            source_complete=?, source_bill_json=?, discount_breakdown_json=? WHERE id=?""",
+            (
+                food_discount,
+                tip,
+                other_charges,
+                refund_amount,
+                reported_savings,
+                difference,
+                int(verified),
+                int(source_complete),
+                json.dumps(source_bill, ensure_ascii=False),
+                json.dumps(discounts, ensure_ascii=False),
+                order_id,
+            ),
+        )
+
+    def check_order_owner(self, cursor, order_id, account_id):
+        existing = cursor.execute(
+            "SELECT account_id FROM orders WHERE id=?", (order_id,)
+        ).fetchone()
+        if existing and existing[0] != account_id:
+            raise KhataError("Order belongs to another local account; import stopped")
+
     def ingest_swiggy_order(
         self, cursor: sqlite3.Cursor, account_id: str, order_id: str, order_data: dict[str, Any]
     ) -> bool:
@@ -390,6 +455,7 @@ class AnalyticsDB:
         history = order_data.get("history") or {}
 
         unique_order_id = f"SWIGGY_{order_id}"
+        self.check_order_owner(cursor, unique_order_id, account_id)
         cursor.execute(
             "INSERT OR IGNORE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
             (account_id, "Unknown", account_id),
@@ -411,16 +477,19 @@ class AnalyticsDB:
         rest_city = ord0.get("restaurant_city_name")
         rest_address = ord0.get("restaurant_address")
         lat_lng = str(ord0.get("restaurant_lat_lng") or "").split(",")
-        lat = float(lat_lng[0]) if len(lat_lng) > 0 and lat_lng[0] else None
-        lng = float(lat_lng[1]) if len(lat_lng) > 1 and lat_lng[1] else None
+        lat = clean_num(lat_lng[0], None) if lat_lng else None
+        lng = clean_num(lat_lng[1], None) if len(lat_lng) > 1 else None
         cuisines = ord0.get("restaurant_cuisine")
         cuisine_str = ", ".join(cuisines) if isinstance(cuisines, list) else None
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO restaurants (
+            INSERT INTO restaurants (
                 id, platform, platform_restaurant_id, name, locality, city, address, latitude, longitude, cuisine
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET name=excluded.name, locality=excluded.locality,
+                city=excluded.city, address=excluded.address, latitude=excluded.latitude,
+                longitude=excluded.longitude, cuisine=excluded.cuisine
             """,
             (
                 rest_id,
@@ -441,46 +510,70 @@ class AnalyticsDB:
         raw_label = addr_info.get("annotation") or "Other"
         addr_text = addr_info.get("address") or ""
         norm_label = normalize_address(raw_label, addr_text)
-        addr_id = hash_address(norm_label, addr_text)
+        addr_id = hash_address(account_id + ":" + raw_label, addr_text)
         addr_city = addr_info.get("city")
         addr_lat = clean_num(addr_info.get("lat"), None)
         addr_lng = clean_num(addr_info.get("lng"), None)
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO delivery_addresses (
+            INSERT INTO delivery_addresses (
                 id, label, normalized_label, full_address, city, latitude, longitude
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET normalized_label=excluded.normalized_label,
+                city=excluded.city, latitude=excluded.latitude, longitude=excluded.longitude
             """,
             (addr_id, raw_label, norm_label, addr_text, addr_city, addr_lat, addr_lng),
         )
 
         # 4. Financials
         item_subtotal = clean_num(ord0.get("item_total"))
-        food_discount = clean_num(ord0.get("order_discount")) or clean_num(
-            ord0.get("coupon_discount")
+        food_discount = clean_num(ord0.get("order_discount", ord0.get("coupon_discount")))
+        deliv_disc = clean_num(ord0.get("free_delivery_discount_hit")) + clean_num(
+            ord0.get("delivery_discount_hit")
         )
-        deliv_disc = clean_num(
-            ord0.get("free_delivery_discount_hit")
-            or (ord0.get("deliveryFeeCouponBreakup") or {}).get("totalDeliveryFeeDiscount")
-        )
+        if not deliv_disc:
+            deliv_disc = clean_num(
+                (ord0.get("deliveryFeeCouponBreakup") or {}).get("totalDeliveryFeeDiscount")
+            )
         total_discount = food_discount + deliv_disc
-
         final_paid = clean_num(
-            ord0.get("order_total_with_tip")
-            or ord0.get("order_total")
-            or ord0.get("net_total")
-            or history.get("orderTotal")
+            ord0.get(
+                "order_total_with_tip",
+                ord0.get("order_total", ord0.get("net_total", history.get("orderTotal"))),
+            )
         )
         delivery_fee = clean_num(
-            ord0.get("discounted_total_delivery_fee") or ord0.get("order_delivery_charge")
+            ord0.get("discounted_total_delivery_fee", ord0.get("order_delivery_charge"))
         )
-        packaging_fee = clean_num(ord0.get("restaurant_packing_charges"))
-        platform_fee = clean_num(ord0.get("convenience_fee") or ord0.get("platform_fee_tax"))
-        total_tax = clean_num(ord0.get("order_tax") or ord0.get("total_tax"))
+        # Older payloads leave named packing at zero while the bill lists a charge.
+        charges = ord0.get("charges") or {}
+        packaging_fee = clean_num(ord0.get("restaurant_packing_charges")) or clean_num(
+            charges.get("Packing Charges")
+        )
+        platform_fee = clean_num(ord0.get("convenience_fees", ord0.get("convenience_fee")))
+        if not platform_fee:
+            platform_fee = clean_num(charges.get("Convenience Fee"))
+        total_tax = clean_num(
+            ord0.get(
+                "total_tax_including_platform_fee",
+                clean_num(ord0.get("order_tax", ord0.get("total_tax")))
+                + clean_num(ord0.get("platform_fee_tax")),
+            )
+        )
+        tip = (
+            max(0, clean_num(ord0.get("order_total_with_tip")) - clean_num(ord0.get("order_total")))
+            if "order_total" in ord0
+            else 0
+        )
+        other_charges = (
+            clean_num(ord0.get("subscription_total"))
+            + clean_num(ord0.get("restaurant_fulfilment_charges"))
+            + clean_num(ord0.get("priority_delivery_fee"))
+        )
         rating = clean_num(ord0.get("restaurant_order_rating") or history.get("foodRating"), None)
 
-        gross_baseline = item_subtotal + delivery_fee + deliv_disc + packaging_fee
+        gross_baseline = final_paid + total_discount
         discount_pct = (
             round((total_discount / gross_baseline) * 100, 2) if gross_baseline > 0 else 0.0
         )
@@ -491,7 +584,9 @@ class AnalyticsDB:
             or history.get("orderStatus")
             or ""
         ).upper()
-        if "DELIVER" in raw_status or "COMPLETE" in raw_status:
+        if "INCOMPLETE" in raw_status:
+            status = "PAYMENT_INCOMPLETE"
+        elif raw_status in {"DELIVERED", "COMPLETED", "COMPLETE", "DELIVERY_DELIVERED"}:
             status = "DELIVERED"
         elif "CANCEL" in raw_status:
             status = "CANCELLED"
@@ -534,11 +629,28 @@ class AnalyticsDB:
             ),
         )
 
+        self.record_financials(
+            cursor,
+            unique_order_id,
+            food_discount=food_discount,
+            tip=tip,
+            other_charges=other_charges,
+            refund_amount=clean_num(ord0.get("edit_refund_amount")),
+            reported_savings=clean_num(ord0.get("savings_shown_to_customer")),
+            source_complete=bool(ord0 and "item_total" in ord0 and "order_total" in ord0),
+            source_bill={
+                k: v
+                for k, v in ord0.items()
+                if any(part in k for part in ("total", "discount", "fee", "charge", "tax", "tip"))
+            },
+            discounts={"food": food_discount, "delivery": deliv_disc},
+        )
+
         # 5. Order Line Items
         cursor.execute("DELETE FROM order_items WHERE order_id = ?", (unique_order_id,))
         for it in ord0.get("order_items") or []:
-            qty = int(clean_num(it.get("quantity"), 1))
-            total_price = clean_num(it.get("final_price") or it.get("subtotal") or it.get("total"))
+            qty = max(1, int(clean_num(it.get("quantity"), 1)))
+            total_price = clean_num(it.get("final_price", it.get("subtotal", it.get("total"))))
             unit_price = clean_num(it.get("base_price")) or (
                 total_price / qty if qty > 0 else total_price
             )
@@ -573,6 +685,7 @@ class AnalyticsDB:
         history = order_data.get("history") or {}
 
         unique_order_id = f"ZOMATO_{order_id}"
+        self.check_order_owner(cursor, unique_order_id, account_id)
         cursor.execute(
             "INSERT OR IGNORE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
             (account_id, "Unknown", account_id),
@@ -602,9 +715,12 @@ class AnalyticsDB:
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO restaurants (
+            INSERT INTO restaurants (
                 id, platform, platform_restaurant_id, name, locality, city, address, latitude, longitude, cuisine
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET name=excluded.name, locality=excluded.locality,
+                city=excluded.city, address=excluded.address, latitude=excluded.latitude,
+                longitude=excluded.longitude, cuisine=excluded.cuisine
             """,
             (
                 rest_id,
@@ -625,16 +741,18 @@ class AnalyticsDB:
         raw_label = del_details.get("alias") or details.get("delivery_label") or "Other"
         addr_text = del_details.get("full_address_text") or details.get("delivery_address") or ""
         norm_label = normalize_address(raw_label, addr_text)
-        addr_id = hash_address(norm_label, addr_text)
-        addr_city = rest_city or del_details.get("subzone_name")
+        addr_id = hash_address(account_id + ":" + raw_label, addr_text)
+        addr_city = del_details.get("city") or del_details.get("subzone_name")
         addr_lat = clean_num(del_details.get("latitude"), None)
         addr_lng = clean_num(del_details.get("longitude"), None)
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO delivery_addresses (
+            INSERT INTO delivery_addresses (
                 id, label, normalized_label, full_address, city, latitude, longitude
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET normalized_label=excluded.normalized_label,
+                city=excluded.city, latitude=excluded.latitude, longitude=excluded.longitude
             """,
             (addr_id, raw_label, norm_label, addr_text, addr_city, addr_lat, addr_lng),
         )
@@ -648,52 +766,90 @@ class AnalyticsDB:
         total_tax = 0.0
         voucher_discounts = 0.0
         savings_val = 0.0
-
+        other_charges = 0.0
+        tip = 0.0
+        discounts = {}
+        known_types = {
+            "dish",
+            "item_total",
+            "subtotal2",
+            "total_user",
+            "savings",
+            "charge",
+            "subtotal_charge",
+            "platform_charge",
+            "tax",
+            "voucher_discount",
+            "discount",
+            "salt_discount",
+            "resell_discount",
+            "gold_subscription_charge",
+            "donations",
+            "tip",
+            "popUpItems",
+        }
+        unknown_types = set()
+        direct_tax = any((w.get("item") or {}).get("type") == "tax" for w in items_list)
+        direct_packaging = any(
+            (w.get("item") or {}).get("type") in {"charge", "subtotal_charge"}
+            and "pack" in (w["item"].get("item_name") or "").lower()
+            for w in items_list
+        )
         for wrapper in items_list:
             it = wrapper.get("item") or {}
             itype = it.get("type")
             cost = clean_num(it.get("total_cost"))
             iname = (it.get("item_name") or "").lower()
             dcost = (it.get("display_cost") or "").strip().upper()
-
+            actual = 0.0 if dcost == "FREE" else clean_num(dcost, cost)
             if itype == "dish":
                 dishes.append(it)
             elif itype in ("charge", "subtotal_charge"):
-                if "FREE" in dcost:
-                    actual = 0.0
-                    waived = cost
-                elif dcost:
-                    actual = clean_num(dcost, default=cost)
-                    waived = max(0.0, cost - actual)
-                else:
-                    actual = cost
-                    waived = 0.0
-
                 if "deliver" in iname or "rider" in iname:
                     delivery_fee += actual
-                    deliv_disc += waived
+                    deliv_disc += max(0.0, cost - actual)
                 elif "pack" in iname or "handling" in iname:
                     packaging_fee += actual
                 else:
-                    delivery_fee += actual
-                    deliv_disc += waived
+                    other_charges += actual
             elif itype == "platform_charge":
-                platform_fee += cost
+                platform_fee += actual
             elif itype == "tax":
-                total_tax += cost
-            elif itype in ("voucher_discount", "discount"):
+                total_tax += actual
+            elif itype in ("voucher_discount", "discount", "salt_discount", "resell_discount"):
                 voucher_discounts += abs(cost)
+                discounts[it.get("item_name") or itype] = abs(cost)
             elif itype == "savings":
                 savings_val = max(savings_val, abs(cost))
+            elif itype in ("gold_subscription_charge", "donations"):
+                other_charges += actual
+            elif itype == "tip":
+                tip += actual
+            elif itype == "popUpItems":
+                if "tax" in iname and not direct_tax:
+                    total_tax += actual
+                elif "pack" in iname and not direct_packaging:
+                    packaging_fee += actual
+            elif itype not in known_types:
+                unknown_types.add(str(itype))
 
-        item_subtotal = sum(clean_num(d.get("total_cost")) for d in dishes)
-        total_discount = savings_val if savings_val > 0 else (voucher_discounts + deliv_disc)
-
-        final_paid = clean_num(order_meta.get("total_cost") or details.get("total_cost"))
-        gross_baseline = item_subtotal + delivery_fee + deliv_disc + packaging_fee
-        discount_pct = (
-            round((total_discount / gross_baseline) * 100, 2) if gross_baseline > 0 else 0.0
+        subtotal_row = next(
+            (
+                (w.get("item") or {})
+                for w in items_list
+                if (w.get("item") or {}).get("type") == "item_total"
+            ),
+            None,
         )
+        item_subtotal = (
+            clean_num(subtotal_row.get("total_cost"))
+            if subtotal_row
+            else sum(clean_num(d.get("total_cost")) for d in dishes)
+        )
+        total_discount = voucher_discounts + deliv_disc
+        final_paid = clean_num(order_meta.get("total_cost", details.get("total_cost")))
+        gross_baseline = final_paid + total_discount
+        discount_pct = round(total_discount / gross_baseline * 100, 2) if gross_baseline > 0 else 0
 
         raw_status = (
             details.get("current_status")
@@ -743,10 +899,23 @@ class AnalyticsDB:
             ),
         )
 
+        self.record_financials(
+            cursor,
+            unique_order_id,
+            food_discount=voucher_discounts,
+            tip=tip,
+            other_charges=other_charges,
+            refund_amount=clean_num(details.get("refund_amount")),
+            reported_savings=savings_val,
+            source_complete=bool(items_list and "total_cost" in order_meta and not unknown_types),
+            source_bill=items_list,
+            discounts=discounts,
+        )
+
         # 5. Items
         cursor.execute("DELETE FROM order_items WHERE order_id = ?", (unique_order_id,))
         for d in dishes:
-            qty = int(clean_num(d.get("quantity"), 1))
+            qty = max(1, int(clean_num(d.get("quantity"), 1)))
             total_price = clean_num(d.get("total_cost"))
             unit_price = clean_num(d.get("unit_cost")) or (
                 total_price / qty if qty > 0 else total_price
@@ -779,33 +948,47 @@ class AnalyticsDB:
         with self.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR REPLACE INTO accounts (id, phone, local_id) VALUES (?, ?, ?)",
+                """INSERT INTO accounts (id, phone, local_id) VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET phone=excluded.phone, local_id=excluded.local_id""",
                 (local_id, phone, local_id),
             )
 
-            # Ingest Swiggy
-            sw_file = acc_path / "swiggy-history.json"
-            if sw_file.exists():
-                try:
-                    sw_data = read_json(sw_file)
-                    orders = sw_data.get("orders") or {}
-                    for oid, oval in orders.items():
-                        if self.ingest_swiggy_order(cursor, local_id, str(oid), oval):
-                            counts["swiggy"] += 1
-                except Exception:
-                    pass
-
-            # Ingest Zomato
-            zm_file = acc_path / "zomato-history.json"
-            if zm_file.exists():
-                try:
-                    zm_data = read_json(zm_file)
-                    orders = zm_data.get("orders") or {}
-                    for oid, oval in orders.items():
-                        if self.ingest_zomato_order(cursor, local_id, str(oid), oval):
-                            counts["zomato"] += 1
-                except Exception:
-                    pass
+            for provider, ingest in (
+                ("swiggy", self.ingest_swiggy_order),
+                ("zomato", self.ingest_zomato_order),
+            ):
+                archive_path = acc_path / f"{provider}-history.json"
+                if not archive_path.exists():
+                    continue
+                archive = read_json(archive_path)
+                if not isinstance(archive, dict) or not isinstance(archive.get("orders"), dict):
+                    raise KhataError(f"Invalid {provider} archive")
+                cursor.execute(
+                    """INSERT INTO archive_imports VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(account_id, platform) DO UPDATE SET
+                    history_complete=excluded.history_complete, details_complete=excluded.details_complete,
+                    lifetime_complete=excluded.lifetime_complete, order_count=excluded.order_count,
+                    imported_at=excluded.imported_at""",
+                    (
+                        local_id,
+                        provider.upper(),
+                        int(archive.get("history_complete") is True),
+                        int(archive.get("details_complete") is True),
+                        int(archive.get("lifetime_complete") is True),
+                        len(archive["orders"]),
+                        datetime.now(IST).isoformat(),
+                    ),
+                )
+                for oid, order in archive["orders"].items():
+                    try:
+                        if not isinstance(order, dict):
+                            raise ValueError("Invalid order")
+                        if ingest(cursor, local_id, str(oid), order):
+                            counts[provider] += 1
+                    except Exception as exc:
+                        raise KhataError(
+                            f"Cannot ingest {provider} order {oid}; account import rolled back"
+                        ) from exc
 
             conn.commit()
 

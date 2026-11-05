@@ -88,11 +88,11 @@ class CliTests(unittest.TestCase):
     def test_logout_preserves_archive(self):
         account = self.saved()
         archive = self.storage.account_path(account["local_id"]) / "zomato-history.json"
-        archive.write_text("existing archive")
+        archive.write_text('{"orders": {}}')
         self.invoke(["zomato", account, "Logout and log in again", "9876543210"])
         self.provider.logout.assert_called_once()
         self.provider.login.assert_called_once()
-        self.assertEqual(archive.read_text(), "existing archive")
+        self.assertEqual(archive.read_text(), '{"orders": {}}')
 
     def test_network_failure_preserves_session(self):
         account = self.saved()

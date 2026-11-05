@@ -165,3 +165,20 @@ separate manual check; offline tests do not prove current provider availability.
 The integrations were adapted from Jomato (MIT, copyright 2026 jatin-dot-py).
 See [LICENSE](LICENSE). This repository is independent and imports no parent project
 modules, configuration, sessions, or exports. Use only for accounts you control.
+
+## Local analytics and history
+
+Run `food-khata ingest` to import saved archives, then `food-khata dashboard --no-open`
+to generate `.food-khata/dashboard.html`. Open that file to explore all customers,
+filter the timeline and search the complete paginated history. Each order exposes
+its stored bill, items, restaurant and delivery address. The generated HTML contains
+personal order/address data for every imported account; keep it private.
+
+Ingestion migrates the SQLite schema additively and rolls back an account import
+if a record fails, leaving source archives untouched. Bill discounts are stored
+separately from provider-advertised savings. A delivered bill is marked reconciled
+when known components match its total within INR 1 (provider rounding); mismatches,
+missing dates and incomplete sources remain visible for review. Reconciled means
+arithmetically consistent, not independently verified against bank transactions.
+Address groups describe geography; original personal annotations remain available.
+Chart.js and Tailwind load from CDNs and need an internet connection.

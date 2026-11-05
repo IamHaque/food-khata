@@ -127,37 +127,43 @@ delivery_addresses (address_id PK, address_line, city, tag)
 
 ### Multi-Platform Ingestion Pipeline
 
-Ingestion (`ingest_all`) iterates through all saved accounts and archives in the storage directory:
-1. **Idempotence**: Orders and items use `INSERT OR REPLACE` upsert semantics keyed by primary keys.
-2. **Payload Parsing**:
-   - Swiggy mobile details: nested inside `details["orders"][0]`.
-   - Zomato mobile details: flat item/charge list inside `details["order"]["items"]` classified by `item["type"]` (`dish`, `charge`, `tax`, `savings`, `voucher_discount`).
-3. **Resilience**: Orders with legacy or redacted item arrays are preserved without failing the ingestion run.
-4. **Offline Migration**: `food-khata ingest` performs full DB population directly from disk without network access or authentication.
+Saved JSON archives remain the source of truth. Ingestion adds missing analytics
+columns without dropping existing data. Parent records use SQLite conflict updates;
+order items are replaced idempotently. An account import is transactional: malformed
+records fail visibly and roll back that account rather than silently committing a
+partial import. Order ownership is checked before updating an existing order.
+
+The parser stores explicit food/delivery discounts separately from advertised
+savings, plus fees, tax, tips, refunds and other charges. Source bill fields and
+discount details are retained for inspection. Reconciliation compares the known
+bill components with the provider total within INR 1 for rounding; unresolved
+records remain flagged. Missing dates stay unknown, and date offsets convert to IST.
+Address variants retain raw labels; normalized groups describe geography rather
+than assuming a personal Home/Work context. Archive coverage is stored separately
+in `archive_imports`; API-visible completeness does not imply lifetime completeness.
 
 ## Visual Dashboard (`dashboard.py`)
 
-The analytics engine runs fast SQL aggregations over `food_analytics.db` to compile a standalone,
-single-file HTML/JS dashboard (`dashboard.html`):
-- **Zero Server Overhead**: The generated dashboard is an offline-ready single HTML document using
-  Tailwind CSS and Chart.js via CDN.
-- **Interactive Multi-Account Filtering**: Allows toggling between aggregate household views and
-  per-account phone number breakdowns.
-- **Core Visualizations**:
-  - **KPI Cards**: Delivered spend, total savings (item discounts + waived fees), order count, and AOV.
-  - **Platform Battle**: Side-by-side volume, spend, and average fee comparison between Swiggy and Zomato.
-  - **Monthly Spend Curves**: Longitudinal spend trends over time.
-  - **Fee Creep Tracker**: Visualizing the historical rise of platform fees, packaging fees, and taxes.
-  - **Dietary & Cuisine Splits**: Doughnut breakdown of Veg vs Non-Veg spending and popular cuisines.
-  - **7x24 Ordering Heatmap**: Hour-of-day vs day-of-week order density matrix.
-  - **Top Lists & Order Log**: Searchable top 10 restaurants, top dishes, and tabular order log.
+The generator embeds all accounts, orders, related items, restaurants and addresses
+in a static HTML file. Customer/date/platform/status/place/payment/quality filters
+run locally and update metrics, charts and complete paginated history. Details
+expose every stored field. Source strings use text nodes and embedded JSON escapes
+script-closing markup. The file contains private order/address information for all
+accounts, including when initially opened with one customer selected.
+
+Tailwind and Chart.js load from CDNs; no local server is needed. Timeline gaps are
+filled from inception through today, with day/week/month/year grouping. Monetary
+metrics separate delivered orders from cancelled/incomplete attempts, and verified
+discounts from unresolved and advertised savings. Other views show fee composition,
+order-value distribution, cuisine/diet quantity, weekday/hour activity, complete
+restaurant/dish rankings, address variants and import/reconciliation quality.
 
 ## Post-Sync Workflow and CLI Subcommands
 
 1. **`food-khata sync`** (default):
    - Authenticates / refreshes session.
    - Syncs orders incrementally or full scan.
-   - Automatically executes `ingest_all()` to update `food_analytics.db`.
+   - Automatically executes `ingest_account()` to update `food_analytics.db`.
    - Prompts the user: `"Generate and view analytics dashboard? [Y/n]"`. If accepted, generates `dashboard.html` and launches the system browser.
 2. **`food-khata ingest`**:
    - Standalone offline ingestion from local JSON archives into SQLite.
