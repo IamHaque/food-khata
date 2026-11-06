@@ -99,39 +99,20 @@ def normalize_payment(payment_str: str | None) -> str:
     return payment_str.strip()
 
 
-def normalize_address(raw_label: str | None, address_text: str | None) -> str:
-    """Cluster raw delivery address texts and annotations into recognized habitat buckets."""
-    addr = (address_text or "").lower()
-    lbl = (raw_label or "").strip()
-
-    if not addr.strip():
+def normalize_address(raw_label: str | None, address_text: str | None = None) -> str:
+    """Clean and normalize delivery address labels without hardcoded neighborhood or personal landmark dictionaries."""
+    if not address_text or not address_text.strip():
         return "Unknown"
-    # Geographic groups preserve personal Home/Work annotations in the raw label.
-    groups = [
-        (("dubagga", "ayesha masjid"), "Dubagga, Lucknow"),
-        (("mahanagar", "vigyanpuri", "shadab colony"), "Mahanagar, Lucknow"),
-        (("jv colony",), "JV Colony, Hyderabad"),
-        (("sunidhi", "chhota anjaiah"), "Chhota Anjaiah Nagar, Hyderabad"),
-        (("gachibowli",), "Gachibowli, Hyderabad"),
-        (("hatigaon", "aashirvad heritage"), "Hatigaon, Guwahati"),
-        (("beltola",), "Beltola, Guwahati"),
-        (("husainabad", "daulatganj"), "Husainabad, Lucknow"),
-        (("aminabad", "maulviganj"), "Aminabad, Lucknow"),
-        (("raja bazar", "chowk", "sabzi mandi"), "Chowk / Raja Bazar, Lucknow"),
-        (("qaisar bagh", "jawahar nagar"), "Jawahar Nagar / Qaisar Bagh, Lucknow"),
-        (("sector 49",), "Sector 49, Noida"),
-        (("sector 36",), "Sector 36, Noida"),
-        (("paharganj",), "Paharganj, Delhi"),
-    ]
-    for keywords, group in groups:
-        if any(k in addr for k in keywords):
-            return group
-    return (
-        lbl
-        if lbl.lower()
-        not in {"", "other", "oth", "delivered", "payment incomplete", "processing refund"}
-        else "Unreviewed"
-    )
+    lbl = (raw_label or "").strip()
+    if not lbl or lbl.lower() in {
+        "other",
+        "oth",
+        "delivered",
+        "payment incomplete",
+        "processing refund",
+    }:
+        return "Other"
+    return lbl.title()
 
 
 def hash_address(label: str | None, address: str | None) -> str:

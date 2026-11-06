@@ -16,7 +16,7 @@ def prohibited(path: str) -> bool:
         or ".sqlite" in name
         or name.startswith(".env")
         or PurePosixPath(name).suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
-        or path.lower() == "docs/agent/parity.local.md"
+        or "parity.local.md" in path.lower()
     )
 
 
@@ -32,10 +32,10 @@ def main() -> int:
             "screenshots/real-screenshot.png",
             "screenshots/home.png",
             "capture.jpg",
-            "docs/agent/parity.local.md",
+            "docs/parity.local.md",
         ):
             assert prohibited(path), path
-        assert not prohibited("docs/BRIEF.md")
+        assert not prohibited("docs/architecture.md")
         print("Synthetic path checks passed")
         return 0
     args = (

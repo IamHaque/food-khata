@@ -144,7 +144,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("db", type=Path)
     args = parser.parse_args(argv)
-    output = Path(__file__).resolve().parents[1] / "docs/agent/parity.local.md"
+    output = Path(__file__).resolve().parents[1] / "docs/parity.local.md"
     try:
         validate_output(args.db, output)
         rows = compare(args.db)
