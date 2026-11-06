@@ -46,3 +46,4 @@ docs/agent/parity.local.md
 *.webp
 *.gif
 *.bmp
+/uv.lock

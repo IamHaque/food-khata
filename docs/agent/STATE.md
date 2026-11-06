@@ -19,7 +19,7 @@
 ## Current phase / epic / story
 E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
 ## In progress
-Ledger table implemented by root after worker no-op;7Node+11Vitest/typecheck/lint/build+syntheticbrowser pass. Next centered modal. Places backend worker running disjoint files. Behavior ef22e50 verified93+10/Ruff; parity passed.
+Places/bill safety root verified97+10/Ruff; local parity0mismatches. Overview wired; centered modal incl crosspage/deeplink navigation rootverified7Node+11Vitest/typecheck/lint/build/syntheticbrowser. Next Food/Spending datasets and remaining pageviews (Medium).
 ## Pending
 1. Complete server charts/comparisons (E1-T6, Terra Medium).
 2. Ledger table, then modal and Overview (Terra Medium).
@@ -45,10 +45,11 @@ Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/resu
 Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
 Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06 root: pytest 93 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
+2026-11-06 root: pytest 97 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
-Working changes are attributed E-1 artifacts and user-supplied technical brief; no data staged. Evidence committed as 4b83f33; clean checkpoint metadata committed with this update.
+Working changes attributed to current Places/Overview/modal slices; no private data staged. Generated unrequested uv.lock ignored, retained without deletion.
+
 
 
 

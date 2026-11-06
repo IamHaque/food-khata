@@ -289,3 +289,35 @@ def test_nonfinite_dashboard_recovers(conn):
     conn.execute("UPDATE orders SET final_amount_paid=100 WHERE id='1'")
     conn.commit()
     assert client.post("/api/dashboard", json={}).status_code == 200
+
+
+def test_finite_error_envelopes_and_row_fees(conn, caplog):
+    path = conn.execute("PRAGMA database_list").fetchone()[2]
+    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    assert client.get("/api/orders/1/bill").json()["order"]["fees"] == 8
+    conn.execute("UPDATE orders SET final_amount_paid=? WHERE id='1'", (float("inf"),))
+    conn.commit()
+    for endpoint in ("/api/orders", "/api/orders/slim", "/api/orders/1/bill", "/api/restaurants"):
+        response = client.get(endpoint)
+        assert response.status_code == 500
+        assert response.json()["error"]["code"] == "internal_error"
+        assert "Infinity" not in response.text
+    assert "final_amount_paid" not in caplog.text
+
+
+def test_bill_discount_items_and_balance_label(conn):
+    conn.execute(
+        "UPDATE orders SET discount_breakdown_json=?, reconciliation_difference=2 WHERE id='1'",
+        ('{"food":10,"delivery":4,"unexpected":"not a number"}',),
+    )
+    conn.commit()
+    path = conn.execute("PRAGMA database_list").fetchone()[2]
+    result = (
+        TestClient(create_app(path), base_url="http://127.0.0.1").get("/api/orders/1/bill").json()
+    )
+    assert result["discount_items"] == [
+        {"label": "food", "amount": 10},
+        {"label": "delivery", "amount": 4},
+    ]
+    assert result["reconciliation_status"] == "off"
+    assert result["reconciliation_label"] == "Off by INR 2.00"

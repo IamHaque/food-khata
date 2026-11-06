@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from .filters import build_where
-from .metrics import compute_metrics
+from .metrics import FEES_SQL, compute_metrics
 
 
 def overview(conn, filters):
@@ -149,7 +149,7 @@ def remaining(conn, filters):
             )
         )
         for r in conn.execute(
-            f"SELECT o.platform, COUNT(*), COALESCE(SUM(o.final_amount_paid),0), COALESCE(SUM(o.total_discount),0), COALESCE(SUM(o.reported_savings),0), COALESCE(SUM(COALESCE(o.delivery_fee,0)+COALESCE(o.packaging_fee,0)+COALESCE(o.platform_fee,0)),0) FROM orders o WHERE {delivered} GROUP BY o.platform ORDER BY o.platform",
+            f"SELECT o.platform, COUNT(*), COALESCE(SUM(o.final_amount_paid),0), COALESCE(SUM(o.total_discount),0), COALESCE(SUM(o.reported_savings),0), COALESCE(SUM({FEES_SQL}),0) FROM orders o WHERE {delivered} GROUP BY o.platform ORDER BY o.platform",
             params,
         )
     ]

@@ -5,6 +5,8 @@ import sqlite3
 from .filters import build_where
 from .schemas import Filters
 
+FEES_SQL = "COALESCE(o.delivery_fee,0)+COALESCE(o.packaging_fee,0)+COALESCE(o.platform_fee,0)"
+
 
 def compute_metrics(conn: sqlite3.Connection, filters: Filters) -> dict:
     where, params = build_where(filters)
@@ -15,8 +17,7 @@ def compute_metrics(conn: sqlite3.Connection, filters: Filters) -> dict:
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.total_discount END), 0),
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.reported_savings END), 0),
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN
-                COALESCE(o.delivery_fee, 0) + COALESCE(o.packaging_fee, 0) +
-                COALESCE(o.platform_fee, 0) END), 0),
+                {FEES_SQL} END), 0),
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.total_tax END), 0),
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.tip END), 0),
             COALESCE(SUM(o.refund_amount), 0),

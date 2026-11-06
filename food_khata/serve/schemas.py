@@ -5,6 +5,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 
+class ResponseModel(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
+
 class Filters(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
@@ -51,12 +55,12 @@ class Filters(BaseModel):
         return self
 
 
-class Metadata(BaseModel):
+class Metadata(ResponseModel):
     filters_applied: Filters
     generated_at: datetime
 
 
-class AccountOption(BaseModel):
+class AccountOption(ResponseModel):
     id: str
     label: str
     platforms: list[str]
@@ -65,7 +69,7 @@ class AccountOption(BaseModel):
     date_to: str | None
 
 
-class RestaurantOption(BaseModel):
+class RestaurantOption(ResponseModel):
     id: str
     name: str
 
@@ -86,7 +90,7 @@ class FilterOptions(Metadata):
     amount_max: float | None
 
 
-class ImportHealth(BaseModel):
+class ImportHealth(ResponseModel):
     account_id: str
     platform: str
     history_complete: bool
@@ -104,7 +108,7 @@ class Health(Metadata):
     note: str
 
 
-class KPIs(BaseModel):
+class KPIs(ResponseModel):
     orders: int
     valid_order_count: int
     spend: float
@@ -123,19 +127,19 @@ class KPIs(BaseModel):
     average_rating: float | None
 
 
-class Month(BaseModel):
+class Month(ResponseModel):
     month: str | None
     orders: int
     spend: float
 
 
-class CalendarDay(BaseModel):
+class CalendarDay(ResponseModel):
     date: str | None
     orders: int
     spend: float
 
 
-class KPIDeltas(BaseModel):
+class KPIDeltas(ResponseModel):
     orders: float | None
     valid_order_count: float | None
     spend: float | None
@@ -154,14 +158,14 @@ class KPIDeltas(BaseModel):
     average_rating: float | None
 
 
-class Comparison(BaseModel):
+class Comparison(ResponseModel):
     date_from: date
     date_to: date
     kpis: KPIs
     percent_change: KPIDeltas
 
 
-class Waterfall(BaseModel):
+class Waterfall(ResponseModel):
     subtotal: float
     food_discount: float
     net_delivery: float
@@ -175,14 +179,14 @@ class Waterfall(BaseModel):
     refunds: float
 
 
-class ChartLeader(BaseModel):
+class ChartLeader(ResponseModel):
     key: str
     name: str
     quantity: int
     amount: float
 
 
-class PlatformChart(BaseModel):
+class PlatformChart(ResponseModel):
     platform: str
     orders: int
     spend: float
@@ -191,7 +195,7 @@ class PlatformChart(BaseModel):
     fees: float
 
 
-class FeeMonth(BaseModel):
+class FeeMonth(ResponseModel):
     month: str | None
     order_count: int
     net_delivery: float
@@ -202,35 +206,35 @@ class FeeMonth(BaseModel):
     rounding_adjustment: float
 
 
-class InsightPatch(BaseModel):
+class InsightPatch(ResponseModel):
     platforms: list[str] = []
     restaurant_ids: list[str] = []
 
 
-class Insight(BaseModel):
+class Insight(ResponseModel):
     key: Literal["most_frequent_platform", "top_restaurant", "fee_percentage"]
     text: str
     value: str
     filter_patch: InsightPatch
 
 
-class BehaviorRow(BaseModel):
+class BehaviorRow(ResponseModel):
     key: str
     orders: int
     spend: float
 
 
-class HistogramRow(BaseModel):
+class HistogramRow(ResponseModel):
     key: str
     orders: int
 
 
-class GapRow(BaseModel):
+class GapRow(ResponseModel):
     days: int
     orders: int
 
 
-class Behavior(BaseModel):
+class Behavior(ResponseModel):
     timing_unavailable_reason: str | None
     date_unavailable_reason: str | None
     hour_weekday: list[BehaviorRow]
@@ -243,7 +247,28 @@ class Behavior(BaseModel):
     orders_per_week: float | None
 
 
-class Charts(BaseModel):
+class PlaceLabel(ResponseModel):
+    label: str
+    city: str
+    orders: int
+    spend: float
+    fee: float
+
+
+class PlaceDistance(ResponseModel):
+    distance_km: float
+    fee: float
+
+
+class Places(ResponseModel):
+    labels: list[PlaceLabel]
+    distances: list[PlaceDistance]
+    distance_unavailable_reason: str | None
+    unsupported_reason: str | None
+
+
+class Charts(ResponseModel):
+    places: Places
     behavior: Behavior
     monthly: list[Month]
     calendar: list[CalendarDay]
@@ -262,7 +287,8 @@ class Dashboard(Metadata):
     data_complete: bool
 
 
-class Order(BaseModel):
+class Order(ResponseModel):
+    fees: float
     id: str
     account_label: str
     account_id: str
@@ -304,7 +330,7 @@ class Orders(Metadata):
     filtered_total_amount: float
 
 
-class Item(BaseModel):
+class Item(ResponseModel):
     item_name: str
     quantity: int
     unit_price: float | None
@@ -313,7 +339,15 @@ class Item(BaseModel):
     category: str | None
 
 
-class Bill(BaseModel):
+class DiscountItem(ResponseModel):
+    label: str
+    amount: float
+
+
+class Bill(ResponseModel):
+    discount_items: list[DiscountItem]
+    reconciliation_label: str
+    reconciliation_status: Literal["matches", "off", "unknown"]
     order: Order
     items: list[Item]
     reconciliation_difference: float | None
@@ -322,13 +356,13 @@ class Bill(BaseModel):
     discount_breakdown: JsonValue = None
 
 
-class PriceMonth(BaseModel):
+class PriceMonth(ResponseModel):
     month: str | None
     unit_price: float | None
     quantity: int
 
 
-class Leader(BaseModel):
+class Leader(ResponseModel):
     key: str
     price_trend: list[PriceMonth] = []
     name: str
@@ -343,7 +377,7 @@ class Leaders(Metadata):
     page_size: int
 
 
-class SlimOrder(BaseModel):
+class SlimOrder(ResponseModel):
     id: str
     order_date: str
     platform: str

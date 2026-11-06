@@ -23,7 +23,8 @@ from .behavior import behavior
 from .charts import overview, remaining
 from .db import connect_readonly, database_version
 from .filters import build_where
-from .metrics import compute_metrics, monthly_totals
+from .metrics import FEES_SQL, compute_metrics, monthly_totals
+from .places import places
 from .schemas import Bill, Dashboard, FilterOptions, Filters, Health, Leaders, Orders, Slim
 
 
@@ -62,7 +63,14 @@ def create_app(
                 {"error": {"code": "forbidden", "message": "Local requests only."}}, status_code=403
             )
         started = time.monotonic()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Response-validation exceptions may contain private row values.
+            return JSONResponse(
+                {"error": {"code": "internal_error", "message": "Internal server error."}},
+                status_code=500,
+            )
         if dev and time.monotonic() - started > 0.15:
             logging.getLogger(__name__).info(
                 "Slow request %s %.0fms",
@@ -321,6 +329,7 @@ def create_app(
                 "kpis": compute_metrics(conn, filters),
                 "charts": {
                     "behavior": behavior(conn, filters),
+                    "places": places(conn, filters),
                     "monthly": monthly_totals(conn, filters),
                     "calendar": calendar,
                     **remaining(conn, filters),
@@ -344,7 +353,7 @@ def create_app(
                 conn.execute("BEGIN")
         raise sqlite3.OperationalError("database busy")
 
-    select_order = """o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
+    select_order = f"""{FEES_SQL} AS fees, o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
         o.order_status, r.name AS restaurant_name, d.label AS address_label, COALESCE(d.city,r.city) AS city,
         (SELECT GROUP_CONCAT(i.item_name, ', ') FROM order_items i WHERE i.order_id=o.id) AS items_summary,
         o.final_amount_paid, o.item_subtotal, o.total_discount, o.reported_savings, o.delivery_fee,
@@ -404,7 +413,7 @@ def create_app(
             "platform": "o.platform",
             "status": "o.order_status",
             "discount": "o.total_discount",
-            "fees": "(COALESCE(o.delivery_fee,0)+COALESCE(o.packaging_fee,0)+COALESCE(o.platform_fee,0))",
+            "fees": f"({FEES_SQL})",
             "amount": "o.final_amount_paid",
         }
         if sort not in sorts or direction not in {"asc", "desc"}:
@@ -465,7 +474,21 @@ def create_app(
             "SELECT item_name, quantity, unit_price, total_price, is_veg, category FROM order_items WHERE order_id=? ORDER BY id",
             (order_id,),
         )
+        discounts = parse(row["discount_breakdown_json"])
+        difference = row["reconciliation_difference"]
+        status = "unknown" if difference is None else "matches" if abs(difference) <= 1 else "off"
         return {
+            "discount_items": [
+                {"label": label, "amount": round(amount, 2)}
+                for label, amount in (discounts.items() if isinstance(discounts, dict) else [])
+                if isinstance(label, str) and type(amount) in (int, float) and math.isfinite(amount)
+            ],
+            "reconciliation_status": status,
+            "reconciliation_label": "Unknown"
+            if status == "unknown"
+            else "Matches"
+            if status == "matches"
+            else f"Off by INR {abs(difference):.2f}",
             "order": rounded(row),
             "items": [rounded(r) for r in items],
             "reconciliation_difference": round(row["reconciliation_difference"], 2)
