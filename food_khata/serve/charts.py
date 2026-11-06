@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date, timedelta
 
 from .filters import build_where
@@ -204,7 +205,33 @@ def remaining(conn, filters):
                     "filter_patch": {},
                 }
             )
+    steps = []
+    running = 0.0
+    for label, amount in waterfall.items():
+        if label in {"provider_paid", "refunds"}:
+            continue
+        endpoint = round(running + amount, 2)
+        steps.append(
+            {
+                "label": label.replace("_", " "),
+                "amount": amount,
+                "baseline": min(running, endpoint),
+                "height": abs(amount),
+                "direction": "up" if amount >= 0 else "down",
+            }
+        )
+        running = endpoint
+    steps.append(
+        {
+            "label": "Final paid",
+            "amount": waterfall["provider_paid"],
+            "baseline": min(0, waterfall["provider_paid"]),
+            "height": abs(waterfall["provider_paid"]),
+            "direction": "total",
+        }
+    )
     return {
+        "waterfall_steps": steps,
         "cost_waterfall": waterfall,
         "top_restaurants": restaurants,
         "top_dishes": dishes,
@@ -212,3 +239,25 @@ def remaining(conn, filters):
         "monthly_fee_components": months,
         "insights": insights,
     }
+
+
+def kpi_history(conn, filters):
+    where, params = build_where(filters)
+    months = conn.execute(
+        f"SELECT DISTINCT substr(o.order_date,1,7) FROM orders o WHERE {where} ORDER BY 1", params
+    )
+    result = []
+    for (month,) in months:
+        try:
+            start = date.fromisoformat(month + "-01")
+            end = start.replace(day=monthrange(start.year, start.month)[1])
+        except (TypeError, ValueError):
+            continue
+        scoped = filters.model_copy(
+            update={
+                "date_from": max(start, filters.date_from) if filters.date_from else start,
+                "date_to": min(end, filters.date_to) if filters.date_to else end,
+            }
+        )
+        result.append({"month": month, **compute_metrics(conn, scoped)})
+    return result

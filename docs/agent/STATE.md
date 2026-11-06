@@ -19,13 +19,12 @@
 ## Current phase / epic / story
 E6 page completion active; user authorizes intermediate checkpoints until final review.
 ## In progress
-Root continuing locally. Cancellation requested for Terra Food/Spending and DataPages tasks after Gemini-only instruction; clean git confirmed, no partial edits. Gemini delegation blocked by prior enforced-scope rule; no transfer.
+Root local: E6 typed pages implemented; E7 final coverage/polish remains. No delegate transfer.
 ## Pending
-1. Food/Spending datasets and remaining page views (root local).
-2. Anomaly shortcut and final modal/Overview visual polish (root).
-3. Parity passed6e86ee2; rerun after remaining serverchanges.
-4. Dependency findings, responsive/a11y checks and documentation.
-5. Final a11y/responsive/stress checks and removal proposals.
+1. Remaining visual/detail gaps, final modal stress and responsiveness.
+2. Final a11y matrix after command palette and navigation changes.
+3. README/architecture/migration plan and final backlog reconciliation.
+4. Removal proposal for final human review; no deletion approved.
 ## Blocked
 No execution blocker. Destructive removals and protected parser/schema edits remain separately approval-gated.
 ## Done recently
@@ -45,27 +44,7 @@ Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/resu
 Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
 Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06 root: pytest 97 passed +10 subtests; Ruff lint/format pass (one Starlette/httpx warning); npm test 7 pass; build pass (existing 826.85kB JS warning); functional browser suite pass; 8 synthetic captures/axe complete; generator self-check and loader validation pass; profile regenerated locally; guard self-check/tracked/staged checks pass.
-Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
-Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
-Working changes attributed to current Places/Overview/modal slices; no private data staged. Generated unrequested uv.lock ignored, retained without deletion.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+2026-11-06 root: pytest104 passed +10 subtests; Ruff lint/format pass; Node7+Vitest12 pass; typecheck/lint/build pass. Local read-only parity0 mismatches (ignored report only).
+Synthetic seven-page browser suite passes; 56 page/theme/width screenshot+axe states pass without serious/critical findings or overflow after dark-link contrast fix. Palette/navigation additions awaiting final rerun.
+Warnings: Starlette/httpx deprecation, dual legacy/new chart bundle size; nine moderate dev lint-chain audit findings remain. Router production findings fixed7.18.5. Python3.11 unavailable locally; CI configured, no remote pass claimed.
+All working changes attributed to E6/E7; no private data staged. Legacy retained, uv.lock ignored and retained.

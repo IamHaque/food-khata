@@ -54,3 +54,11 @@ def test_empty_database(conn):
     conn.execute("DELETE FROM orders")
     assert compute_metrics(conn, Filters())["orders"] == 0
     assert monthly_totals(conn, Filters()) == []
+
+
+def test_normalized_restaurant_count(conn):
+    conn.execute(
+        "INSERT INTO restaurants (id,platform,platform_restaurant_id,name,locality) VALUES ('duplicate','ZOMATO','3',' cafe 100% ','center')"
+    )
+    conn.execute("UPDATE orders SET restaurant_id='duplicate' WHERE id='3'")
+    assert compute_metrics(conn, Filters())["unique_restaurants"] == 1

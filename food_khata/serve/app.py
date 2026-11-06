@@ -20,12 +20,14 @@ from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .behavior import behavior
-from .charts import overview, remaining
+from .charts import kpi_history, overview, remaining
 from .db import connect_readonly, database_version
 from .filters import build_where
+from .food import food
 from .metrics import FEES_SQL, compute_metrics, monthly_totals
 from .places import places
 from .schemas import Bill, Dashboard, FilterOptions, Filters, Health, Leaders, Orders, Slim
+from .spending import spending
 
 
 def create_app(
@@ -322,12 +324,22 @@ def create_app(
             if cached is not None and key[1] == database_version(db_path):
                 return cached
             h = health(conn, filters)
+            kpis = compute_metrics(conn, filters)
+            try:
+                json.dumps(kpis, allow_nan=False)
+            except ValueError:
+                raise HTTPException(
+                    422, "Dashboard data contains invalid numeric values."
+                ) from None
             calendar, comparison = overview(conn, filters)
             result = {
                 **metadata(filters),
                 "comparison": comparison,
-                "kpis": compute_metrics(conn, filters),
+                "kpis": kpis,
                 "charts": {
+                    "kpi_history": kpi_history(conn, filters),
+                    "food": food(conn, filters),
+                    "spending": spending(conn, filters),
                     "behavior": behavior(conn, filters),
                     "places": places(conn, filters),
                     "monthly": monthly_totals(conn, filters),

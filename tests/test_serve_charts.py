@@ -12,6 +12,7 @@ def test_calendar_and_comparison_scope():
         packaging_fee REAL, platform_fee REAL, total_tax REAL, tip REAL, refund_amount REAL,
         restaurant_id TEXT, user_rating REAL)""")
     conn.execute("CREATE TABLE order_items (order_id TEXT, item_name TEXT)")
+    conn.execute("CREATE TABLE restaurants (id TEXT PRIMARY KEY, name TEXT, locality TEXT)")
     conn.executemany(
         "INSERT INTO orders (id, account_id, order_date, order_status, final_amount_paid) VALUES (?,?,?,?,?)",
         [
@@ -146,3 +147,16 @@ def test_chart_scope_multi_item_and_nulls(conn):
             assert {dish["name"] for dish in charts["top_dishes"]} == {"Mystery"}
         if account == "missing":
             assert charts["top_restaurants"] == charts["top_dishes"] == charts["platforms"] == []
+
+
+def test_kpi_history_and_waterfall_layout(conn):
+    from food_khata.serve.charts import kpi_history, remaining
+    from food_khata.serve.metrics import compute_metrics
+
+    filters = Filters(account_ids=["a"], statuses=[])
+    history = kpi_history(conn, filters)
+    assert [row["month"] for row in history] == ["2025-01", "2025-02"]
+    assert sum(row["orders"] for row in history) == compute_metrics(conn, filters)["orders"]
+    steps = remaining(conn, filters)["waterfall_steps"]
+    assert steps[-1]["amount"] == compute_metrics(conn, filters)["spend"]
+    assert all(step["height"] >= 0 for step in steps)

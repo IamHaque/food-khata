@@ -232,6 +232,19 @@
             }
           },
           {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -510,6 +523,19 @@
             "schema": {
               "type": "boolean",
               "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
             }
           },
           {
@@ -829,6 +855,19 @@
             "schema": {
               "type": "boolean",
               "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
             }
           },
           {
@@ -1156,6 +1195,19 @@
             }
           },
           {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -1443,6 +1495,19 @@
             "schema": {
               "type": "boolean",
               "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
             }
           },
           {
@@ -1797,6 +1862,19 @@
             }
           },
           {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -2129,6 +2207,19 @@
             "schema": {
               "type": "boolean",
               "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
             }
           },
           {
@@ -2508,6 +2599,26 @@
       },
       "Charts": {
         "properties": {
+          "kpi_history": {
+            "items": {
+              "$ref": "#/components/schemas/MonthKPIs"
+            },
+            "type": "array",
+            "title": "Kpi History"
+          },
+          "waterfall_steps": {
+            "items": {
+              "$ref": "#/components/schemas/WaterfallStep"
+            },
+            "type": "array",
+            "title": "Waterfall Steps"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodCharts"
+          },
+          "spending": {
+            "$ref": "#/components/schemas/SpendingCharts"
+          },
           "places": {
             "$ref": "#/components/schemas/Places"
           },
@@ -2569,6 +2680,10 @@
         },
         "type": "object",
         "required": [
+          "kpi_history",
+          "waterfall_steps",
+          "food",
+          "spending",
           "places",
           "behavior",
           "monthly",
@@ -2609,6 +2724,57 @@
           "percent_change"
         ],
         "title": "Comparison"
+      },
+      "CuisineRow": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "orders",
+          "spend"
+        ],
+        "title": "CuisineRow"
+      },
+      "DailySpend": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "cumulative": {
+            "type": "number",
+            "title": "Cumulative"
+          },
+          "rolling_30": {
+            "type": "number",
+            "title": "Rolling 30"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "spend",
+          "cumulative",
+          "rolling_30"
+        ],
+        "title": "DailySpend"
       },
       "Dashboard": {
         "properties": {
@@ -2651,6 +2817,34 @@
           "data_complete"
         ],
         "title": "Dashboard"
+      },
+      "DietRow": {
+        "properties": {
+          "diet": {
+            "type": "string",
+            "title": "Diet"
+          },
+          "item_lines": {
+            "type": "integer",
+            "title": "Item Lines"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "line_total": {
+            "type": "number",
+            "title": "Line Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "diet",
+          "item_lines",
+          "quantity",
+          "line_total"
+        ],
+        "title": "DietRow"
       },
       "DiscountItem": {
         "properties": {
@@ -2724,6 +2918,36 @@
           "rounding_adjustment"
         ],
         "title": "FeeMonth"
+      },
+      "FeeScatter": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "fee_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "fees",
+          "fee_percent"
+        ],
+        "title": "FeeScatter"
       },
       "FilterOptions": {
         "properties": {
@@ -3008,6 +3232,15 @@
             "title": "Verified Only",
             "default": false
           },
+          "anomaly": {
+            "type": "string",
+            "enum": [
+              "all",
+              "review"
+            ],
+            "title": "Anomaly",
+            "default": "all"
+          },
           "search": {
             "anyOf": [
               {
@@ -3033,6 +3266,75 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Filters"
+      },
+      "FoodCharts": {
+        "properties": {
+          "cuisines": {
+            "items": {
+              "$ref": "#/components/schemas/CuisineRow"
+            },
+            "type": "array",
+            "title": "Cuisines"
+          },
+          "diet": {
+            "items": {
+              "$ref": "#/components/schemas/DietRow"
+            },
+            "type": "array",
+            "title": "Diet"
+          },
+          "loyalty": {
+            "items": {
+              "$ref": "#/components/schemas/LoyaltyRow"
+            },
+            "type": "array",
+            "title": "Loyalty"
+          },
+          "new_repeat": {
+            "items": {
+              "$ref": "#/components/schemas/VisitMonth"
+            },
+            "type": "array",
+            "title": "New Repeat"
+          },
+          "cuisine_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine Unavailable Reason"
+          },
+          "diet_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diet Unavailable Reason"
+          },
+          "orders_without_dates": {
+            "type": "integer",
+            "title": "Orders Without Dates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cuisines",
+          "diet",
+          "loyalty",
+          "new_repeat",
+          "cuisine_unavailable_reason",
+          "diet_unavailable_reason",
+          "orders_without_dates"
+        ],
+        "title": "FoodCharts"
       },
       "GapRow": {
         "properties": {
@@ -3710,6 +4012,39 @@
         ],
         "title": "Leaders"
       },
+      "LoyaltyRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "aov": {
+            "type": "number",
+            "title": "Aov"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "orders",
+          "spend",
+          "aov"
+        ],
+        "title": "LoyaltyRow"
+      },
       "Month": {
         "properties": {
           "month": {
@@ -3739,6 +4074,134 @@
           "spend"
         ],
         "title": "Month"
+      },
+      "MonthKPIs": {
+        "properties": {
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "valid_order_count": {
+            "type": "integer",
+            "title": "Valid Order Count"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "aov": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aov"
+          },
+          "total_discount": {
+            "type": "number",
+            "title": "Total Discount"
+          },
+          "reported_savings": {
+            "type": "number",
+            "title": "Reported Savings"
+          },
+          "discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Rate"
+          },
+          "reported_savings_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings Rate"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "fee_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percentage"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "tips": {
+            "type": "number",
+            "title": "Tips"
+          },
+          "refunds": {
+            "type": "number",
+            "title": "Refunds"
+          },
+          "unique_restaurants": {
+            "type": "integer",
+            "title": "Unique Restaurants"
+          },
+          "unique_dishes": {
+            "type": "integer",
+            "title": "Unique Dishes"
+          },
+          "average_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Rating"
+          },
+          "month": {
+            "type": "string",
+            "title": "Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders",
+          "valid_order_count",
+          "spend",
+          "aov",
+          "total_discount",
+          "reported_savings",
+          "discount_rate",
+          "reported_savings_rate",
+          "fees",
+          "fee_percentage",
+          "tax",
+          "tips",
+          "refunds",
+          "unique_restaurants",
+          "unique_dishes",
+          "average_rating",
+          "month"
+        ],
+        "title": "MonthKPIs"
       },
       "Order": {
         "properties": {
@@ -4338,6 +4801,43 @@
         ],
         "title": "SlimOrder"
       },
+      "SpendingCharts": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DailySpend"
+            },
+            "type": "array",
+            "title": "Daily"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/YearSpend"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "fee_scatter": {
+            "items": {
+              "$ref": "#/components/schemas/FeeScatter"
+            },
+            "type": "array",
+            "title": "Fee Scatter"
+          },
+          "unallocated_spend": {
+            "type": "number",
+            "title": "Unallocated Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily",
+          "years",
+          "fee_scatter",
+          "unallocated_spend"
+        ],
+        "title": "SpendingCharts"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4377,6 +4877,29 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VisitMonth": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "new_orders": {
+            "type": "integer",
+            "title": "New Orders"
+          },
+          "repeat_orders": {
+            "type": "integer",
+            "title": "Repeat Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "new_orders",
+          "repeat_orders"
+        ],
+        "title": "VisitMonth"
       },
       "Waterfall": {
         "properties": {
@@ -4440,6 +4963,67 @@
           "refunds"
         ],
         "title": "Waterfall"
+      },
+      "WaterfallStep": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "baseline": {
+            "type": "number",
+            "title": "Baseline"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "total"
+            ],
+            "title": "Direction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "amount",
+          "baseline",
+          "height",
+          "direction"
+        ],
+        "title": "WaterfallStep"
+      },
+      "YearSpend": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "spend"
+        ],
+        "title": "YearSpend"
       }
     }
   }

@@ -21,9 +21,9 @@ def compute_metrics(conn: sqlite3.Connection, filters: Filters) -> dict:
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.total_tax END), 0),
             COALESCE(SUM(CASE WHEN o.order_status = 'DELIVERED' THEN o.tip END), 0),
             COALESCE(SUM(o.refund_amount), 0),
-            COUNT(DISTINCT CASE WHEN o.order_status = 'DELIVERED' THEN o.restaurant_id END),
+            COUNT(DISTINCT CASE WHEN o.order_status = 'DELIVERED' THEN LOWER(TRIM(r.name)) || '|' || LOWER(TRIM(COALESCE(r.locality,''))) END),
             AVG(CASE WHEN o.order_status = 'DELIVERED' THEN o.user_rating END)
-            FROM orders o WHERE {where}""",
+            FROM orders o LEFT JOIN restaurants r ON r.id=o.restaurant_id WHERE {where}""",
         params,
     ).fetchone()
     dish_count = conn.execute(

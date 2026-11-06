@@ -1,3 +1,4 @@
+import {mkdirSync,writeFileSync} from 'node:fs';
 import {chromium} from '@playwright/test';
 import {preview} from 'vite';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ try{
  server=await preview({root,preview:{host:'127.0.0.1',port:0,open:false}});const url=server.resolvedUrls.local[0];
  browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:{})});
  const context=await browser.newContext({viewport:{width:360,height:900}});const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await context.route('**/*',route=>{const u=new URL(route.request().url());return u.origin===new URL(url).origin&&(u.pathname==='/'||u.pathname==='/ledger'||u.pathname.startsWith('/assets/'))?route.continue():route.abort();});
+ await context.route('**/*',route=>{const u=new URL(route.request().url());return u.origin===new URL(url).origin&&(['/','/ledger','/spending','/food','/behavior','/places','/data-health'].includes(u.pathname)||u.pathname.startsWith('/assets/'))?route.continue():route.abort();});
  let single=false;
  await page.route('**/api/**',route=>{const u=new URL(route.request().url());const scope=u.searchParams.getAll('account_ids');const current={...filters,account_ids:scope};
  if(u.pathname==='/api/meta/filters')return route.fulfill({json:{filters_applied:current,generated_at:'now',accounts:accounts.filter(a=>!scope.length||scope.includes(a.id)),all_accounts:single?accounts.slice(0,1):accounts,restaurants:scope[0]==='fake-a'?[{id:'r-a',name:'Fictional A'}]:[{id:'r-a',name:'Fictional A'},{id:'r-b',name:'Fictional B'}],platforms:['SWIGGY','ZOMATO'],statuses:['DELIVERED','CANCELLED'],cities:['Imaginary'],localities:[],cuisines:['Meals'],payment_methods:['UPI'],date_from:'2025-01-01',date_to:'2026-01-01',amount_min:0,amount_max:1000}});
@@ -20,13 +21,14 @@ try{
  const body=route.request().postDataJSON();const statuses=body.statuses??['DELIVERED'];
  const rows=makeOrders().filter(o=>(!body.account_ids?.length||body.account_ids.includes(o.account_id))&&(!statuses.length||statuses.includes(o.order_status)));
  const delivered=rows.filter(o=>o.order_status==='DELIVERED');const spend=delivered.reduce((n,o)=>n+o.final_amount_paid,0);
- return route.fulfill({json:{filters_applied:{...filters,...body},generated_at:'now',data_complete:true,comparison:null,kpis:{orders:rows.length,valid_order_count:delivered.length,spend,aov:delivered.length?spend/delivered.length:null,total_discount:0,reported_savings:0,discount_rate:0,reported_savings_rate:0,fees:0,fee_percentage:0,tax:0,tips:0,refunds:0,unique_restaurants:delivered.length,unique_dishes:1,average_rating:null},charts:{places:{labels:[],distances:[],distance_unavailable_reason:null,unsupported_reason:'Maps are not supported.'},behavior:{timing_unavailable_reason:null,date_unavailable_reason:null,hour_weekday:[],meals:[],day_type:[],aov_histogram:[],gaps:[],longest_streak:1,longest_gap:0,orders_per_week:rows.length*7},monthly:[{month:'2025-01',orders:rows.length,spend}],calendar:[{date:'2025-01-01',orders:rows.length,spend}],cost_waterfall:{subtotal:spend,food_discount:0,net_delivery:0,packaging:0,platform:0,tax:0,tip:0,other:0,residual:0,provider_paid:spend,refunds:0},top_restaurants:[],top_dishes:[],platforms:[],monthly_fee_components:[],insights:[]}}});
+ return route.fulfill({json:{filters_applied:{...filters,...body},generated_at:'now',data_complete:true,comparison:null,kpis:{orders:rows.length,valid_order_count:delivered.length,spend,aov:delivered.length?spend/delivered.length:null,total_discount:0,reported_savings:0,discount_rate:0,reported_savings_rate:0,fees:0,fee_percentage:0,tax:0,tips:0,refunds:0,unique_restaurants:delivered.length,unique_dishes:1,average_rating:null},charts:{food:{cuisines:[],diet:[],loyalty:[],new_repeat:[],cuisine_unavailable_reason:null,diet_unavailable_reason:null,orders_without_dates:0},spending:{daily:[],years:[],fee_scatter:[],unallocated_spend:0},kpi_history:[],waterfall_steps:[],places:{labels:[],distances:[],distance_unavailable_reason:null,unsupported_reason:'Maps are not supported.'},behavior:{timing_unavailable_reason:null,date_unavailable_reason:null,hour_weekday:[],meals:[],day_type:[],aov_histogram:[],gaps:[],longest_streak:1,longest_gap:0,orders_per_week:rows.length*7},monthly:[{month:'2025-01',orders:rows.length,spend}],calendar:[{date:'2025-01-01',orders:rows.length,spend}],cost_waterfall:{subtotal:spend,food_discount:0,net_delivery:0,packaging:0,platform:0,tax:0,tip:0,other:0,residual:0,provider_paid:spend,refunds:0},top_restaurants:[],top_dishes:[],platforms:[],monthly_fee_components:[],insights:[]}}});
  }
  if(u.pathname.endsWith('/bill')) {
  const id=decodeURIComponent(u.pathname.split('/')[3]);const order=makeOrders().find(row=>row.id===id);
  if(!order)return route.fulfill({status:404,json:{error:{code:'not_found',message:'Order not found.'}}});
  return route.fulfill({json:{order,items:[{item_name:'Fictional Lunch',quantity:1,unit_price:order.final_amount_paid,total_price:order.final_amount_paid,is_veg:true,category:'Meals'}],discount_items:[],reconciliation_status:'matches',reconciliation_label:'Matches',reconciliation_difference:0,full_address:null,source_bill:{item_total:order.final_amount_paid},discount_breakdown:null}});
  }
+ if(u.pathname==='/api/restaurants'||u.pathname==='/api/items')return route.fulfill({json:{filters_applied:current,generated_at:'now',rows:[{key:'fake-leader',name:'Fictional leader',quantity:3,amount:120,price_trend:[{month:'2025-01',unit_price:40,quantity:3}]}],total:1,page:1,page_size:25}});
  if(u.pathname==='/api/orders') {
  const all=makeOrders();
  const statuses=u.searchParams.getAll('statuses').filter(Boolean);
@@ -89,6 +91,17 @@ try{
 
 
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'ledger page overflow');
+ for(const [path,title] of [['spending','Spending'],['food','Food'],['behavior','Behavior'],['places','Places'],['data-health','Data health']]){await page.goto(url+path);await page.getByRole('heading',{name:title,exact:true}).waitFor();await page.waitForTimeout(250);assert.equal(await page.getByText('This page is not available yet.').count(),0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,path+' overflow');}
+ await page.goto(url+'food?account_ids=fake-a');await page.getByRole('heading',{name:'Food',exact:true}).waitFor();await page.getByRole('link',{name:'Spending',exact:true}).click();assert.equal(new URL(page.url()).searchParams.get('account_ids'),'fake-a');
+ await page.keyboard.press('Control+k');await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'Go to Food',exact:true}).click();await page.getByRole('heading',{name:'Food',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('account_ids'),'fake-a');await page.getByRole('button',{name:'Fictional leader',exact:true}).click();await page.getByRole('heading',{name:'Unit price history: Fictional leader',exact:true}).waitFor();
+ if(process.env.AXE_CORE_PATH){
+ const output=resolve(root,'test-results/synthetic-v2');mkdirSync(output,{recursive:true});const results=[];
+ for(const theme of ['light','dark'])for(const width of [360,768,1280,1920])for(const path of ['','spending','food','behavior','places','ledger','data-health']){
+ await page.setViewportSize({width,height:900});await page.goto(url+path);await page.getByRole('heading',{level:1}).waitFor();await page.getByLabel('Theme',{exact:true}).selectOption(theme);await page.waitForTimeout(300);
+ await page.addScriptTag({path:process.env.AXE_CORE_PATH});const audit=await page.evaluate(async()=>{const r=await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});return {violations:r.violations.map(x=>({id:x.id,impact:x.impact,nodes:x.nodes.map(n=>n.target)})),incomplete:r.incomplete.map(x=>x.id)};});
+ results.push({theme,width,page:path||'overview',...audit});await page.screenshot({path:resolve(output,`${path||'overview'}-${theme}-${width}.png`),fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,path+' matrix overflow');
+ }writeFileSync(resolve(output,'accessibility.json'),JSON.stringify(results,null,2));const serious=results.flatMap(r=>r.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>`${r.page}/${r.theme}/${r.width}: ${v.id}`));assert.deepEqual(serious,[]);
+ }
  assert.deepEqual(errors,[]);
  console.log('Synthetic foundation checks passed: scoped pruning, reload, presets, theme, single account, Ledger sort/pagination/CSV/keyboard and mobile containment.');
 }finally{if(browser)await browser.close();if(server)await new Promise(done=>server.httpServer.close(done));}

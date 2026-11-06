@@ -33,6 +33,7 @@ class Filters(BaseModel):
     )
     day_type: Literal["all", "weekday", "weekend"] = "all"
     verified_only: bool = False
+    anomaly: Literal["all", "review"] = "all"
     search: str | None = None
     compare: Literal["none", "previous_period", "previous_year"] = "none"
 
@@ -267,7 +268,86 @@ class Places(ResponseModel):
     unsupported_reason: str | None
 
 
+class CuisineRow(ResponseModel):
+    name: str
+    orders: int
+    spend: float
+
+
+class DietRow(ResponseModel):
+    diet: str
+    item_lines: int
+    quantity: int
+    line_total: float
+
+
+class LoyaltyRow(ResponseModel):
+    key: str
+    name: str
+    orders: int
+    spend: float
+    aov: float
+
+
+class VisitMonth(ResponseModel):
+    month: str
+    new_orders: int
+    repeat_orders: int
+
+
+class FoodCharts(ResponseModel):
+    cuisines: list[CuisineRow]
+    diet: list[DietRow]
+    loyalty: list[LoyaltyRow]
+    new_repeat: list[VisitMonth]
+    cuisine_unavailable_reason: str | None
+    diet_unavailable_reason: str | None
+    orders_without_dates: int
+
+
+class DailySpend(ResponseModel):
+    date: str
+    spend: float
+    cumulative: float
+    rolling_30: float
+
+
+class YearSpend(ResponseModel):
+    year: int
+    month: int
+    spend: float
+
+
+class FeeScatter(ResponseModel):
+    amount: float
+    fees: float
+    fee_percent: float | None
+
+
+class SpendingCharts(ResponseModel):
+    daily: list[DailySpend]
+    years: list[YearSpend]
+    fee_scatter: list[FeeScatter]
+    unallocated_spend: float
+
+
+class MonthKPIs(KPIs):
+    month: str
+
+
+class WaterfallStep(ResponseModel):
+    label: str
+    amount: float
+    baseline: float
+    height: float
+    direction: Literal["up", "down", "total"]
+
+
 class Charts(ResponseModel):
+    kpi_history: list[MonthKPIs]
+    waterfall_steps: list[WaterfallStep]
+    food: FoodCharts
+    spending: SpendingCharts
     places: Places
     behavior: Behavior
     monthly: list[Month]

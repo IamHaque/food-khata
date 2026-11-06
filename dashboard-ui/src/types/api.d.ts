@@ -234,6 +234,12 @@ export interface components {
         };
         /** Charts */
         Charts: {
+            /** Kpi History */
+            kpi_history: components["schemas"]["MonthKPIs"][];
+            /** Waterfall Steps */
+            waterfall_steps: components["schemas"]["WaterfallStep"][];
+            food: components["schemas"]["FoodCharts"];
+            spending: components["schemas"]["SpendingCharts"];
             places: components["schemas"]["Places"];
             behavior: components["schemas"]["Behavior"];
             /** Monthly */
@@ -267,6 +273,26 @@ export interface components {
             kpis: components["schemas"]["KPIs"];
             percent_change: components["schemas"]["KPIDeltas"];
         };
+        /** CuisineRow */
+        CuisineRow: {
+            /** Name */
+            name: string;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+        };
+        /** DailySpend */
+        DailySpend: {
+            /** Date */
+            date: string;
+            /** Spend */
+            spend: number;
+            /** Cumulative */
+            cumulative: number;
+            /** Rolling 30 */
+            rolling_30: number;
+        };
         /** Dashboard */
         Dashboard: {
             filters_applied: components["schemas"]["Filters"];
@@ -280,6 +306,17 @@ export interface components {
             comparison: components["schemas"]["Comparison"] | null;
             /** Data Complete */
             data_complete: boolean;
+        };
+        /** DietRow */
+        DietRow: {
+            /** Diet */
+            diet: string;
+            /** Item Lines */
+            item_lines: number;
+            /** Quantity */
+            quantity: number;
+            /** Line Total */
+            line_total: number;
         };
         /** DiscountItem */
         DiscountItem: {
@@ -306,6 +343,15 @@ export interface components {
             total_fees: number;
             /** Rounding Adjustment */
             rounding_adjustment: number;
+        };
+        /** FeeScatter */
+        FeeScatter: {
+            /** Amount */
+            amount: number;
+            /** Fees */
+            fees: number;
+            /** Fee Percent */
+            fee_percent: number | null;
         };
         /** FilterOptions */
         FilterOptions: {
@@ -390,6 +436,12 @@ export interface components {
              * @default false
              */
             verified_only: boolean;
+            /**
+             * Anomaly
+             * @default all
+             * @enum {string}
+             */
+            anomaly: "all" | "review";
             /** Search */
             search?: string | null;
             /**
@@ -398,6 +450,23 @@ export interface components {
              * @enum {string}
              */
             compare: "none" | "previous_period" | "previous_year";
+        };
+        /** FoodCharts */
+        FoodCharts: {
+            /** Cuisines */
+            cuisines: components["schemas"]["CuisineRow"][];
+            /** Diet */
+            diet: components["schemas"]["DietRow"][];
+            /** Loyalty */
+            loyalty: components["schemas"]["LoyaltyRow"][];
+            /** New Repeat */
+            new_repeat: components["schemas"]["VisitMonth"][];
+            /** Cuisine Unavailable Reason */
+            cuisine_unavailable_reason: string | null;
+            /** Diet Unavailable Reason */
+            diet_unavailable_reason: string | null;
+            /** Orders Without Dates */
+            orders_without_dates: number;
         };
         /** GapRow */
         GapRow: {
@@ -601,6 +670,19 @@ export interface components {
             /** Page Size */
             page_size: number;
         };
+        /** LoyaltyRow */
+        LoyaltyRow: {
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+            /** Aov */
+            aov: number;
+        };
         /** Month */
         Month: {
             /** Month */
@@ -609,6 +691,43 @@ export interface components {
             orders: number;
             /** Spend */
             spend: number;
+        };
+        /** MonthKPIs */
+        MonthKPIs: {
+            /** Orders */
+            orders: number;
+            /** Valid Order Count */
+            valid_order_count: number;
+            /** Spend */
+            spend: number;
+            /** Aov */
+            aov: number | null;
+            /** Total Discount */
+            total_discount: number;
+            /** Reported Savings */
+            reported_savings: number;
+            /** Discount Rate */
+            discount_rate: number | null;
+            /** Reported Savings Rate */
+            reported_savings_rate: number | null;
+            /** Fees */
+            fees: number;
+            /** Fee Percentage */
+            fee_percentage: number | null;
+            /** Tax */
+            tax: number;
+            /** Tips */
+            tips: number;
+            /** Refunds */
+            refunds: number;
+            /** Unique Restaurants */
+            unique_restaurants: number;
+            /** Unique Dishes */
+            unique_dishes: number;
+            /** Average Rating */
+            average_rating: number | null;
+            /** Month */
+            month: string;
         };
         /** Order */
         Order: {
@@ -782,6 +901,17 @@ export interface components {
             /** Final Amount Paid */
             final_amount_paid: number;
         };
+        /** SpendingCharts */
+        SpendingCharts: {
+            /** Daily */
+            daily: components["schemas"]["DailySpend"][];
+            /** Years */
+            years: components["schemas"]["YearSpend"][];
+            /** Fee Scatter */
+            fee_scatter: components["schemas"]["FeeScatter"][];
+            /** Unallocated Spend */
+            unallocated_spend: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -794,6 +924,15 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VisitMonth */
+        VisitMonth: {
+            /** Month */
+            month: string;
+            /** New Orders */
+            new_orders: number;
+            /** Repeat Orders */
+            repeat_orders: number;
         };
         /** Waterfall */
         Waterfall: {
@@ -819,6 +958,31 @@ export interface components {
             provider_paid: number;
             /** Refunds */
             refunds: number;
+        };
+        /** WaterfallStep */
+        WaterfallStep: {
+            /** Label */
+            label: string;
+            /** Amount */
+            amount: number;
+            /** Baseline */
+            baseline: number;
+            /** Height */
+            height: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "up" | "down" | "total";
+        };
+        /** YearSpend */
+        YearSpend: {
+            /** Year */
+            year: number;
+            /** Month */
+            month: number;
+            /** Spend */
+            spend: number;
         };
     };
     responses: never;
@@ -849,6 +1013,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -898,6 +1063,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -980,6 +1146,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -1033,6 +1200,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -1082,6 +1250,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -1140,6 +1309,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };
@@ -1194,6 +1364,7 @@ export interface operations {
                 meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
                 day_type?: "all" | "weekday" | "weekend";
                 verified_only?: boolean;
+                anomaly?: "all" | "review";
                 search?: string | null;
                 compare?: "none" | "previous_period" | "previous_year";
             };

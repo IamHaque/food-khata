@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {useFilters} from './FilterContext';
-import {validateFilters,type FilterState} from '../lib/filters';
+import {defaultFilters,validateFilters,type FilterState} from '../lib/filters';
 
 function Amount({field,label}:{field:'amount_min'|'amount_max';label:string}){
  const {filters,update}=useFilters();const [value,setValue]=useState(filters[field]?.toString()??'');
@@ -41,7 +41,7 @@ export function FilterBar(){
  <label>Compare<select value={filters.compare} onChange={e=>update({compare:e.target.value as FilterState['compare']})}>{['none','previous_period','previous_year'].map(v=><option key={v}>{v}</option>)}</select></label>
  <label>Search restaurant or item<input type="search" value={filters.search??''} onChange={e=>update({search:e.target.value||null})}/></label>
  <label className="check"><input type="checkbox" checked={filters.verified_only} onChange={e=>update({verified_only:e.target.checked})}/>Verified only</label></div>
- <div className="chips">{active.map(([key,value])=><button key={key} onClick={()=>update({[key]:Array.isArray(value)?[]:typeof value==='boolean'?false:key==='veg'||key==='day_type'?'all':key==='compare'?'none':null})}>{key.replaceAll('_',' ')}: {String(value)} ×</button>)}<button onClick={clear}>Clear filters</button>
+ <div className="chips">{active.map(([key,value])=><button key={key} onClick={()=>update({[key]:defaultFilters()[key as keyof FilterState]})}>{key.replaceAll('_',' ')}: {String(value)} ×</button>)}<button onClick={clear}>Clear filters</button>
  <button onClick={()=>{try{localStorage.setItem('food-khata-preset',JSON.stringify(filters));setSaved('Preset saved');}catch{setError('Could not save preset');}}}>Save preset</button>
  <button onClick={()=>{try{const raw=localStorage.getItem('food-khata-preset');if(raw){const candidate:unknown=JSON.parse(raw);update(validateFilters(candidate));setSaved('Preset loaded');}}catch{setError('Could not load preset');}}}>Load preset</button></div>
  <p role="status">{saved}</p>{error&&<p role="alert">{error}</p>}</details></section>;

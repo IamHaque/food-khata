@@ -22,3 +22,5 @@ it('preserves implicit versus explicitly selected delivered status',()=>{
  expect(serializeFilters(f).has('statuses')).toBe(false);
  expect(serializeFilters(f,new URLSearchParams('statuses=DELIVERED')).get('statuses')).toBe('DELIVERED');
 });
+
+it("round trips the shared anomaly scope",()=>{const f={...defaultFilters(),anomaly:"review" as const};expect(parseFilters(serializeFilters(f)).anomaly).toBe("review");});

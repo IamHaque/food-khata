@@ -81,6 +81,11 @@ def build_where(filters: Filters) -> tuple[str, list]:
         clauses.append(f"strftime('%w', o.order_date) {op} ('0', '6')")
     if filters.verified_only:
         clauses.append("o.financial_verified = 1")
+    if filters.anomaly == "review":
+        clauses.append(
+            "(o.financial_verified IS NULL OR o.financial_verified<>1 "
+            "OR o.reconciliation_difference IS NULL OR ABS(o.reconciliation_difference)>1)"
+        )
     if filters.search:
         term = (
             "%" + filters.search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"

@@ -172,3 +172,12 @@ def test_cuisine_is_restaurant_cuisine_not_item_category(conn):
     conn.execute("UPDATE order_items SET category = 'Dessert'")
     assert ids(conn, cuisines=["Indian"]) == ["1"]
     assert ids(conn, cuisines=["Dessert"]) == []
+
+
+def test_anomaly_scope_uses_shared_filter(conn):
+    conn.execute("UPDATE orders SET reconciliation_difference=0")
+    conn.execute("UPDATE orders SET reconciliation_difference=2 WHERE id='3'")
+    assert ids(conn, anomaly="review") == ["3"]
+    assert ids(conn, statuses=[], anomaly="review", account_ids=["a"]) == ["2"]
+    with pytest.raises(ValidationError):
+        Filters(anomaly="unsafe")

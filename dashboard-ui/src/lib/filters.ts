@@ -14,7 +14,7 @@ const schema = z.object({
  veg:z.enum(['all','veg','nonveg','unknown']).default('all'),
  amount_min:z.number().nullable().default(null),amount_max:z.number().nullable().default(null),
  meal_slots:z.array(z.enum(['breakfast','lunch','snack','dinner','late_night'])).default([]),
- day_type:z.enum(['all','weekday','weekend']).default('all'),verified_only:z.boolean().default(false),
+ day_type:z.enum(['all','weekday','weekend']).default('all'),anomaly:z.enum(['all','review']).default('all'),verified_only:z.boolean().default(false),
  search:z.string().nullable().default(null),compare:z.enum(['none','previous_period','previous_year']).default('none'),
 }).refine(f => !f.date_from || !f.date_to || f.date_from <= f.date_to)
  .refine(f => f.amount_min === null || f.amount_max === null || f.amount_min <= f.amount_max);
