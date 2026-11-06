@@ -11,6 +11,7 @@ import { FilterProvider, useFilters } from './FilterContext';
 import { AccountSelector } from './AccountSelector';
 import { FilterBar } from './FilterBar';
 import { ThemeControl } from './ThemeControl';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -26,6 +27,7 @@ import {
   UtensilsCrossed,
   AlertCircle,
   CheckCircle2,
+  Menu,
 } from 'lucide-react';
 import '../styles/app.css';
 
@@ -41,16 +43,68 @@ const pages = [
 
 function Shell() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { filters, metadata, notice } = useFilters();
   const health = useHealth(filters);
 
   return (
     <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden">
+      {/* Accessible skip link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring font-semibold text-xs min-h-[44px] inline-flex items-center"
+      >
+        Skip to main content
+      </a>
+
       {/* Top Header */}
       <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b bg-card/95 px-3 sm:px-6 py-2.5 backdrop-blur shadow-xs">
-        {/* Brand */}
+        {/* Brand + Mobile nav toggle */}
         <div className="flex items-center gap-2 shrink-0">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open navigation menu"
+                className="lg:hidden inline-flex items-center justify-center p-2 rounded-md border border-input bg-background min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-4 bg-card">
+              <SheetHeader className="pb-3 border-b text-left">
+                <SheetTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                  <UtensilsCrossed className="h-4 w-4 text-primary" />
+                  <span>Food Khata</span>
+                </SheetTitle>
+              </SheetHeader>
+              <nav aria-label="Mobile drawer navigation" className="flex flex-col gap-1.5 py-4">
+                {pages.map((p, i) => {
+                  const path = i === 0 ? '/' : `/${p.name.toLowerCase().replace(' ', '-')}`;
+                  const active = location.pathname === path;
+                  const Icon = p.icon;
+                  return (
+                    <Link
+                      key={p.name}
+                      to={{ pathname: path, search: location.search }}
+                      onClick={() => setMobileOpen(false)}
+                      aria-current={active ? 'page' : undefined}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+                        active
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                          : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span>{p.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </SheetContent>
+          </Sheet>
+
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
             <UtensilsCrossed className="h-4 w-4" />
           </div>
@@ -83,19 +137,19 @@ function Shell() {
 
       {/* Main Container with Sidebar + Content */}
       <div className={`shell-layout flex-1 flex flex-col lg:flex-row min-h-0 w-full max-w-full ${collapsed ? 'sidebar-collapsed' : ''}`}>
-        {/* Navigation: Horizontal scroll on mobile, vertical sidebar on lg */}
+        {/* Navigation: Horizontal on mobile, vertical sidebar on lg */}
         <nav
           aria-label="Main navigation"
           className={`border-b lg:border-b-0 lg:border-r bg-card/40 transition-all duration-200 shrink-0 ${
             collapsed ? 'lg:w-16' : 'lg:w-56'
-          } flex flex-row lg:flex-col justify-between p-2 lg:p-3 gap-1 overflow-x-auto lg:overflow-x-visible`}
+          } flex flex-row lg:flex-col justify-between p-2 lg:p-3 gap-1 overflow-x-auto lg:overflow-x-visible select-custom-scroll`}
         >
           <div className="flex flex-row lg:flex-col items-center lg:items-stretch gap-1 w-full">
             <button
               aria-label="Toggle sidebar"
               aria-expanded={!collapsed}
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex items-center justify-center p-2 mb-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground text-xs font-medium transition-colors"
+              className="hidden lg:flex items-center justify-center p-2 mb-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground text-xs font-medium transition-colors cursor-pointer"
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -117,7 +171,8 @@ function Shell() {
                   to={{ pathname: path, search: location.search }}
                   title={p.name}
                   aria-label={p.name}
-                  className={`flex items-center gap-2 lg:gap-3 px-2.5 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center gap-2 lg:gap-3 px-3 py-2 min-h-[44px] shrink-0 rounded-lg text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${
                     active
                       ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -202,7 +257,7 @@ function Shell() {
           )}
 
           {/* Routes */}
-          <main className="flex-1 min-w-0 max-w-full">
+          <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
             <Routes>
               {pages.map((p, i) => (
                 <Route

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { useBill } from '../hooks/api';
@@ -14,7 +14,15 @@ const money = (value: number | null | undefined) =>
     ? 'Unknown'
     : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
 
-export function OrderModal({ rows, request }: { rows: Order[]; request: OrdersParams }) {
+export function OrderModal({
+  rows,
+  request,
+  total = 0,
+}: {
+  rows: Order[];
+  request: OrdersParams;
+  total?: number;
+}) {
   const [params, setParams] = useSearchParams();
   const id = params.get('order') ?? undefined;
   const bill = useBill(id, request);
@@ -41,55 +49,68 @@ export function OrderModal({ rows, request }: { rows: Order[]; request: OrdersPa
     setParams(next);
   };
 
-  async function adjacent(delta: number) {
-    if (!id || navigating) return;
-    setNavigating(true);
-    setError('');
-    const abort = new AbortController();
-    controller.current = abort;
-    try {
-      let index = rows.findIndex(row => row.id === id);
-      let neighbor: Order | undefined;
-      let targetPage = Number(request.page ?? 1);
-      const size = Number(request.page_size ?? 50);
-      if (index >= 0) {
-        neighbor = rows[index + delta];
-        if (!neighbor && targetPage + delta > 0) {
-          const result = await orders({ ...request, page: targetPage + delta }, abort.signal);
-          neighbor = delta > 0 ? result.rows[0] : result.rows.at(-1);
-          targetPage += delta;
-        }
-      } else {
-        for (let page = 1; ; page++) {
-          const result = await orders({ ...request, page, page_size: 200 }, abort.signal);
-          index = result.rows.findIndex(row => row.id === id);
-          if (index >= 0) {
-            const offset = index + delta;
-            neighbor = result.rows[offset];
-            const globalIndex = (page - 1) * 200 + offset;
-            if (!neighbor && globalIndex >= 0 && globalIndex < result.total) {
-              const other = await orders({ ...request, page: page + delta, page_size: 200 }, abort.signal);
-              neighbor = delta > 0 ? other.rows[0] : other.rows.at(-1);
-            }
-            targetPage = Math.floor(globalIndex / size) + 1;
-            break;
+  const currentIndex = rows.findIndex(row => row.id === id);
+  const currentPage = Number(request.page ?? 1);
+  const pageSize = Number(request.page_size ?? 50);
+
+  const isFirst = currentPage <= 1 && currentIndex === 0;
+  const isLast = total > 0 && currentIndex >= 0 && (currentPage - 1) * pageSize + currentIndex + 1 >= total;
+
+  const adjacent = useCallback(
+    async (delta: number) => {
+      if (!id || navigating) return;
+      if (delta < 0 && isFirst) return;
+      if (delta > 0 && isLast) return;
+
+      setNavigating(true);
+      setError('');
+      const abort = new AbortController();
+      controller.current = abort;
+      try {
+        let index = rows.findIndex(row => row.id === id);
+        let neighbor: Order | undefined;
+        let targetPage = Number(request.page ?? 1);
+        const size = Number(request.page_size ?? 50);
+        if (index >= 0) {
+          neighbor = rows[index + delta];
+          if (!neighbor && targetPage + delta > 0) {
+            const result = await orders({ ...request, page: targetPage + delta }, abort.signal);
+            neighbor = delta > 0 ? result.rows[0] : result.rows.at(-1);
+            targetPage += delta;
           }
-          if (page * 200 >= result.total) break;
+        } else {
+          for (let page = 1; ; page++) {
+            const result = await orders({ ...request, page, page_size: 200 }, abort.signal);
+            index = result.rows.findIndex(row => row.id === id);
+            if (index >= 0) {
+              const offset = index + delta;
+              neighbor = result.rows[offset];
+              const globalIndex = (page - 1) * 200 + offset;
+              if (!neighbor && globalIndex >= 0 && globalIndex < result.total) {
+                const other = await orders({ ...request, page: page + delta, page_size: 200 }, abort.signal);
+                neighbor = delta > 0 ? other.rows[0] : other.rows.at(-1);
+              }
+              targetPage = Math.floor(globalIndex / size) + 1;
+              break;
+            }
+            if (page * 200 >= result.total) break;
+          }
         }
+        if (neighbor && !abort.signal.aborted) {
+          const next = new URLSearchParams(params);
+          next.set('order', neighbor.id);
+          next.set('page', String(targetPage));
+          setParams(next);
+        }
+      } catch (reason) {
+        if (!(reason instanceof Error && reason.name === 'AbortError'))
+          setError('Could not load the adjacent order. Please retry.');
+      } finally {
+        setNavigating(false);
       }
-      if (neighbor && !abort.signal.aborted) {
-        const next = new URLSearchParams(params);
-        next.set('order', neighbor.id);
-        next.set('page', String(targetPage));
-        setParams(next);
-      }
-    } catch (reason) {
-      if (!(reason instanceof Error && reason.name === 'AbortError'))
-        setError('Could not load the adjacent order. Please retry.');
-    } finally {
-      setNavigating(false);
-    }
-  }
+    },
+    [id, navigating, isFirst, isLast, rows, request, params, setParams]
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -109,7 +130,7 @@ export function OrderModal({ rows, request }: { rows: Order[]; request: OrdersPa
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [id, params, adjacent]);
+  }, [id, adjacent]);
 
   const o = data?.order;
   const ladder: [string, number | null | undefined][] = [];
@@ -178,8 +199,9 @@ export function OrderModal({ rows, request }: { rows: Order[]; request: OrdersPa
             <div role="alert" className="p-4 rounded-lg border border-destructive/20 bg-destructive/10 text-xs text-destructive">
               <p>Order details could not load.</p>
               <button
+                type="button"
                 onClick={() => void bill.refetch()}
-                className="mt-2 rounded border px-3 py-1 bg-background shadow-xs hover:bg-accent font-medium"
+                className="mt-2 min-h-[44px] rounded border px-3 py-1 bg-background shadow-xs hover:bg-accent font-medium text-foreground"
               >
                 Retry
               </button>
@@ -352,31 +374,38 @@ export function OrderModal({ rows, request }: { rows: Order[]; request: OrdersPa
         <footer className="order-modal-footer flex items-center justify-between p-4 border-t bg-card">
           <div className="flex items-center gap-2">
             <button
-              aria-disabled={navigating || bill.isPending}
+              type="button"
+              disabled={isFirst || navigating || bill.isPending}
+              aria-disabled={isFirst || navigating || bill.isPending}
               onClick={() => {
-                if (navigating || bill.isPending) return;
+                if (isFirst || navigating || bill.isPending) return;
                 void adjacent(-1);
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent aria-disabled:opacity-50 aria-disabled:pointer-events-none transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              aria-label="Previous order"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               <span>Previous order</span>
             </button>
             <button
-              aria-disabled={navigating || bill.isPending}
+              type="button"
+              disabled={isLast || navigating || bill.isPending}
+              aria-disabled={isLast || navigating || bill.isPending}
               onClick={() => {
-                if (navigating || bill.isPending) return;
+                if (isLast || navigating || bill.isPending) return;
                 void adjacent(1);
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent aria-disabled:opacity-50 aria-disabled:pointer-events-none transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              aria-label="Next order"
             >
               <span>Next order</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
           <button
+            type="button"
             onClick={close}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
+            className="min-h-[44px] rounded-md border border-input bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
           >
             Close receipt
           </button>

@@ -61,4 +61,35 @@ export function sanitizeAccountFilters(filters:FilterState, meta:components['sch
 
 export function validateFilters(value:unknown):FilterState{return schema.parse(value);}
 
+export function calculatePresetDates(name: string, now = new Date()): { date_from: string | null; date_to: string | null } {
+  if (name === 'all' || name === 'custom') return { date_from: null, date_to: null };
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let start = new Date(end);
+  if (name === '7d' || name === '30d' || name === '90d') {
+    start.setDate(start.getDate() - Number(name.slice(0, -1)) + 1);
+  } else if (name === 'month') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (name === 'last_month') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end.setDate(0);
+  } else if (name === 'year') {
+    start = new Date(now.getFullYear(), 0, 1);
+  } else if (name === 'fy') {
+    start = new Date(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0), 3, 1);
+  }
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { date_from: iso(start), date_to: iso(end) };
+}
+
+export function detectPreset(date_from: string | null, date_to: string | null, now = new Date()): string {
+  if (!date_from && !date_to) return 'all';
+  if (!date_from || !date_to) return 'custom';
+  for (const p of ['7d', '30d', '90d', 'month', 'last_month', 'fy', 'year']) {
+    const dates = calculatePresetDates(p, now);
+    if (dates.date_from === date_from && dates.date_to === date_to) return p;
+  }
+  return 'custom';
+}
+
 

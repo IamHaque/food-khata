@@ -17,11 +17,11 @@
 - Old UI/export remain working until parity and approved retirement.
 - Screenshots synthetic only; no .food-khata-derived captures or fixtures.
 ## Current phase / epic / story
-UI redesign complete (Tailwind + shadcn modern shell, FilterBar, Overview, Ledger, OrderModal, AnalyticsPages). Parity and foundation tests passing.
+Dashboard Redesign (docs/agent/REDESIGN_PLAN.md): Stories R01 through R11 COMPLETE and verified.
 ## In progress
-Reviewing redesigned UI with user.
+None. All redesign stories delivered.
 ## Pending
-User approval on UI overhaul and separate decisions on REMOVALS R1 (legacy UI) and R2 (export path).
+None. Release gate verified.
 ## Blocked
 None.
 ## Done recently

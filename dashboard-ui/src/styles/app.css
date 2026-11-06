@@ -1,34 +1,4 @@
 /* Clean modern app styling and subtle scrollbars */
-:root {
-  --v2-background: #f5f8f6;
-  --v2-surface: #ffffff;
-  --v2-foreground: #162b23;
-  --v2-muted: #4c6257;
-  --v2-border: #d4ded7;
-  --v2-primary: #087448;
-  --v2-on-primary: #ffffff;
-  --v2-warning: #775000;
-  --v2-ring: #087448;
-  --v2-chart-2: #3565b0;
-  --v2-chart-3: #a1467c;
-  --v2-chart-4: #986100;
-}
-
-:root[data-v2theme="dark"], .dark {
-  --v2-background: #101b16;
-  --v2-surface: #192820;
-  --v2-foreground: #edf5ef;
-  --v2-muted: #b4c6ba;
-  --v2-border: #2e3e35;
-  --v2-primary: #70d9a4;
-  --v2-on-primary: #10251a;
-  --v2-warning: #f0ce79;
-  --v2-ring: #70d9a4;
-  --v2-chart-2: #8db8ff;
-  --v2-chart-3: #ef9bcb;
-  --v2-chart-4: #e6c272;
-}
-
 body:has(.v2) {
   margin: 0;
   background-color: hsl(var(--background));

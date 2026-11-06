@@ -7,7 +7,16 @@ import { useOrders } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { exportLedger } from '../lib/ledger';
 import type { components } from '../types/api';
-import { Download, SlidersHorizontal, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  Download,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Eye,
+} from 'lucide-react';
 
 type Order = components['schemas']['Order'];
 
@@ -17,6 +26,11 @@ const money = (n: number | null | undefined) =>
     : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
 
 const sortKeys = ['date', 'restaurant', 'platform', 'status', 'discount', 'fees', 'amount'];
+
+interface ExportStatus {
+  type: 'success' | 'cancelled' | 'error';
+  message: string;
+}
 
 export function Ledger() {
   const { filters, update, clear } = useFilters();
@@ -47,7 +61,7 @@ export function Ledger() {
   const [visibility, setVisibility] = useState<VisibilityState>({});
   const [compact, setCompact] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState('');
+  const [exportStatus, setExportStatus] = useState<ExportStatus | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   const scope = JSON.stringify(filters);
@@ -67,6 +81,7 @@ export function Ledger() {
 
   const sortable = (id: string, label: string) => (
     <button
+      type="button"
       onClick={() => change({ sort: id, direction: sort === id && direction === 'desc' ? 'asc' : 'desc', page: '1' })}
       className="inline-flex items-center gap-1 font-semibold text-xs text-foreground hover:text-primary transition-colors cursor-pointer select-none"
     >
@@ -92,7 +107,10 @@ export function Ledger() {
       header: () => sortable('restaurant', 'Restaurant'),
       accessorKey: 'restaurant_name',
       cell: info => (
-        <span className="truncate-cell font-medium text-xs max-w-[200px] truncate block" title={info.row.original.restaurant_name ?? 'Unknown'}>
+        <span
+          className="truncate-cell font-medium text-xs max-w-[200px] truncate block"
+          title={info.row.original.restaurant_name ?? 'Unknown'}
+        >
           {info.row.original.restaurant_name ?? 'Unknown'}
         </span>
       ),
@@ -102,7 +120,10 @@ export function Ledger() {
       header: 'Items',
       accessorKey: 'items_summary',
       cell: info => (
-        <span className="truncate-cell text-xs text-muted-foreground max-w-[220px] truncate block" title={info.row.original.items_summary ?? 'Unknown'}>
+        <span
+          className="truncate-cell text-xs text-muted-foreground max-w-[220px] truncate block"
+          title={info.row.original.items_summary ?? 'Unknown'}
+        >
           {info.row.original.items_summary ?? 'Unknown'}
         </span>
       ),
@@ -150,7 +171,9 @@ export function Ledger() {
     {
       id: 'discount',
       header: () => sortable('discount', 'Discount'),
-      cell: info => <span className="font-mono text-xs text-muted-foreground">{money(info.row.original.total_discount)}</span>,
+      cell: info => (
+        <span className="font-mono text-xs text-muted-foreground">{money(info.row.original.total_discount)}</span>
+      ),
     },
     {
       id: 'fees',
@@ -164,7 +187,11 @@ export function Ledger() {
     {
       id: 'amount',
       header: () => sortable('amount', 'Amount'),
-      cell: info => <span className="font-mono text-xs font-semibold text-foreground">{money(info.row.original.final_amount_paid)}</span>,
+      cell: info => (
+        <span className="font-mono text-xs font-semibold text-foreground">
+          {money(info.row.original.final_amount_paid)}
+        </span>
+      ),
     },
     {
       id: 'verified',
@@ -179,6 +206,24 @@ export function Ledger() {
             <AlertTriangle className="h-3 w-3" /> Review
           </span>
         ),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      cell: info => (
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            open(info.row.original.id);
+          }}
+          className="min-h-[44px] px-2.5 py-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          aria-label={`Inspect order ${info.row.original.platform_order_id}`}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span>Inspect</span>
+        </button>
+      ),
     },
   ];
 
@@ -197,7 +242,7 @@ export function Ledger() {
     const controller = new AbortController();
     abort.current = controller;
     setExporting(true);
-    setExportMessage('');
+    setExportStatus(null);
     try {
       const csv = await exportLedger(request, controller.signal);
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -206,9 +251,22 @@ export function Ledger() {
       link.download = 'food-khata-orders.csv';
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setExportMessage('CSV exported');
+      setExportStatus({
+        type: 'success',
+        message: `CSV exported successfully (${query.data?.total ?? 'matching'} orders).`,
+      });
     } catch (error) {
-      setExportMessage(error instanceof Error && error.name === 'AbortError' ? 'Export cancelled' : 'Could not export. Please retry.');
+      if (error instanceof Error && error.name === 'AbortError') {
+        setExportStatus({
+          type: 'cancelled',
+          message: 'Export was cancelled.',
+        });
+      } else {
+        setExportStatus({
+          type: 'error',
+          message: 'Could not export orders. Please retry.',
+        });
+      }
     } finally {
       setExporting(false);
     }
@@ -234,9 +292,10 @@ export function Ledger() {
       <div className="ledger-tools flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             aria-pressed={filters.anomaly === 'review'}
             onClick={() => update({ anomaly: filters.anomaly === 'review' ? 'all' : 'review' })}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors border ${
+            className={`min-h-[44px] rounded-md px-3 py-2 text-xs font-semibold shadow-xs transition-colors border ${
               filters.anomaly === 'review'
                 ? 'bg-amber-500 text-white border-amber-600'
                 : 'border-input bg-background hover:bg-accent text-foreground'
@@ -251,7 +310,7 @@ export function Ledger() {
               aria-label="Rows per page"
               value={pageSize}
               onChange={e => change({ page_size: e.target.value, page: '1' })}
-              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
+              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
             >
               {[25, 50, 100, 200].map(n => (
                 <option key={n} value={n}>
@@ -267,7 +326,7 @@ export function Ledger() {
               aria-label="Density"
               value={compact ? 'compact' : 'comfortable'}
               onChange={e => setCompact(e.target.value === 'compact')}
-              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
+              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
             >
               <option value="comfortable">comfortable</option>
               <option value="compact">compact</option>
@@ -275,18 +334,21 @@ export function Ledger() {
           </label>
 
           <details className="relative">
-            <summary className="cursor-pointer rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium shadow-xs hover:bg-accent text-foreground list-none flex items-center gap-1">
-              <SlidersHorizontal className="h-3 w-3 text-muted-foreground" />
+            <summary className="cursor-pointer min-h-[44px] rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-xs hover:bg-accent text-foreground list-none flex items-center gap-1">
+              <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Columns</span>
             </summary>
-            <div className="absolute left-0 top-8 z-30 w-44 rounded-md border bg-popover p-2 shadow-lg space-y-1">
+            <div className="absolute left-0 top-12 z-30 w-44 rounded-md border bg-popover p-2 shadow-lg space-y-1">
               {table.getAllLeafColumns().map(column => (
-                <label className="check flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer hover:bg-accent px-1.5 py-1 rounded" key={column.id}>
+                <label
+                  className="check flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer hover:bg-accent px-1.5 py-1 rounded"
+                  key={column.id}
+                >
                   <input
                     type="checkbox"
                     checked={column.getIsVisible()}
                     onChange={column.getToggleVisibilityHandler()}
-                    className="h-3.5 w-3.5 rounded border-input"
+                    className="h-4 w-4 rounded border-input"
                   />
                   <span className="capitalize">{column.id}</span>
                 </label>
@@ -297,17 +359,19 @@ export function Ledger() {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             disabled={exporting || query.isPending || query.isError}
             onClick={() => void download()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 text-foreground transition-colors cursor-pointer"
+            className="min-h-[44px] inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 text-foreground transition-colors cursor-pointer"
           >
             <Download className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Export CSV</span>
           </button>
           {exporting && (
             <button
+              type="button"
               onClick={() => abort.current?.abort()}
-              className="rounded-md border border-destructive/30 bg-destructive/10 text-destructive px-2.5 py-1.5 text-xs font-medium hover:bg-destructive/20 transition-colors"
+              className="min-h-[44px] rounded-md border border-destructive/30 bg-destructive/10 text-destructive px-3 py-2 text-xs font-medium hover:bg-destructive/20 transition-colors"
             >
               Cancel export
             </button>
@@ -315,35 +379,93 @@ export function Ledger() {
         </div>
       </div>
 
-      {exportMessage && (
-        <p role="status" className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          {exportMessage}
-        </p>
+      {/* Distinct Export Feedback */}
+      {exportStatus && (
+        <div
+          role={exportStatus.type === 'error' ? 'alert' : 'status'}
+          className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
+            exportStatus.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+              : exportStatus.type === 'cancelled'
+              ? 'bg-muted border-border text-muted-foreground'
+              : 'bg-destructive/10 border-destructive/20 text-destructive'
+          }`}
+        >
+          {exportStatus.type === 'success' ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : exportStatus.type === 'cancelled' ? (
+            <XCircle className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+          )}
+          <span>{exportStatus.message}</span>
+        </div>
       )}
 
-      {query.isError ? (
-        <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-xs text-destructive flex items-center justify-between">
+      {/* Refresh error banner when retaining prior rows */}
+      {query.isError && query.data && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between"
+        >
+          <span>Orders could not refresh. Displaying previously loaded data.</span>
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            className="min-h-[36px] rounded border border-destructive/30 px-3 py-1 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Initial load failure */}
+      {query.isError && !query.data ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-xs text-destructive flex items-center justify-between"
+        >
           <span>Orders could not load.</span>
-          <button onClick={() => void query.refetch()} className="rounded border px-2.5 py-1 bg-background shadow-xs hover:bg-accent font-medium">
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            className="min-h-[44px] rounded border px-3 py-2 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
+          >
             Retry
           </button>
         </div>
       ) : query.isPending ? (
-        <div aria-busy="true" className="ledger-skeleton rounded-lg border bg-muted/20 p-8 text-center text-xs text-muted-foreground animate-pulse">
+        <div
+          aria-busy="true"
+          className="ledger-skeleton rounded-lg border bg-muted/20 p-8 text-center text-xs text-muted-foreground animate-pulse"
+        >
           Loading order history…
         </div>
       ) : total === 0 ? (
         <div className="rounded-lg border bg-card p-8 text-center space-y-2">
           <p className="font-semibold text-foreground text-sm">No orders match these filters</p>
           <p className="text-xs text-muted-foreground">Try clearing the restaurant, search or date restriction.</p>
-          <button onClick={clear} className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent">
+          <button
+            type="button"
+            onClick={clear}
+            className="min-h-[44px] rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-xs hover:bg-accent"
+          >
             Clear filters
           </button>
         </div>
       ) : (
         <>
+          {query.isFetching && !query.isPending && (
+            <div role="status" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span>Refreshing ledger data…</span>
+            </div>
+          )}
+
           <div
-            className={`ledger-scroll ${compact ? 'compact' : ''} rounded-lg border overflow-auto max-h-[65vh] bg-card`}
+            className={`ledger-scroll ${compact ? 'compact' : ''} rounded-lg border overflow-auto max-h-[65vh] bg-card ${
+              query.isFetching && !query.isPending ? 'opacity-70 transition-opacity' : ''
+            }`}
             role="region"
             aria-label="Order history"
             tabIndex={0}
@@ -416,17 +538,21 @@ export function Ledger() {
             </p>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 disabled={page === 1 || query.isFetching}
                 onClick={() => change({ page: String(page - 1) })}
-                className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                aria-label="Previous page"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Previous page</span>
               </button>
               <button
+                type="button"
                 disabled={end >= total || query.isFetching}
                 onClick={() => change({ page: String(page + 1) })}
-                className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                aria-label="Next page"
               >
                 <span>Next page</span>
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -436,7 +562,7 @@ export function Ledger() {
         </>
       )}
 
-      <OrderModal rows={query.data?.rows ?? []} request={request} />
+      <OrderModal rows={query.data?.rows ?? []} request={request} total={total} />
     </section>
   );
 }

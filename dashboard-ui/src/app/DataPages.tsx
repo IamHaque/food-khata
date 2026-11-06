@@ -5,21 +5,61 @@ import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
 import { ShieldCheck, ExternalLink } from 'lucide-react';
 
-function Bars({ title, rows }: { title: string; rows: [string, number][] }) {
+const MEAL_ORDER = ['breakfast', 'lunch', 'snack', 'dinner', 'late_night'];
+const MEAL_LABELS: Record<string, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  snack: 'Snack',
+  dinner: 'Dinner',
+  late_night: 'Late night',
+};
+
+function BarsPanel({
+  title,
+  subtitle,
+  yName,
+  rows,
+  valueFormatter,
+}: {
+  title: string;
+  subtitle?: string;
+  yName: string;
+  rows: [string, number][];
+  valueFormatter?: (v: number) => string;
+}) {
   return (
     <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
       <Chart
         summary={title}
-        headers={['Group', 'Value']}
-        rows={rows}
+        headers={['Category', yName]}
+        rows={rows.map(([k, v]) => [k, valueFormatter ? valueFormatter(v) : v])}
         option={{
-          tooltip: { trigger: 'axis', renderMode: 'richText' },
+          tooltip: {
+            trigger: 'axis',
+            renderMode: 'richText',
+            valueFormatter: (val: unknown) =>
+              val != null ? (valueFormatter ? valueFormatter(Number(val)) : Number(val).toLocaleString('en-IN')) : 'Unknown',
+          },
           grid: { left: 70, right: 25, bottom: 65, top: 20 },
-          xAxis: { type: 'category', data: rows.map(x => x[0]), axisLabel: { hideOverlap: true, fontSize: 11 } },
-          yAxis: { type: 'value' },
+          xAxis: {
+            type: 'category',
+            data: rows.map(x => x[0]),
+            axisLabel: { hideOverlap: true, fontSize: 11 },
+          },
+          yAxis: {
+            type: 'value',
+            name: yName,
+            axisLabel: {
+              formatter: (v: number) => (valueFormatter ? valueFormatter(v) : v.toLocaleString('en-IN')),
+            },
+          },
           series: [
             {
+              name: yName,
               type: 'bar',
               itemStyle: { borderRadius: [4, 4, 0, 0] },
               data: rows.map(x => x[1]),
@@ -61,6 +101,21 @@ export function DataPage({ page }: { page: 'Behavior' | 'Places' }) {
   const b = data.charts.behavior;
   const p = data.charts.places;
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  // Behavior data transformations
+  const sortedMeals = [...b.meals]
+    .sort((a, b) => {
+      const idxA = MEAL_ORDER.indexOf(a.key.toLowerCase());
+      const idxB = MEAL_ORDER.indexOf(b.key.toLowerCase());
+      return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+    })
+    .map(x => [MEAL_LABELS[x.key.toLowerCase()] ?? x.key, x.orders] as [string, number]);
+
+  const sortedGaps = [...b.gaps]
+    .sort((a, b) => a.days - b.days)
+    .map(x => [`${x.days} ${x.days === 1 ? 'day' : 'days'}`, x.orders] as [string, number]);
+
+  const sortedPlaces = [...p.labels].sort((a, b) => b.spend - a.spend);
 
   return (
     <section aria-busy={query.isFetching} className="space-y-6">
@@ -124,22 +179,41 @@ export function DataPage({ page }: { page: 'Behavior' | 'Places' }) {
           </div>
 
           {b.timing_unavailable_reason ? (
-            <p className="text-xs text-muted-foreground p-4 rounded-lg border bg-muted/20">{b.timing_unavailable_reason}</p>
+            <p className="text-xs text-muted-foreground p-4 rounded-lg border bg-muted/20">
+              {b.timing_unavailable_reason}
+            </p>
           ) : (
             <>
               <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-                <h2 className="text-base font-semibold text-foreground">Hour and weekday</h2>
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Hour and weekday</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Order distribution by time of day and day of week. Unplotted slots indicate 0 recorded orders.
+                  </p>
+                </div>
                 <Chart
                   summary="Order count by hour and weekday"
                   headers={['Day and hour', 'Orders']}
                   rows={b.hour_weekday.map(x => [
-                    `${days[Math.floor(Number(x.key) / 24)]} ${Number(x.key) % 24}:00`,
+                    `${days[Math.floor(Number(x.key) / 24)]} ${String(Number(x.key) % 24).padStart(2, '0')}:00`,
                     x.orders,
                   ])}
                   option={{
-                    tooltip: { renderMode: 'richText' },
+                    tooltip: {
+                      renderMode: 'richText',
+                      formatter: (params: unknown) => {
+                        const item = params as { value: [number, number, number] };
+                        const day = days[item.value[1]];
+                        const hour = String(item.value[0]).padStart(2, '0');
+                        return `${day} ${hour}:00 - ${hour}:59<br/>Orders: <b>${item.value[2]}</b>`;
+                      },
+                    },
                     grid: { left: 50, right: 25, bottom: 60, top: 20 },
-                    xAxis: { type: 'category', data: Array.from({ length: 24 }, (_, i) => `${i}:00`) },
+                    xAxis: {
+                      type: 'category',
+                      data: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
+                      axisLabel: { hideOverlap: true, fontSize: 11 },
+                    },
                     yAxis: { type: 'category', data: days },
                     visualMap: {
                       min: 0,
@@ -150,6 +224,7 @@ export function DataPage({ page }: { page: 'Behavior' | 'Places' }) {
                     },
                     series: [
                       {
+                        name: 'Orders',
                         type: 'heatmap',
                         data: b.hour_weekday.map(x => [
                           Number(x.key) % 24,
@@ -161,43 +236,156 @@ export function DataPage({ page }: { page: 'Behavior' | 'Places' }) {
                   }}
                 />
               </div>
-              <Bars title="Meal slots" rows={b.meals.map(x => [x.key, x.orders])} />
+
+              <BarsPanel
+                title="Meal slots"
+                subtitle="Order volume grouped by standard meal windows"
+                yName="Orders"
+                rows={sortedMeals}
+              />
             </>
           )}
 
           {b.date_unavailable_reason ? (
-            <p className="text-xs text-muted-foreground p-4 rounded-lg border bg-muted/20">{b.date_unavailable_reason}</p>
+            <p className="text-xs text-muted-foreground p-4 rounded-lg border bg-muted/20">
+              {b.date_unavailable_reason}
+            </p>
           ) : (
             <>
-              <Bars title="Weekday and weekend" rows={b.day_type.map(x => [x.key, x.orders])} />
-              <Bars title="Days between orders" rows={b.gaps.map(x => [String(x.days), x.orders])} />
+              <BarsPanel
+                title="Weekday vs weekend orders"
+                subtitle="5 weekdays vs 2 weekend days per calendar week. Actual order counts are shown without preference normalization."
+                yName="Orders"
+                rows={b.day_type.map(x => [x.key.charAt(0).toUpperCase() + x.key.slice(1), x.orders])}
+              />
+
+              <BarsPanel
+                title="Days between orders"
+                subtitle="Frequency distribution of gap lengths between consecutive orders"
+                yName="Orders"
+                rows={sortedGaps}
+              />
             </>
           )}
 
-          <Bars title="Order value distribution" rows={b.aov_histogram.map(x => [x.key, x.orders])} />
+          <BarsPanel
+            title="Order value distribution"
+            subtitle="Frequency distribution of order total amounts across defined brackets"
+            yName="Orders"
+            rows={b.aov_histogram.map(x => [x.key, x.orders])}
+          />
         </>
       ) : (
+        /* Places page */
         <>
-          <p className="text-xs text-muted-foreground">Only address labels and cities are shown.</p>
+          <div className="p-3 rounded-lg border bg-muted/20 text-xs text-muted-foreground">
+            <strong>Privacy notice:</strong> Only delivery labels and city names are displayed. Street addresses and
+            geographic coordinates are intentionally excluded to protect privacy.
+          </div>
+
           {p.unsupported_reason && (
             <p className="text-xs text-muted-foreground p-3 rounded-lg border bg-muted/20">{p.unsupported_reason}</p>
           )}
-          <Bars title="Spend by delivery label" rows={p.labels.map(x => [`${x.label} · ${x.city}`, x.spend])} />
+
+          {/* Destination spending (Ranked horizontal bars) */}
+          <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Spend by delivery destination</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Total expenditure across approved delivery labels and cities
+              </p>
+            </div>
+
+            {!sortedPlaces.length ? (
+              <p className="text-xs text-muted-foreground p-4 text-center">No destination data available.</p>
+            ) : (
+              <Chart
+                summary="Spend by delivery destination"
+                headers={['Destination', 'City', 'Orders', 'Spend', 'Delivery fees']}
+                rows={sortedPlaces.map(x => [
+                  x.label,
+                  x.city,
+                  x.orders,
+                  `₹${Math.round(x.spend).toLocaleString('en-IN')}`,
+                  `₹${Math.round(x.fee).toLocaleString('en-IN')}`,
+                ])}
+                option={{
+                  tooltip: {
+                    trigger: 'axis',
+                    renderMode: 'richText',
+                    axisPointer: { type: 'shadow' },
+                    valueFormatter: (val: unknown) =>
+                      val != null ? `₹${Number(val).toLocaleString('en-IN')}` : 'Unknown',
+                  },
+                  grid: { left: 120, right: 30, bottom: 40, top: 15 },
+                  xAxis: {
+                    type: 'value',
+                    name: 'Spend (₹)',
+                    axisLabel: {
+                      formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
+                    },
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: sortedPlaces.map(x => `${x.label} (${x.city})`).reverse(),
+                    axisLabel: { fontSize: 11 },
+                  },
+                  series: [
+                    {
+                      name: 'Spend',
+                      type: 'bar',
+                      itemStyle: { borderRadius: [0, 4, 4, 0] },
+                      data: sortedPlaces.map(x => x.spend).reverse(),
+                    },
+                  ],
+                }}
+              />
+            )}
+          </div>
+
+          {/* Distance vs delivery fee */}
           {p.distance_unavailable_reason ? (
-            <p className="text-xs text-muted-foreground p-3 rounded-lg border bg-muted/20">{p.distance_unavailable_reason}</p>
+            <p className="text-xs text-muted-foreground p-3 rounded-lg border bg-muted/20">
+              {p.distance_unavailable_reason}
+            </p>
           ) : (
             <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-              <h2 className="text-base font-semibold text-foreground">Distance and delivery fee</h2>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Distance and delivery fee</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Observed net delivery fee relative to distance (km). Does not imply a causal relationship; delivery fees
+                  depend on platform, time, surge, and promotions.
+                </p>
+              </div>
+
               <Chart
                 summary="Restaurant distance versus net delivery fee"
-                headers={['Distance km', 'Delivery fee']}
-                rows={p.distances.map(x => [x.distance_km, x.fee])}
+                headers={['Distance (km)', 'Delivery fee (₹)']}
+                rows={p.distances.map(x => [`${x.distance_km} km`, `₹${x.fee.toLocaleString('en-IN')}`])}
                 option={{
-                  tooltip: { renderMode: 'richText' },
-                  grid: { left: 60, right: 25, bottom: 50, top: 20 },
-                  xAxis: { type: 'value', name: 'km' },
-                  yAxis: { type: 'value', name: 'Fee' },
-                  series: [{ type: 'scatter', data: p.distances.map(x => [x.distance_km, x.fee]) }],
+                  tooltip: {
+                    renderMode: 'richText',
+                    formatter: (params: unknown) => {
+                      const item = params as { value: [number, number] };
+                      return `Distance: <b>${item.value[0]} km</b><br/>Net fee: <b>₹${item.value[1]}</b>`;
+                    },
+                  },
+                  grid: { left: 70, right: 25, bottom: 50, top: 20 },
+                  xAxis: { type: 'value', name: 'Distance (km)' },
+                  yAxis: {
+                    type: 'value',
+                    name: 'Delivery fee (₹)',
+                    axisLabel: {
+                      formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
+                    },
+                  },
+                  series: [
+                    {
+                      name: 'Delivery fee',
+                      type: 'scatter',
+                      data: p.distances.map(x => [x.distance_km, x.fee]),
+                    },
+                  ],
                 }}
               />
             </div>
@@ -212,6 +400,33 @@ export function HealthPage() {
   const { filters } = useFilters();
   const query = useHealth(filters);
   const h = query.data;
+
+  const nullRateLabels: Record<string, string> = {
+    user_rating: 'User rating',
+    food_discount: 'Food discount',
+    delivery_fee_discount: 'Delivery discount',
+    other_charges: 'Other charges',
+    restaurant_name: 'Restaurant name',
+    address_label: 'Address label',
+    city: 'City',
+    items_summary: 'Items summary',
+    item_subtotal: 'Item subtotal',
+    total_discount: 'Total discount',
+    reported_savings: 'Reported savings',
+    delivery_fee: 'Delivery fee',
+    packaging_fee: 'Packaging fee',
+    platform_fee: 'Platform fee',
+    total_tax: 'Total tax',
+    tip: 'Tip',
+    refund_amount: 'Refund amount',
+  };
+
+  const nullRateRows = h
+    ? Object.entries(h.null_rates)
+        .filter((x): x is [string, number] => x[1] !== null)
+        .map(([k, v]) => [nullRateLabels[k] ?? k, v] as [string, number])
+        .sort((a, b) => b[1] - a[1])
+    : [];
 
   return (
     <section aria-busy={query.isFetching} className="space-y-6">
@@ -248,45 +463,61 @@ export function HealthPage() {
               <span>Scope Integrity Summary</span>
             </div>
             <p className="text-xs text-muted-foreground">{h.note}</p>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">History Complete</span>
-                <strong className={`font-semibold ${h.history_complete ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {h.history_complete ? 'Complete' : 'Incomplete'}
+                <span className="text-muted-foreground block text-[11px]">History Coverage</span>
+                <strong className="font-semibold text-foreground">
+                  {h.history_complete ? 'Complete' : 'Partial scope'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Details Complete</span>
-                <strong className={`font-semibold ${h.details_complete ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {h.details_complete ? 'Complete' : 'Incomplete'}
+                <span className="text-muted-foreground block text-[11px]">Details Coverage</span>
+                <strong className="font-semibold text-foreground">
+                  {h.details_complete ? 'Complete' : 'Partial scope'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
                 <span className="text-muted-foreground block text-[11px]">Verified Rate</span>
-                <strong className="font-semibold text-foreground">{h.verified_percent ?? 'Unknown'}%</strong>
+                <strong className="font-semibold text-foreground">
+                  {h.verified_percent != null ? `${h.verified_percent}%` : 'Unknown'}
+                </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Anomalies</span>
+                <span className="text-muted-foreground block text-[11px]">Reconciliation Anomalies</span>
                 <strong className="font-semibold text-foreground">{h.reconciliation_anomalies}</strong>
               </div>
             </div>
 
+            <p className="text-[11px] text-muted-foreground">
+              Note: Lifetime coverage indicates whether the entire historical account record was imported. Partial scope
+              is normal and expected when filtering by date or accounts without full historical imports.
+            </p>
+
             <Link
               to={{ pathname: '/ledger', search: serializeFilters({ ...filters, anomaly: 'review' }).toString() }}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline pt-2"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline pt-2 min-h-[44px]"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               <span>Review unverified and anomalous orders</span>
             </Link>
           </div>
 
-          <Bars
+          <BarsPanel
             title="Missing field rates (%)"
-            rows={Object.entries(h.null_rates).filter((x): x is [string, number] => x[1] !== null)}
+            subtitle="Percentage of orders with null or missing data values across optional fields"
+            yName="Missing rate (%)"
+            rows={nullRateRows}
+            valueFormatter={(v: number) => `${v.toFixed(1)}%`}
           />
 
           <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-            <h2 className="text-base font-semibold text-foreground">Import coverage</h2>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Import coverage</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Sync and detail coverage status by account and platform
+              </p>
+            </div>
             <div className="overview-scroll rounded-lg border overflow-x-auto" tabIndex={0}>
               <table className="w-full text-xs">
                 <thead className="bg-muted/40 border-b">
@@ -303,21 +534,13 @@ export function HealthPage() {
                       <td className="p-2.5">{x.account_id}</td>
                       <td className="p-2.5 font-semibold">{x.platform}</td>
                       <td className="p-2.5 text-center font-sans">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            x.history_complete ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                          }`}
-                        >
-                          {x.history_complete ? 'Complete' : 'Incomplete'}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground border">
+                          {x.history_complete ? 'Complete' : 'Partial scope'}
                         </span>
                       </td>
                       <td className="p-2.5 text-center font-sans">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            x.details_complete ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                          }`}
-                        >
-                          {x.details_complete ? 'Complete' : 'Incomplete'}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground border">
+                          {x.details_complete ? 'Complete' : 'Partial scope'}
                         </span>
                       </td>
                     </tr>

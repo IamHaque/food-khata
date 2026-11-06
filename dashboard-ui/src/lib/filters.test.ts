@@ -1,5 +1,5 @@
 import { expect,it } from 'vitest';
-import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters} from './filters';
+import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters,calculatePresetDates,detectPreset} from './filters';
 it('roundtrips all-status scope and preserves unrelated URL state',()=>{
  const f={...defaultFilters(),statuses:[],platforms:['ZOMATO','SWIGGY'],amount_min:0,search:'rice & beans'};
  const p=serializeFilters(f,new URLSearchParams('order=one&sort=amount&page=4'),true);
@@ -24,3 +24,15 @@ it('preserves implicit versus explicitly selected delivered status',()=>{
 });
 
 it("round trips the shared anomaly scope",()=>{const f={...defaultFilters(),anomaly:"review" as const};expect(parseFilters(serializeFilters(f)).anomaly).toBe("review");});
+ 
+it('calculates and detects presets accurately', () => {
+  const fixedDate = new Date('2026-11-06T12:00:00Z');
+  const d7 = calculatePresetDates('7d', fixedDate);
+  expect(detectPreset(d7.date_from, d7.date_to, fixedDate)).toBe('7d');
+  const d30 = calculatePresetDates('30d', fixedDate);
+  expect(detectPreset(d30.date_from, d30.date_to, fixedDate)).toBe('30d');
+  const month = calculatePresetDates('month', fixedDate);
+  expect(detectPreset(month.date_from, month.date_to, fixedDate)).toBe('month');
+  expect(detectPreset(null, null, fixedDate)).toBe('all');
+  expect(detectPreset('2025-01-01', '2025-01-10', fixedDate)).toBe('custom');
+});
