@@ -2818,6 +2818,34 @@
         ],
         "title": "Dashboard"
       },
+      "DietMonth": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "veg": {
+            "type": "integer",
+            "title": "Veg"
+          },
+          "non_veg": {
+            "type": "integer",
+            "title": "Non Veg"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "veg",
+          "non_veg",
+          "unknown"
+        ],
+        "title": "DietMonth"
+      },
       "DietRow": {
         "properties": {
           "diet": {
@@ -3269,6 +3297,14 @@
       },
       "FoodCharts": {
         "properties": {
+          "diet_monthly": {
+            "items": {
+              "$ref": "#/components/schemas/DietMonth"
+            },
+            "type": "array",
+            "title": "Diet Monthly",
+            "default": []
+          },
           "cuisines": {
             "items": {
               "$ref": "#/components/schemas/CuisineRow"
@@ -4803,6 +4839,14 @@
       },
       "SpendingCharts": {
         "properties": {
+          "discount_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountItem"
+            },
+            "type": "array",
+            "title": "Discount Breakdown",
+            "default": []
+          },
           "daily": {
             "items": {
               "$ref": "#/components/schemas/DailySpend"

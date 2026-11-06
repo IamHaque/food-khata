@@ -19,3 +19,5 @@
 18. 2026-11-06: Gemini3.8Flash Medium/High-only supersedes Terra worker preference. Prior Gemini git-only/scanned-file enforcement still applies; no repository transfer while harness cannot enforce scope. Root local fallback explicitly authorized earlier remains in effect.
 
 2026-11-06: Restaurant count now follows normalized name+locality from the technical brief; listing identity remains an explicit leaderboard option. Root retains local-only execution under the Gemini transfer boundary. Router patched to 7.18.5; nine moderate development-only lint-chain audit findings remain after compatible fixes, with no forced transitive major override.
+
+2026-11-06: A targeted minimatch11.0.1 override resolves the remaining development lint-chain advisory without downgrading TypeScript tooling. ESLint and all19 frontend tests pass; npm audit reports0 vulnerabilities. Node22 is the supported frontend tooling baseline.

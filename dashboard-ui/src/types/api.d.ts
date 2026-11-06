@@ -307,6 +307,17 @@ export interface components {
             /** Data Complete */
             data_complete: boolean;
         };
+        /** DietMonth */
+        DietMonth: {
+            /** Month */
+            month: string;
+            /** Veg */
+            veg: number;
+            /** Non Veg */
+            non_veg: number;
+            /** Unknown */
+            unknown: number;
+        };
         /** DietRow */
         DietRow: {
             /** Diet */
@@ -453,6 +464,11 @@ export interface components {
         };
         /** FoodCharts */
         FoodCharts: {
+            /**
+             * Diet Monthly
+             * @default []
+             */
+            diet_monthly: components["schemas"]["DietMonth"][];
             /** Cuisines */
             cuisines: components["schemas"]["CuisineRow"][];
             /** Diet */
@@ -903,6 +919,11 @@ export interface components {
         };
         /** SpendingCharts */
         SpendingCharts: {
+            /**
+             * Discount Breakdown
+             * @default []
+             */
+            discount_breakdown: components["schemas"]["DiscountItem"][];
             /** Daily */
             daily: components["schemas"]["DailySpend"][];
             /** Years */

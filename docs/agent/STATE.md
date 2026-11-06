@@ -19,14 +19,11 @@
 ## Current phase / epic / story
 E6 page completion active; user authorizes intermediate checkpoints until final review.
 ## In progress
-Root local: E6 typed pages implemented; E7 final coverage/polish remains. No delegate transfer.
+Final documentation and verified implementation commit; no delegate transfer.
 ## Pending
-1. Remaining visual/detail gaps, final modal stress and responsiveness.
-2. Final a11y matrix after command palette and navigation changes.
-3. README/architecture/migration plan and final backlog reconciliation.
-4. Removal proposal for final human review; no deletion approved.
+Explicit final review and separate legacy/export retirement decisions (REMOVALS R1/R2).
 ## Blocked
-No execution blocker. Destructive removals and protected parser/schema edits remain separately approval-gated.
+No execution error. Deletions remain approval-gated; all legacy functionality retained.
 ## Done recently
 - BASE-03 72dcc0b: guard, initial briefs/state/backlog; root reverified.
 - BASE-02 draft 689afa9: baseline/source inventory.
@@ -44,7 +41,7 @@ Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/resu
 Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
 Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
 ## Last verified
-2026-11-06 root: pytest104 passed +10 subtests; Ruff lint/format pass; Node7+Vitest12 pass; typecheck/lint/build pass. Local read-only parity0 mismatches (ignored report only).
-Synthetic seven-page browser suite passes; 56 page/theme/width screenshot+axe states pass without serious/critical findings or overflow after dark-link contrast fix. Palette/navigation additions awaiting final rerun.
-Warnings: Starlette/httpx deprecation, dual legacy/new chart bundle size; nine moderate dev lint-chain audit findings remain. Router production findings fixed7.18.5. Python3.11 unavailable locally; CI configured, no remote pass claimed.
-All working changes attributed to E6/E7; no private data staged. Legacy retained, uv.lock ignored and retained.
+2026-11-06 root: pytest105 passed +10 subtests; Ruff lint/format pass; Node7+Vitest12 pass; typecheck/lint/build pass; npm audit0. Local read-only parity0 mismatches (ignored report only).
+Populated synthetic56-state page/theme/width matrix passes: no serious/critical axe findings or page overflow; includes mobile modal. Legacy browser suite passes. Palette/scope-preserving navigation/price-history checks pass.
+Limits: Starlette/httpx deprecation and dual chart-stack chunk warning; Python3.11 not installed locally, CI configured but not observed. Full evidence/limits in FINAL_VERIFICATION.md.
+No private data staged; source read-only, indexes unapplied. Legacy retained, uv.lock ignored and retained.

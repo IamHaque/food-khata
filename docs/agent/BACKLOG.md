@@ -1,6 +1,6 @@
 # Backlog
 
-Unless listed below, stories: status `todo`; owner `pending`; commit `pending`.
+Status table below is authoritative; original story text is preserved.
 
 ## Revised epics
  (replace the seed epics in the orchestrator prompt)
@@ -170,15 +170,21 @@ Story CLEAN-02: Retire the JSON export path
 
 
 ## Current status
-| Story | Status | Owner | Commit / evidence |
+| Story | Status | Owner | Evidence |
 | --- | --- | --- | --- |
-| BASE-03 | done | Terra Low + root | 72dcc0b; root guard verification |
-| BASE-01 | done | Terra Low + root | 4b83f33; root-verified 8 states and browser suite; defects recorded |
-| BASE-02 | done | root + Terra Medium review | 4b83f33; final MIGRATION_PLAN approval checkpoint |
-| DATA-01 | done | Terra Medium + root | 4b83f33; DATA_PROFILE/privacy tests root verified |
+| BASE-01..03, DATA-01 | verified | root / earlier workers | baseline commits and DATA_PROFILE |
+| DATA-02 | proposal only, no schema changes | root | QUERY_PLANS; proposed_indexes.sql |
+| CLI-01, FILT-01, MET-01..02, API-01, CI-01 | locally verified; CI configured | root / earlier workers |105 tests +10 subtests; Ruff; CI3.11/3.14 not remotely observed |
+| UI-01..05, ACCT-01..03 | implemented and locally verified | root | type/lint/build,19 tests, synthetic browser |
+| MIG-01 | verified | root | ignored local parity0 mismatches |
+| LEDGER-01..04 | implemented and locally verified | root | pagination/sort/CSV/account/keyboard/modal tests |
+| KPI-01, CHART-01, SPEND, FOOD, BEHAV, PLACES, HEALTH | implemented and locally verified | root | typed server datasets, synthetic cases and routed browser checks |
+| MOTION, A11Y, RESP, STRESS | functional checks pass; limits recorded | root | FINAL_VERIFICATION; reduced motion,56 synthetic states, error/empty validation |
+| CLEAN-03 | updated | root | README, architecture, METRICS |
+| CLEAN-01..02 | awaiting explicit retirement approval | human | proposed REMOVALS; nothing deleted |
 
 ## Remaining story scenarios (technical BRIEF sections 2–10)
-All stories below are todo, owner pending, commit pending. Required source ACCT/LEDGER/new-story text above remains authoritative.
+See the status table and final verification record. Required source ACCT/LEDGER/new-story text above remains authoritative.
 
 ### E-1: baseline and audit
 BASE-01 — As the owner I want a reproducible baseline so migration regressions are visible.

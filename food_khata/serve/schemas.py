@@ -295,7 +295,15 @@ class VisitMonth(ResponseModel):
     repeat_orders: int
 
 
+class DietMonth(ResponseModel):
+    month: str
+    veg: int
+    non_veg: int
+    unknown: int
+
+
 class FoodCharts(ResponseModel):
+    diet_monthly: list[DietMonth] = []
     cuisines: list[CuisineRow]
     diet: list[DietRow]
     loyalty: list[LoyaltyRow]
@@ -324,7 +332,13 @@ class FeeScatter(ResponseModel):
     fee_percent: float | None
 
 
+class DiscountItem(ResponseModel):
+    label: str
+    amount: float
+
+
 class SpendingCharts(ResponseModel):
+    discount_breakdown: list[DiscountItem] = []
     daily: list[DailySpend]
     years: list[YearSpend]
     fee_scatter: list[FeeScatter]
@@ -417,11 +431,6 @@ class Item(ResponseModel):
     total_price: float | None
     is_veg: bool | None
     category: str | None
-
-
-class DiscountItem(ResponseModel):
-    label: str
-    amount: float
 
 
 class Bill(ResponseModel):

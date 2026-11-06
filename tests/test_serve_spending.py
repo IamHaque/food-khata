@@ -25,3 +25,11 @@ def test_spending_unallocated_and_item_filter(conn):
     assert result["daily"] == []
     assert result["unallocated_spend"] == 0.01
     assert len(result["fee_scatter"]) == 1
+
+
+def test_discount_components_reconcile_without_merging_savings(conn):
+    conn.execute(
+        "UPDATE orders SET food_discount=3,delivery_fee_discount=2,total_discount=9,reported_savings=100 WHERE id='1'"
+    )
+    result = spending(conn, Filters(account_ids=["a"]))
+    assert [x["amount"] for x in result["discount_breakdown"]] == [3, 2, 4]

@@ -78,3 +78,7 @@ Approve this incremental migration plan, including carrying baseline accessibili
 ## Independent review and verification
 Terra Medium reviewed the scripts and evidence. Root fixed both concrete safety findings: reject profile output aliases of the source DB (including hard links), and block raster screenshots regardless of filename. Added regression checks; root reran full Python suite (57 + 10 subtests), Ruff, generator self-check, profile generation, eight Playwright/axe captures and existing browser suite. No unexplained code-review finding remains; baseline a11y/contrast defects stay documented for migration.
 
+
+## Implementation outcome (supersedes baseline-only status above)
+
+User authorized intermediate work through final review. The read-only API, typed frontend, seven pages, shared account/filter scope, Ledger/modal and server chart datasets are implemented. See FINAL_VERIFICATION.md for current evidence and limits; the earlier absence of API/types/lint and baseline a11y defects describe the pre-migration state. Local parity passes with0 mismatches. Final populated synthetic56-state axe/overflow checks pass after dark-link contrast and mobile modal-table focus fixes. Legacy remains working. Removal proposals remain unapproved in docs/agent/REMOVALS.md. No source schema or indexes changed.

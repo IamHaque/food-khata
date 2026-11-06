@@ -38,6 +38,20 @@ def food(conn, filters):
         }
         for veg, count, quantity, amount in item_rows
     ]
+    diet_months = defaultdict(lambda: {"Veg": 0, "Non-veg": 0, "Unknown": 0})
+    for day, veg, quantity in conn.execute(
+        f"SELECT o.order_date,i.is_veg,i.quantity FROM order_items i JOIN orders o ON o.id=i.order_id WHERE {where} AND o.order_status='DELIVERED'",
+        params,
+    ):
+        try:
+            parsed = date.fromisoformat(day)
+            if parsed.isoformat() != day:
+                continue
+        except (ValueError, TypeError):
+            continue
+        diet_months[day[:7]]["Veg" if veg == 1 else "Non-veg" if veg == 0 else "Unknown"] += (
+            quantity
+        )
     all_dates = filters.model_copy(update={"date_from": None, "date_to": None})
     first_where, first_params = build_where(all_dates)
     first_rows = conn.execute(
@@ -92,6 +106,17 @@ def food(conn, filters):
             if value["orders"]
         ],
         "diet": [] if diet_reason else dietary,
+        "diet_monthly": []
+        if diet_reason
+        else [
+            {
+                "month": month,
+                "veg": counts["Veg"],
+                "non_veg": counts["Non-veg"],
+                "unknown": counts["Unknown"],
+            }
+            for month, counts in sorted(diet_months.items())
+        ],
         "loyalty": [
             {
                 "key": str(key),

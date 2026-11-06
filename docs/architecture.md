@@ -166,3 +166,15 @@ internal IDs/field dumps. Financial uncertainty is indicated without altering to
 Python neither bundles frontend assets nor generates an HTML dashboard. Production
 UI output is `dashboard-ui/dist`; Python distribution contains only backend code.
 After syncing/importing, regenerate the JSON and refresh or reload it in the UI.
+
+## Current v2 serving path
+
+The earlier export-driven UI description applies to `/legacy`. The default UI now uses the `food_khata.serve` FastAPI package and strict TypeScript React routes in the existing Vite project. No project was scaffolded. The original ingestion/authentication/session paths and schema are unchanged.
+
+`create_app` supplies filter metadata, account-scoped health, aggregate dashboard charts, paginated orders, bill details, restaurant/item leaders and slim orders. The connection dependency uses a read-only SQLite URI, `PRAGMA query_only`, bounded retries and a request snapshot. Dashboard cache keys contain the complete filter model and DB/WAL versions; builds are rechecked before caching. Invalid/non-finite data produces sanitized errors. Development timing logs include route names and durations only. Loopback Host/Origin validation and static asset containment prevent remote access and accidental export serving.
+
+`build_where` defines all shared scope predicates. Item filters use EXISTS to avoid multiplying order totals. The server owns metrics, monthly history, comparisons, waterfall coordinates, timing, food, spending and privacy-safe Places datasets. The frontend maps these values into charts and tables. It does not recalculate financial metrics. All charts use server aggregates; the slim endpoint is available but the UI does not download it, so large histories stay server-side.
+
+The frontend uses generated OpenAPI types, Zod response validation, cancellable TanStack Query requests, URL filters and account-scoped metadata pruning. Navigation preserves current scope. All seven routes share the same filters. Ledger uses TanStack Table with manual server pagination/sort; CSV fetches every matching page with cancellation and spreadsheet-formula protection. The Radix modal retains URL selection, filtered previous/next continuity, focus restoration and mobile internal scrolling.
+
+No external tiles, analytics or data requests are used. Synthetic-only browser fixtures block unexpected network paths. Legacy UI/export/Recharts remain pending explicit removal approval; no source database indexes were applied.

@@ -200,3 +200,24 @@ Source archives remain untouched. Advertised savings remain distinct from explic
 bill discounts. Reconciliation means the known components balance within INR 1;
 it does not independently verify bank transactions. Unreconciled bills retain
 provider totals and show a concise notice in the receipt.
+
+## Dashboard v2 migration
+
+The API dashboard is the default route; the original export dashboard remains at `/legacy` while retirement awaits approval. No export is required by the API dashboard.
+
+From the repository root in PowerShell:
+
+```powershell
+python -m pip install -e ".[serve]"
+npm --prefix dashboard-ui ci
+npm --prefix dashboard-ui run build
+python -m food_khata serve --host 127.0.0.1 --port 8765
+```
+
+Open `http://127.0.0.1:8765`. The server opens SQLite with `mode=ro` and `query_only`; it never syncs or ingests. Keep the existing sync/import workflow separate. For frontend development, run the API and `npm --prefix dashboard-ui run dev`; Vite proxies `/api` to loopback port 8765. Missing frontend assets leave the API available.
+
+The seven pages share account and URL filters. Ledger uses server sorting/pagination; its CSV exports all matching rows. Order inspection is a centered, keyboard-accessible modal. Savings reported by providers remain separate from explicit discounts. Data health reports API-visible history/details coverage and snapshot limits, without warning on lifetime coverage alone.
+
+Validation: `python -m pytest -q`, `python -m ruff check .`, `python -m ruff format --check .`; frontend `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` from `dashboard-ui`. `node dashboard-ui/scripts/foundation-test.mjs` runs synthetic-only browser regressions after building. Set `AXE_CORE_PATH` to a local `axe.min.js` to enable seven-page, two-theme, four-width screenshots and axe checks. Generated screenshots remain ignored. Never use real data for captures.
+
+See `docs/METRICS.md`, `docs/MIGRATION_PLAN.md` and `docs/agent/STATE.md` for definitions, evidence and outstanding approval boundaries. The router is patched and the development lint chain pins patched minimatch 11.0.1 through an npm override; the current npm audit reports zero vulnerabilities. Both chart stacks remain installed while legacy retirement awaits approval.

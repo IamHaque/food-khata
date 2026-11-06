@@ -10,6 +10,7 @@ def test_food_scope_and_new_repeat_history(conn):
     result = food(conn, Filters(account_ids=["a"]))
     assert result["cuisines"] == [{"name": "Indian", "orders": 1, "spend": 100.12}]
     assert result["diet"][0]["quantity"] == 2
+    assert sum(result["diet_monthly"][0][k] for k in ["veg", "non_veg", "unknown"]) == 2
     assert result["loyalty"][0]["orders"] == 1
     conn.execute("UPDATE orders SET order_status='DELIVERED' WHERE id='2'")
     result = food(conn, Filters(account_ids=["a"], date_from="2025-02-01"))

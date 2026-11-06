@@ -55,7 +55,19 @@ def spending(conn, filters):
             }
         )
         years[(day.year, day.month)] += amount
+    discounts = conn.execute(
+        f"SELECT COALESCE(SUM(o.food_discount),0),COALESCE(SUM(o.delivery_fee_discount),0),COALESCE(SUM(o.total_discount),0) FROM orders o WHERE {where} AND o.order_status='DELIVERED'",
+        params,
+    ).fetchone()
     return {
+        "discount_breakdown": [
+            {"label": "Food discount", "amount": round(discounts[0], 2)},
+            {"label": "Delivery discount", "amount": round(discounts[1], 2)},
+            {
+                "label": "Other / unallocated discount",
+                "amount": round(discounts[2] - discounts[0] - discounts[1], 2),
+            },
+        ],
         "daily": points,
         "years": [
             {"year": year, "month": month, "spend": round(amount, 2)}
