@@ -2377,6 +2377,26 @@
       },
       "Bill": {
         "properties": {
+          "discount_items": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountItem"
+            },
+            "type": "array",
+            "title": "Discount Items"
+          },
+          "reconciliation_label": {
+            "type": "string",
+            "title": "Reconciliation Label"
+          },
+          "reconciliation_status": {
+            "type": "string",
+            "enum": [
+              "matches",
+              "off",
+              "unknown"
+            ],
+            "title": "Reconciliation Status"
+          },
           "order": {
             "$ref": "#/components/schemas/Order"
           },
@@ -2418,6 +2438,9 @@
         },
         "type": "object",
         "required": [
+          "discount_items",
+          "reconciliation_label",
+          "reconciliation_status",
           "order",
           "items",
           "reconciliation_difference",
@@ -2485,6 +2508,9 @@
       },
       "Charts": {
         "properties": {
+          "places": {
+            "$ref": "#/components/schemas/Places"
+          },
           "behavior": {
             "$ref": "#/components/schemas/Behavior"
           },
@@ -2543,6 +2569,7 @@
         },
         "type": "object",
         "required": [
+          "places",
           "behavior",
           "monthly",
           "calendar",
@@ -2624,6 +2651,24 @@
           "data_complete"
         ],
         "title": "Dashboard"
+      },
+      "DiscountItem": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "amount"
+        ],
+        "title": "DiscountItem"
       },
       "FeeMonth": {
         "properties": {
@@ -3697,6 +3742,10 @@
       },
       "Order": {
         "properties": {
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -3957,6 +4006,7 @@
         },
         "type": "object",
         "required": [
+          "fees",
           "id",
           "account_label",
           "account_id",
@@ -4036,6 +4086,105 @@
           "filtered_total_amount"
         ],
         "title": "Orders"
+      },
+      "PlaceDistance": {
+        "properties": {
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          }
+        },
+        "type": "object",
+        "required": [
+          "distance_km",
+          "fee"
+        ],
+        "title": "PlaceDistance"
+      },
+      "PlaceLabel": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "city",
+          "orders",
+          "spend",
+          "fee"
+        ],
+        "title": "PlaceLabel"
+      },
+      "Places": {
+        "properties": {
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceLabel"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "distances": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceDistance"
+            },
+            "type": "array",
+            "title": "Distances"
+          },
+          "distance_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Unavailable Reason"
+          },
+          "unsupported_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unsupported Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labels",
+          "distances",
+          "distance_unavailable_reason",
+          "unsupported_reason"
+        ],
+        "title": "Places"
       },
       "PlatformChart": {
         "properties": {

@@ -193,6 +193,15 @@ export interface components {
         };
         /** Bill */
         Bill: {
+            /** Discount Items */
+            discount_items: components["schemas"]["DiscountItem"][];
+            /** Reconciliation Label */
+            reconciliation_label: string;
+            /**
+             * Reconciliation Status
+             * @enum {string}
+             */
+            reconciliation_status: "matches" | "off" | "unknown";
             order: components["schemas"]["Order"];
             /** Items */
             items: components["schemas"]["Item"][];
@@ -225,6 +234,7 @@ export interface components {
         };
         /** Charts */
         Charts: {
+            places: components["schemas"]["Places"];
             behavior: components["schemas"]["Behavior"];
             /** Monthly */
             monthly: components["schemas"]["Month"][];
@@ -270,6 +280,13 @@ export interface components {
             comparison: components["schemas"]["Comparison"] | null;
             /** Data Complete */
             data_complete: boolean;
+        };
+        /** DiscountItem */
+        DiscountItem: {
+            /** Label */
+            label: string;
+            /** Amount */
+            amount: number;
         };
         /** FeeMonth */
         FeeMonth: {
@@ -595,6 +612,8 @@ export interface components {
         };
         /** Order */
         Order: {
+            /** Fees */
+            fees: number;
             /** Id */
             id: string;
             /** Account Label */
@@ -676,6 +695,37 @@ export interface components {
             page_size: number;
             /** Filtered Total Amount */
             filtered_total_amount: number;
+        };
+        /** PlaceDistance */
+        PlaceDistance: {
+            /** Distance Km */
+            distance_km: number;
+            /** Fee */
+            fee: number;
+        };
+        /** PlaceLabel */
+        PlaceLabel: {
+            /** Label */
+            label: string;
+            /** City */
+            city: string;
+            /** Orders */
+            orders: number;
+            /** Spend */
+            spend: number;
+            /** Fee */
+            fee: number;
+        };
+        /** Places */
+        Places: {
+            /** Labels */
+            labels: components["schemas"]["PlaceLabel"][];
+            /** Distances */
+            distances: components["schemas"]["PlaceDistance"][];
+            /** Distance Unavailable Reason */
+            distance_unavailable_reason: string | null;
+            /** Unsupported Reason */
+            unsupported_reason: string | null;
         };
         /** PlatformChart */
         PlatformChart: {
