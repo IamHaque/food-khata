@@ -17,14 +17,14 @@
 - Old UI/export remain working until parity and approved retirement.
 - Screenshots synthetic only; no .food-khata-derived captures or fixtures.
 ## Current phase / epic / story
-E1 serve foundation active; user approved continuing intermediate checkpoints until final review.
+E6 page completion active; user authorizes intermediate checkpoints until final review.
 ## In progress
-Places/bill safety root verified97+10/Ruff; local parity0mismatches. Overview wired; centered modal incl crosspage/deeplink navigation rootverified7Node+11Vitest/typecheck/lint/build/syntheticbrowser. Next Food/Spending datasets and remaining pageviews (Medium).
+Root continuing locally. Cancellation requested for Terra Food/Spending and DataPages tasks after Gemini-only instruction; clean git confirmed, no partial edits. Gemini delegation blocked by prior enforced-scope rule; no transfer.
 ## Pending
-1. Complete server charts/comparisons (E1-T6, Terra Medium).
-2. Ledger table, then modal and Overview (Terra Medium).
+1. Food/Spending datasets and remaining page views (root local).
+2. Anomaly shortcut and final modal/Overview visual polish (root).
 3. Parity passed6e86ee2; rerun after remaining serverchanges.
-4. Ledger/modal then Overview and remaining pages.
+4. Dependency findings, responsive/a11y checks and documentation.
 5. Final a11y/responsive/stress checks and removal proposals.
 ## Blocked
 No execution blocker. Destructive removals and protected parser/schema edits remain separately approval-gated.
@@ -37,7 +37,7 @@ No execution blocker. Destructive removals and protected parser/schema edits rem
 ## Open questions for the human
 Nothing during implementation; final review pending. No deletion approval inferred.
 ## Worker constraint
-Use only GPT-6.1 Terra Medium or Low; never High/Max or automatic effort escalation (user override 2026-11-06).
+Sub-agents: Gemini3.8Flash Medium/High ONLY (latest user override). No other models. Gemini Git-only scoping remains mandatory; current harness cannot enforce it, so root works locally and transfers nothing.
 ## Environment notes
 Git/build/browser/uv execution needs sandbox escalation. Default Python lacks test tools; use temporary uv dependencies (pytest, ruff, requests, questionary, curl_cffi).
 Python 3.11 unavailable locally; covered by configured Windows/Linux CI, no remote pass asserted.
@@ -49,6 +49,7 @@ Gemini not used: shared checkout cannot enforce git-only snapshot scope; no tran
 Baseline defects: axe heading-order moderate and scrollable-region-focusable serious at all 8 states; light primary text/focus/5 chart-color contrast failures; axe incomplete contrast requires later manual review. No app fixes.
 Lint script/tsc setup absent in existing frontend; establish in foundation phase. API core now present and verified; real parity not run yet.
 Working changes attributed to current Places/Overview/modal slices; no private data staged. Generated unrequested uv.lock ignored, retained without deletion.
+
 
 
 
