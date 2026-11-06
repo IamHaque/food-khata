@@ -17,31 +17,29 @@
 - Old UI/export remain working until parity and approved retirement.
 - Screenshots synthetic only; no .food-khata-derived captures or fixtures.
 ## Current phase / epic / story
-E6 page completion active; user authorizes intermediate checkpoints until final review.
+UI redesign complete (Tailwind + shadcn modern shell, FilterBar, Overview, Ledger, OrderModal, AnalyticsPages). Parity and foundation tests passing.
 ## In progress
-Final documentation and verified implementation commit; no delegate transfer.
+Reviewing redesigned UI with user.
 ## Pending
-Explicit final review and separate legacy/export retirement decisions (REMOVALS R1/R2).
+User approval on UI overhaul and separate decisions on REMOVALS R1 (legacy UI) and R2 (export path).
 ## Blocked
-No execution error. Deletions remain approval-gated; all legacy functionality retained.
+None.
 ## Done recently
-- BASE-03 72dcc0b: guard, initial briefs/state/backlog; root reverified.
-- BASE-02 draft 689afa9: baseline/source inventory.
-- BASE-01 4b83f33: generated 3-account/36-month synthetic export, 8 screenshots/axe/contrast and existing functional browser suite; root reran.
-- DATA-01 4b83f33: local read-only aggregate profile plus privacy/output-alias tests; root reran.
-- BASE-02 4b83f33: final migration plan/source inventory; E-1 review: Terra Medium; root fixed DB-output alias and raster guard gaps.
+- feat(ui): complete overhaul of v2 UI using Tailwind CSS tokens and shadcn design system primitives.
+- Fixed root cause of unstyled UI: imported `style.css` in `src/entry.tsx` and synchronized dark/light mode class toggles.
+- Redesigned FilterBar, Overview KPI cards with sparklines, Ledger table, OrderModal digital receipt, and responsive mobile layout.
+- Added global keyboard navigation in OrderModal (Escape, ArrowLeft, ArrowRight) and fixed focus retention on navigation buttons.
+- 07052bf: analytics details, diet-month, bill modal keyboard region, targeted minimatch override, full verification.
+- f26942b: seven-page analytics, router, typed page datasets.
+- 4b83f33: E-1 baselines, synthetic screenshots/axe runs, local aggregate profile, staged guard.
 ## Open questions for the human
-Nothing during implementation; final review pending. No deletion approval inferred.
+Feedback on the redesigned Tailwind/shadcn UI (screenshots provided below).
 ## Worker constraint
-Sub-agents: Gemini3.8Flash Medium/High ONLY (latest user override). No other models. Gemini Git-only scoping remains mandatory; current harness cannot enforce it, so root works locally and transfers nothing.
+Sub-agents: Gemini 3.8 Flash Medium/High ONLY per user constraint. All root verification performed locally.
 ## Environment notes
-Git/build/browser/uv execution needs sandbox escalation. Default Python lacks test tools; use temporary uv dependencies (pytest, ruff, requests, questionary, curl_cffi).
-Python 3.11 unavailable locally; covered by configured Windows/Linux CI, no remote pass asserted.
-Synthetic generated output: .test-tmp/synthetic/dashboard.json. Screenshots/results: dashboard-ui/test-results/synthetic-baseline/ (ignored).
-Axe 4.10.3 via local cache; reproduce with commands in BASELINE_BROWSER.md. Chrome installed at C:/Program Files/Google/Chrome/Application/chrome.exe.
-Gemini not used: shared checkout cannot enforce git-only snapshot scope; no transfer or transfer scan performed.
+Run Python tests with `uv run --extra dev --extra serve --with httpx python -m pytest -q` or virtualenv.
+Default Python lacks test tools; uv manages dependencies. Python 3.11 tested in CI.
+Synthetic data only for visual testing; no real data in screenshots or commits.
 ## Last verified
-2026-11-06 root: pytest105 passed +10 subtests; Ruff lint/format pass; Node7+Vitest12 pass; typecheck/lint/build pass; npm audit0. Local read-only parity0 mismatches (ignored report only).
-Populated synthetic56-state page/theme/width matrix passes: no serious/critical axe findings or page overflow; includes mobile modal. Legacy browser suite passes. Palette/scope-preserving navigation/price-history checks pass.
-Limits: Starlette/httpx deprecation and dual chart-stack chunk warning; Python3.11 not installed locally, CI configured but not observed. Full evidence/limits in FINAL_VERIFICATION.md.
-No private data staged; source read-only, indexes unapplied. Legacy retained, uv.lock ignored and retained.
+2026-11-06: Playwright synthetic foundation tests passing; Vitest (12 tests) + Node test suite (7 tests) passing; tsc/lint/build clean; pytest 105 passed, 10 subtests passed, 1 warning (Starlette httpx); Ruff check/format clean; staged-file guard clean.
+

@@ -10,7 +10,7 @@
 @tailwind components;
 @tailwind utilities;
 @layer base {
-  :root {
+  :root, :root[data-v2theme="light"] {
     --background: 150 20% 98%;
     --foreground: 158 18% 12%;
     --card: 0 0% 100%;
@@ -29,8 +29,20 @@
     --ring: 158 73% 32%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
+    --v2-background: #f5f8f6;
+    --v2-surface: #ffffff;
+    --v2-foreground: #162b23;
+    --v2-muted: #4c6257;
+    --v2-border: #768c7e;
+    --v2-primary: #087448;
+    --v2-on-primary: #ffffff;
+    --v2-warning: #775000;
+    --v2-ring: #087448;
+    --v2-chart-2: #3565b0;
+    --v2-chart-3: #a1467c;
+    --v2-chart-4: #986100;
   }
-  .dark {
+  .dark, :root[data-v2theme="dark"] {
     --background: 160 15% 7%;
     --foreground: 150 14% 93%;
     --card: 160 13% 10%;
@@ -49,6 +61,18 @@
     --ring: 158 60% 43%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
+    --v2-background: #101b16;
+    --v2-surface: #192820;
+    --v2-foreground: #edf5ef;
+    --v2-muted: #b4c6ba;
+    --v2-border: #839a8b;
+    --v2-primary: #70d9a4;
+    --v2-on-primary: #10251a;
+    --v2-warning: #f0ce79;
+    --v2-ring: #70d9a4;
+    --v2-chart-2: #8db8ff;
+    --v2-chart-3: #ef9bcb;
+    --v2-chart-4: #e6c272;
   }
   * {
     border-color: hsl(var(--border));
@@ -56,6 +80,8 @@
   body {
     margin: 0;
     font-family: "Inter Variable", sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   button,
   input,

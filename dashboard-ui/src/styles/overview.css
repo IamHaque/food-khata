@@ -1,2 +1,17 @@
-.v2 .overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.v2 .overview-grid .page-panel{margin:0}.v2 .overview-card{display:flex;flex-direction:column;gap:8px}.v2 .overview-card strong{font-size:22px;font-variant-numeric:tabular-nums}.v2 .overview-card span,.v2 .overview-card small{color:var(--v2-muted)}.v2 .overview-scroll{overflow:auto}.v2 .overview-insights{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.v2 .overview-loading{min-height:320px}
-.v2 .overview-grid table{table-layout:fixed;width:100%}.v2 .overview-truncate{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v2 .overview-card strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v2 .kpi-formula p{color:var(--v2-foreground);margin:8px 0;font-size:12px}
+/* Overview enhancements */
+.overview-scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.overview-truncate {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-loading {
+  min-height: 280px;
+}
