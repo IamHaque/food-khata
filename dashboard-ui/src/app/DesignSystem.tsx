@@ -1,10 +1,22 @@
+import { useState } from 'react';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
+import { Skeleton } from '../components/ui/skeleton';
+import { Chip } from '../components/ui/chip';
+import { SegmentedControl } from '../components/ui/segmented-control';
+import { ToolbarButton } from '../components/ui/toolbar-button';
+import { KpiCard, ChartCard, EmptyState, ErrorState } from '../components/dashboard';
+import { RefreshCw, BarChart3 } from 'lucide-react';
 
 export function DesignSystem() {
+  const [seg, setSeg] = useState('a');
+  const [chipActive, setChipActive] = useState(false);
+
   return (
     <section className="space-y-6">
       <div className="border-b pb-3">
@@ -14,112 +26,129 @@ export function DesignSystem() {
         </p>
       </div>
 
-      <Card className="space-y-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-foreground">Type and surfaces</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Inter · tabular numbers · opaque backgrounds · visible keyboard focus.
-          </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard title="Revenue" value="₹1,234" subtitle="+12% vs last" icon={<BarChart3 className="h-4 w-4" />} />
+        <KpiCard title="Loading" isLoading />
+      </div>
+
+      <ChartCard
+        title="Sample chart"
+        subtitle="Last 7 days"
+        caption="Takeaway: up 12%"
+        tableData={[{ day: 'Mon', value: 10 }, { day: 'Tue', value: 14 }]}
+        onExportCsv={() => {}}
+        onExportPng={() => {}}
+      >
+        <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">Chart placeholder</div>
+      </ChartCard>
+
+      <ChartCard title="Loading chart" isLoading>
+        <div />
+      </ChartCard>
+
+      <ChartCard title="Empty chart" isEmpty emptyReason="No orders match filters">
+        <div />
+      </ChartCard>
+
+      <ChartCard title="Error chart" error="Data could not load" onRetry={() => {}}>
+        <div />
+      </ChartCard>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">Chips & badges</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="numeric text-2xl font-mono font-bold text-foreground">₹1,234,567.89</p>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="default">
-              Default button
-            </Button>
-            <Button variant="secondary" disabled>
-              Disabled button
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline">
-                  Open popover
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="text-xs space-y-1">
-                <p className="font-semibold text-popover-foreground">Opaque popover token</p>
-                <p className="text-muted-foreground">Derived from shared semantic palette.</p>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
-            <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-              <span>Example field</span>
-              <Input
-                placeholder="Keyboard focus example"
-                aria-label="Example field"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-              <span>Example choice</span>
-              <select
-                aria-label="Example choice"
-                className="min-h-[44px] rounded-md border border-input bg-background px-3 text-xs focus:ring-1 focus:ring-ring font-medium text-foreground"
-              >
-                <option>Delivered</option>
-                <option>Cancelled</option>
-              </select>
-            </label>
-          </div>
-
-          <details className="rounded-lg border bg-muted/20 p-3 text-xs group">
-            <summary className="cursor-pointer font-semibold text-foreground select-none">Disclosure</summary>
-            <p className="text-muted-foreground mt-2">Opaque expanded content.</p>
-          </details>
-
-          <div className="flex items-center gap-2">
-            <Badge variant="default">Primary badge</Badge>
-            <Badge variant="secondary">Secondary badge</Badge>
-            <Badge variant="destructive">Destructive badge</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card role="status">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-foreground">Loading</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="ledger-skeleton rounded-lg border bg-muted/20 p-6 text-center text-xs text-muted-foreground animate-pulse">
-            Loading records…
-          </div>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Chip label="Default" />
+          <Chip label="Active" active={chipActive} onClick={() => setChipActive((v) => !v)} />
+          <Chip label="Removable" onRemove={() => {}} />
+          <Badge variant="default">Primary</Badge>
+          <Badge variant="secondary">Secondary</Badge>
+          <Badge variant="destructive">Destructive</Badge>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-foreground">Empty</CardTitle>
-          <p className="text-xs text-muted-foreground">No orders match these filters.</p>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">Segmented control</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" size="sm">
-            Clear filters example
-          </Button>
+          <SegmentedControl
+            options={[
+              { value: 'a', label: 'Option A' },
+              { value: 'b', label: 'Option B' },
+            ]}
+            value={seg}
+            onChange={setSeg}
+          />
+          <p className="text-xs text-muted-foreground mt-2">Selected: {seg}</p>
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/20 bg-destructive/10">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-destructive">Error</CardTitle>
-          <p className="text-xs text-destructive">Data could not load.</p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">Popover, Select, Sheet, Tooltip</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Button variant="outline" size="sm">
-            Retry example
-          </Button>
+        <CardContent className="flex flex-wrap items-center gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">Open popover</Button>
+            </PopoverTrigger>
+            <PopoverContent className="text-xs">Popover content</PopoverContent>
+          </Popover>
+
+          <Select>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Choose" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="a">Option A</SelectItem>
+              <SelectItem value="b">Option B</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">Open sheet</Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Sheet title</SheetTitle>
+              </SheetHeader>
+              <p className="text-sm text-muted-foreground mt-2">Sheet content</p>
+            </SheetContent>
+          </Sheet>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline">Hover me</Button>
+              </TooltipTrigger>
+              <TooltipContent>Tooltip text</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardContent>
       </Card>
 
-      <Card className="border-amber-500/30 bg-amber-500/10">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-amber-900 dark:text-amber-200">Partial data</CardTitle>
-          <p className="text-xs text-amber-900/90 dark:text-amber-200/90">
-            Some API-visible history or details are incomplete. Saved details are snapshots.
-          </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">Toolbar buttons</CardTitle>
         </CardHeader>
+        <CardContent className="flex items-center gap-2">
+          <ToolbarButton icon={<RefreshCw className="h-4 w-4" />} tooltip="Refresh" />
+          <ToolbarButton icon={<BarChart3 className="h-4 w-4" />} active tooltip="Chart" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">Skeleton / Empty / Error</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-6 w-40" />
+          <EmptyState icon={<BarChart3 className="h-6 w-6" />} title="Nothing here" description="No data yet" />
+          <ErrorState message="Failed to load" onRetry={() => {}} />
+        </CardContent>
       </Card>
     </section>
   );
