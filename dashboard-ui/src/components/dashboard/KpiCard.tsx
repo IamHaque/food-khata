@@ -3,13 +3,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { KpiDelta } from "./KpiDelta";
 
 export interface KpiCardProps {
   title?: string;
   label?: string;
   value?: React.ReactNode;
   subtitle?: React.ReactNode;
-  delta?: React.ReactNode;
+  delta?: React.ReactNode | number;
   icon?: React.ReactNode;
   isLoading?: boolean;
   className?: string;
@@ -17,7 +18,8 @@ export interface KpiCardProps {
 
 function KpiCard({ title, label, value, subtitle, delta, icon, isLoading, className }: KpiCardProps) {
   const heading = title ?? label;
-  const sub = subtitle ?? delta;
+  const sub = typeof delta === "number" ? <KpiDelta value={delta} /> : (subtitle ?? delta);
+
 
   if (isLoading) {
     return (

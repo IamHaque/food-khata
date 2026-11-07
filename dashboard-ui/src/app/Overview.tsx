@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
-import { useDashboard } from '../hooks/api';
+import { useDashboard, useDashboardCompare } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
+import { MonthlyTrendChart } from '@/components/charts/MonthlyTrendChart';
+import { KpiDelta } from '@/components/dashboard/KpiDelta';
 import { ScopeNotice } from './SyncStatusPanel';
 import {
   TrendingUp,
@@ -85,82 +87,10 @@ const metricIcons: Record<string, React.ComponentType<{ className?: string }>> =
 export function Overview() {
   const { filters, update, clear } = useFilters();
   const query = useDashboard(filters);
+  const compareQuery = useDashboardCompare(filters);
   const data = query.data;
+  const compareData = compareQuery.data;
 
-  const monthly = useMemo(() => {
-    const months = data?.charts.monthly.map(x => x.month ?? 'Unknown') ?? [];
-    return {
-      tooltip: {
-        trigger: 'axis' as const,
-        formatter: (params: unknown) => {
-          if (!Array.isArray(params)) return '';
-          const month = (params[0] as { axisValueLabel?: string })?.axisValueLabel ?? '';
-          let res = `<div class="font-bold text-xs mb-1">${month}</div>`;
-          for (const item of params as { seriesName: string; value: number }[]) {
-            const formatted =
-              item.seriesName.includes('Spend')
-                ? money.format(item.value)
-                : `${num.format(item.value)} orders`;
-            res += `<div class="flex justify-between gap-3 text-xs"><span>${item.seriesName}:</span> <strong>${formatted}</strong></div>`;
-          }
-          return res;
-        },
-      },
-      grid: [
-        { left: 65, right: 25, top: 25, height: '36%' },
-        { left: 65, right: 25, top: '56%', height: '36%' },
-      ],
-      xAxis: [
-        {
-          type: 'category' as const,
-          gridIndex: 0,
-          data: months,
-          axisLabel: { show: false },
-          axisTick: { show: false },
-        },
-        {
-          type: 'category' as const,
-          gridIndex: 1,
-          data: months,
-          axisLabel: { fontSize: 11, interval: 'auto' },
-        },
-      ],
-      yAxis: [
-        {
-          type: 'value' as const,
-          gridIndex: 0,
-          name: 'Spend (₹)',
-          nameTextStyle: { fontSize: 11 },
-          axisLabel: { fontSize: 10 },
-        },
-        {
-          type: 'value' as const,
-          gridIndex: 1,
-          name: 'Orders',
-          nameTextStyle: { fontSize: 11 },
-          axisLabel: { fontSize: 10 },
-        },
-      ],
-      series: [
-        {
-          name: 'Spend (₹)',
-          type: 'bar',
-          xAxisIndex: 0,
-          yAxisIndex: 0,
-          itemStyle: { borderRadius: [3, 3, 0, 0] },
-          data: data?.charts.monthly.map(x => x.spend),
-        },
-        {
-          name: 'Orders',
-          type: 'bar',
-          xAxisIndex: 1,
-          yAxisIndex: 1,
-          itemStyle: { borderRadius: [3, 3, 0, 0] },
-          data: data?.charts.monthly.map(x => x.orders),
-        },
-      ],
-    };
-  }, [data]);
 
   const billComponents = useMemo(() => {
     if (!data) return { labels: [], amounts: [], option: {} };
@@ -345,8 +275,8 @@ export function Overview() {
                       values={data.charts.kpi_history.map(x => x[key])}
                     />
                     {data.comparison && (
-                      <span className="text-xs font-mono font-medium text-muted-foreground flex items-center gap-1">
-                        <span>{delta == null ? 'Unknown' : `${delta > 0 ? '+' : ''}${num.format(delta)}%`}</span>
+                      <span className="text-xs font-mono font-medium flex items-center gap-1">
+                        <KpiDelta value={delta} />
                         <span className="text-xs text-muted-foreground/75">
                           ({filters.compare === 'previous_year' ? 'vs prior yr' : 'vs prior per'})
                         </span>
@@ -393,8 +323,8 @@ export function Overview() {
                     </strong>
 
                     {data.comparison && (
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {delta == null ? 'Unknown' : `${delta > 0 ? '+' : ''}${num.format(delta)}%`}
+                      <span className="text-xs font-mono">
+                        <KpiDelta value={delta} />
                       </span>
                     )}
                   </div>
@@ -429,20 +359,12 @@ export function Overview() {
           </div>
 
           {/* Monthly Spend and Orders Chart Card */}
-          <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Monthly spend and orders</h2>
-                <p className="text-xs text-muted-foreground">Historical monthly expenditure and total volume</p>
-              </div>
-            </div>
-            <Chart
-              option={monthly}
-              summary="Monthly spend and orders"
-              headers={['Month', 'Spend', 'Orders']}
-              rows={data.charts.monthly.map(x => [x.month, money.format(x.spend), x.orders])}
-            />
-          </div>
+          <MonthlyTrendChart
+            data={data.charts.monthly}
+            compareData={compareData}
+            isLoading={query.isLoading}
+          />
+
 
           {/* Bill Composition Card */}
           <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-4">

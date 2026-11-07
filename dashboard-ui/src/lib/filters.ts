@@ -172,4 +172,65 @@ export function detectPreset(date_from: string | null, date_to: string | null, n
   return 'custom';
 }
 
+export function calculateComparisonDates(
+  filters: { compare?: string | null; date_from?: string | null; date_to?: string | null } | components['schemas']['Filters'],
+  now = new Date(),
+): { date_from: string; date_to: string } | null {
+  const compare = filters.compare;
+  if (!compare || compare === 'none') {
+    return null;
+  }
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const formatUtc = (d: Date) =>
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+
+  const currentYear = now.getFullYear();
+  const priorYear = currentYear - 1;
+  const safeFallback = {
+    date_from: `${priorYear}-01-01`,
+    date_to: `${priorYear}-12-31`,
+  };
+
+  if (compare === 'previous_period') {
+    if (!filters.date_from || !filters.date_to) {
+      return safeFallback;
+    }
+    const [y1, m1, d1] = filters.date_from.split('-').map(Number);
+    const [y2, m2, d2] = filters.date_to.split('-').map(Number);
+    const utcFrom = Date.UTC(y1, m1 - 1, d1);
+    const utcTo = Date.UTC(y2, m2 - 1, d2);
+    const dayMs = 24 * 60 * 60 * 1000;
+    const D = Math.round((utcTo - utcFrom) / dayMs);
+    const shiftedToUtc = utcFrom - dayMs;
+    const shiftedFromUtc = shiftedToUtc - (D * dayMs);
+    return {
+      date_from: formatUtc(new Date(shiftedFromUtc)),
+      date_to: formatUtc(new Date(shiftedToUtc)),
+    };
+  }
+
+  if (compare === 'previous_year') {
+    if (!filters.date_from && !filters.date_to) {
+      return safeFallback;
+    }
+    const subtractYear = (isoDate: string): string => {
+      const [y, m, d] = isoDate.split('-').map(Number);
+      const prevYear = y - 1;
+      if (m === 2 && d === 29) {
+        const isLeap = (prevYear % 4 === 0 && prevYear % 100 !== 0) || (prevYear % 400 === 0);
+        return isLeap ? `${prevYear}-02-29` : `${prevYear}-02-28`;
+      }
+      return `${prevYear}-${pad(m)}-${pad(d)}`;
+    };
+
+    const date_from = filters.date_from ? subtractYear(filters.date_from) : `${priorYear}-01-01`;
+    const date_to = filters.date_to ? subtractYear(filters.date_to) : `${priorYear}-12-31`;
+    return { date_from, date_to };
+  }
+
+  return null;
+}
+
+
 

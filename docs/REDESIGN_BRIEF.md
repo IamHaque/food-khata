@@ -1182,7 +1182,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-021 | Linked hover | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 158 passed); linked hover bus, 120ms debounce, zero rerenders |
 | S-022 | Chart toolkit actions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); table toggle, fullscreen dialog, PNG/CSV export |
 | S-023 | Takeaway captions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); pure caption generators, safe zero/null fallbacks |
-| S-024 | Compare mode overlay | P1 | DEFERRED | 2026-11-07 | Deferred to Phase P3a pending S-032; logged DEC-022 and BL |
+| S-024 | Compare mode overlay | P1 | DONE | 2026-11-08 | compare date calculations, useDashboardCompare query, MonthlyTrendChart dashed overlay series, KpiDelta arrow and color |
 | S-025 | Motion system | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 174 passed); motion system, useCountUp hook, reduced-motion |
 | S-030 | Insight strip | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 201 passed); insight cards, filter patch click, keyboard access |
 | S-031 | KPI cards | P0 | TODO | | |
@@ -1255,6 +1255,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-025 | 2026-11-07 | 2026-11-08 | S-030 | Insight strip cards with filter patch click and keyboard access | Overview insights | Up to 4 insight cards with icons, values, and text; clicking applies filter_patch via FilterContext; hides cleanly when no insights; keyboard button access |
 | DEC-026 | 2026-11-07 | 2026-11-08 | S-034 | Platform split donut chart with center total and platform toggle | Overview charts | Donut chart (50-75% radius) with total spend center label, spend share/orders/discounts/fees tooltip, platform cross-filter toggle click, and linked hover |
 | DEC-027 | 2026-11-07 | S-033: Year calendar heatmap supports dynamic year range with year picker tabs, zero-order gray cells, 4-tier spend greens, and day click date cross-filter |  |  |  |  |
+| DEC-028 | 2026-11-08 | 2026-11-08 | S-024 | Compare mode overlay via second dashboard query with shifted dates | Compare mode overlay | Single dashboard endpoint returns current period and KPI percent_change; overlay time series fetched via separate dashboard query with date range shifted by duration (previous_period) or year (previous_year) and disabled when compare is 'none' |
+
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
