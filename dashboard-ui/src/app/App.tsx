@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CommandPalette } from './CommandPalette';
 import { DesignSystem } from './DesignSystem';
 import { DataPage, HealthPage } from './DataPages';
@@ -12,6 +12,7 @@ import { AccountSelector } from './AccountSelector';
 import { FilterBar } from './FilterBar';
 import { ThemeControl } from './ThemeControl';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -42,13 +43,27 @@ const pages = [
 ];
 
 function Shell() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return globalThis.localStorage?.getItem('food-khata-nav-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      globalThis.localStorage?.setItem('food-khata-nav-collapsed', String(collapsed));
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { filters, metadata, notice } = useFilters();
   const health = useHealth(filters);
 
   return (
+    <TooltipProvider>
     <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden">
       {/* Accessible skip link */}
       <a
@@ -139,10 +154,10 @@ function Shell() {
       <div className={`shell-layout flex-1 flex flex-col lg:flex-row min-h-0 w-full max-w-full ${collapsed ? 'sidebar-collapsed' : ''}`}>
         {/* Navigation: Horizontal on mobile, vertical sidebar on lg */}
         <nav
-          aria-label="Main navigation"
-          className={`border-b lg:border-b-0 lg:border-r bg-card/40 transition-all duration-200 shrink-0 ${
-            collapsed ? 'lg:w-16' : 'lg:w-56'
-          } flex flex-row lg:flex-col justify-between p-2 lg:p-3 gap-1 overflow-x-auto lg:overflow-x-visible select-custom-scroll`}
+          aria-label="Main Navigation"
+          className={`hidden lg:flex border-r bg-card/40 transition-all duration-200 shrink-0 ${
+            collapsed ? 'w-16' : 'w-56'
+          } flex-col justify-between p-3 gap-1 select-custom-scroll`}
         >
           <div className="flex flex-row lg:flex-col items-center lg:items-stretch gap-1 w-full">
             <button
@@ -165,23 +180,38 @@ function Shell() {
               const path = i === 0 ? '/' : `/${p.name.toLowerCase().replace(' ', '-')}`;
               const active = location.pathname === path;
               const Icon = p.icon;
-              return (
+              const item = (
                 <Link
                   key={p.name}
                   to={{ pathname: path, search: location.search }}
                   title={p.name}
                   aria-label={p.name}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-2 lg:gap-3 px-3 py-2 min-h-[44px] shrink-0 rounded-lg text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`relative flex items-center gap-2 lg:gap-3 px-3 py-2 min-h-[44px] shrink-0 rounded-lg text-xs lg:text-sm font-medium whitespace-nowrap transition-colors ${
                     active
                       ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   } ${collapsed ? 'lg:justify-center lg:px-2' : ''}`}
                 >
+                  {active && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r bg-primary-foreground/80"
+                    />
+                  )}
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className={collapsed ? 'lg:hidden' : ''}>{p.name}</span>
                 </Link>
               );
+              if (collapsed) {
+                return (
+                  <Tooltip key={p.name}>
+                    <TooltipTrigger asChild>{item}</TooltipTrigger>
+                    <TooltipContent side="right">{p.name}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+              return item;
             })}
           </div>
 
@@ -213,7 +243,7 @@ function Shell() {
         </nav>
 
         {/* Content Area */}
-        <div className="shell-content flex-1 min-w-0 max-w-full flex flex-col p-3 sm:p-5 lg:p-7 space-y-5 overflow-x-hidden">
+        <div className="shell-content flex-1 min-w-0 max-w-[1440px] mx-auto w-full flex flex-col px-4 sm:px-6 lg:px-8 py-6 space-y-5 overflow-x-hidden">
           {notice && (
             <p
               role="status"
@@ -302,6 +332,7 @@ function Shell() {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
 
