@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 21 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-08
+**Overall progress:** 21 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
 
 ---
 
@@ -1182,7 +1182,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-021 | Linked hover | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 158 passed); linked hover bus, 120ms debounce, zero rerenders |
 | S-022 | Chart toolkit actions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); table toggle, fullscreen dialog, PNG/CSV export |
 | S-023 | Takeaway captions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); pure caption generators, safe zero/null fallbacks |
-| S-024 | Compare mode overlay | P1 | TODO | | |
+| S-024 | Compare mode overlay | P1 | DEFERRED | 2026-11-07 | Deferred to Phase P3a pending S-032; logged DEC-022 and BL |
 | S-025 | Motion system | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 174 passed); motion system, useCountUp hook, reduced-motion |
 | S-030 | Insight strip | P0 | TODO | | |
 | S-031 | KPI cards | P0 | TODO | | |
@@ -1249,6 +1249,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-019 | 2026-11-07 | 2026-11-08 | S-021 | Imperative linked hover highlight bus with 120ms debounce | Linked chart hover | Pub-sub bus dispatching native ECharts highlight/downplay actions directly, 120ms cancelable debounce on pointer leave, zero React re-renders |
 | DEC-020 | 2026-11-07 | 2026-11-08 | S-025 | Motion tokens, useCountUp hook, and strict reduced-motion | Animation and motion | Composite-only transitions (transform/opacity), 600ms count-up with tabular nums, 240ms page slide, 40ms card stagger up to 12 cards, 2px card lift, button compress, reduced-motion bypass |
 | DEC-021 | 2026-11-07 | 2026-11-08 | GATE-P2 | Phase P2 Interaction Gate Audit Passed | Phase Gate P2 | Independent audit by gemini-med verified all 5 criteria: cross-filter engine across 7 dimensions with multi-select and Escape undo, linked hover pub-sub bus with zero React re-renders and 120ms debounce, ChartCard toolkit with sortable table and fullscreen modal, pure takeaway captions with Indian rupee formatting, composite-only motion system with 600ms count-up and strict reduced-motion bypass |
+| DEC-022 | 2026-11-07 | 2026-11-08 | S-024 | Defer S-024 compare mode overlay to Phase P3a | Phase dependency alignment | S-024 explicitly depends on S-032 (Monthly trend combo in Phase P3a). Deferring S-024 until S-032 is implemented on Overview page |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1261,6 +1262,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 |---|---|---|---|---|---|
 | BL-001 | 2026-11-07 | 2026-11-07 | S-001 | pytest fails: httpx2 not installed (starlette.testclient import error). Pre-existing. Must fix before S-008 or any serve test. | P1 |
 | BL-002 | 2026-11-07 | 2026-11-07 | S-005 | Adopt rounded-card aliases across remaining containers | P2 |
+| BL-003 | 2026-11-07 | S-024 | Compare mode overlay deferred to Phase P3a pending S-032 dependency | P1 | S-032 |
 
 ### 8.5 Blockers and open issues
 | ID | Date | Story | Description | Needed to unblock | Status |
