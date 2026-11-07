@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 0 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: (agent fills)
+**Overall progress:** 1 / 62 stories DONE · 1 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1162,7 +1162,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 
 | Story | Title | Priority | Status | Updated | Evidence |
 |---|---|---|---|---|---|
-| S-001 | Baseline and safety net | P0 | TODO | | |
+| S-001 | Baseline and safety net | P0 | IN_PROGRESS | 2026-11-07 |  |
 | S-002 | Token consolidation | P0 | TODO | | |
 | S-003 | Theme engine (mode and accent) | P0 | TODO | | |
 | S-004 | Theme picker | P0 | TODO | | |
@@ -1170,7 +1170,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-006 | Chart theme adapter and library consolidation | P0 | TODO | | |
 | S-007 | Shared primitives | P0 | TODO | | |
 | S-008 | Synthetic dev database and backend harness | P0 | TODO | | |
-| S-009 | Orchestration harness | P0 | TODO | | |
+| S-009 | Orchestration harness | P0 | DONE | 2026-11-07 | merge 6ac38d3; verify PASS guardrails/typecheck/lint/unit; verify.mjs created, .gitignore updated |
 | S-010 | App shell | P0 | TODO | | |
 | S-011 | Five-page routing | P0 | TODO | | |
 | S-012 | Account switcher | P0 | TODO | | |
@@ -1228,7 +1228,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 ### 8.2 Decision log
 | ID | Date | Story | Context | Options considered | Decision | Consequence |
 |---|---|---|---|---|---|---|
-| DEC-001 | | | | | | |
+| DEC-001 | 2026-11-07 | 2026-11-07 | S-009 | gemini CLI and opencode CLI probe | gemini CLI returns IneligibleTierError (blocked); opencode run subcommand does not exist. Both CLI command templates in models.json are wrong for this environment. | Use delegate_task via T3 MCP for all sub-agents: antigravity provider for gemini-*/claude models, opencode provider for beam/deepseek/glm/mimo/nemotron. Command templates updated accordingly. Probe method changed to delegate_task health check. |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1238,7 +1238,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 ### 8.4 Backlog
 | ID | Date | Origin (story or discovery) | Description | Priority | Reason deferred |
 |---|---|---|---|---|---|
-| BL-001 | | | | | |
+| BL-001 | 2026-11-07 | 2026-11-07 | S-001 | pytest fails: httpx2 not installed (starlette.testclient import error). Pre-existing. Must fix before S-008 or any serve test. | P1 |
 
 ### 8.5 Blockers and open issues
 | ID | Date | Story | Description | Needed to unblock | Status |
@@ -1248,17 +1248,19 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 ### 8.6 Verification log
 | Date | Commit | pytest | ruff | typecheck | lint | unit | browser | build | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| | | | | | | | | | |
+| 2026-11-07 | 2026-11-07 | d6c9f8f | FAIL-needs httpx2 | pass | pass | pass | 13/13 pass | not_run | not_run |
+| 2026-11-07 | 2026-11-07 | merge-6ac38d3 | n/a | pass | pass | pass | 13 pass | not_run | not_run |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
 |---|---|---|---|
-| | | | |
+| 2026-11-07 | 2026-11-07 | merge-6ac38d3 | S-009 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
 |---|---|---|---|---|---|---|---|---|
-| | | | | | | | | |
+| 2026-11-07 | 2026-11-07 | D-002-S001-screenshots | S-001 | T1 | gemini-low | 1 | running | 0 |
+| 2026-11-07 | 2026-11-07 | D-003-S009-harness | S-009 | T2 | gemini-med | 1 | running | 0 |
 
 ---
 

@@ -56,6 +56,17 @@
       "note": "Multimodal. Screenshot review and visual checks."
     }
   },
+  "_t3_routing": {
+    "_note": "DEC-001 2026-11-07: gemini CLI returns IneligibleTierError; opencode CLI has no run subcommand. All sub-agents dispatched via T3 delegate_task MCP tool instead of CLI exec. Mapping below.",
+    "gemini-low":    { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "low" } },
+    "gemini-med":    { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "medium" } },
+    "gemini-high":   { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "high" } },
+    "beam":          { "providerInstanceId": "opencode", "model": "opencode/beam-free", "options": { "variant": "high" } },
+    "deepseek":      { "providerInstanceId": "opencode", "model": "opencode/deepseek-v4.1-flash-free", "options": { "variant": "high" } },
+    "glm":           { "providerInstanceId": "opencode", "model": "opencode/glm-5.3-flash-free", "options": { "variant": "high" } },
+    "mimo":          { "providerInstanceId": "opencode", "model": "opencode/mimo-v2.6-flash-free", "options": {} },
+    "nemotron-vl":   { "providerInstanceId": "opencode", "model": "opencode/nemotron-3.5-super-vl-free", "options": {}, "note": "NOT in current opencode list; use gemini-med or gemini-high for vision fallback" }
+  },
   "task_classes": {
     "T1": { "name": "Mechanical edits (renames, tokens, CSS, config, boilerplate)", "chain": ["glm", "gemini-low", "deepseek", "gemini-med"] },
     "T2": { "name": "Component or page implementation with unit tests", "chain": ["beam", "deepseek", "gemini-med", "gemini-high"] },
