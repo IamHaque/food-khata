@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 9 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 9 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P1 · Last updated: 2026-11-08
 
 ---
 
@@ -1265,6 +1265,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | n/a | n/a | pass | pass | pass (44 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-f7433ea | n/a | n/a | pass | pass | pass (46 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-e680506 | n/a | n/a | pass | pass | pass (47 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | P0-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (72 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1278,6 +1279,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | S-006 |
 | 2026-11-07 | 2026-11-08 | merge-f7433ea | S-007 |
 | 2026-11-07 | 2026-11-08 | merge-e680506 | S-004 |
+| 2026-11-07 | 2026-11-08 | P0-GATE-PASS | GATE-P0 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1300,6 +1302,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-009-S007-primitives | S-007 | T2 | beam | 1 | pass | 4 |
 | 2026-11-07 | 2026-11-08 | D-010-S004-theme-picker | S-004 | T2 | beam | 1 | running | 0 |
 | 2026-11-07 | 2026-11-08 | D-010-S004-theme-picker | S-004 | T2 | beam | 1 | pass | 2 |
+| 2026-11-07 | 2026-11-08 | D-011-GATE-P0 | P0-GATE | T9 | gemini-high | 1 | running | 0 |
+| 2026-11-07 | 2026-11-08 | D-011-GATE-P0 | P0-GATE | T9 | gemini-high | 1 | pass | 5 |
 
 ---
 
