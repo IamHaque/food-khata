@@ -27,6 +27,7 @@
     "src/lib/api.ts",
     "src/lib/filters.ts",
     "src/hooks/api.ts",
-    "src/lib/chart-theme.ts"
+    "src/lib/chart-theme.ts",
+    "src/lib/captions.ts"
   ]
 }
