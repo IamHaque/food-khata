@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 28 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3b Orders · Last updated: 2026-11-08
+**Overall progress:** 29 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3b Orders · Last updated: 2026-11-07
 
 ---
 
@@ -1190,7 +1190,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-033 | Year calendar heatmap | P0 | DONE | 2026-11-07 | --note |
 | S-034 | Platform split | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 206 passed); donut, center total spend, platform toggle |
 | S-035 | Top restaurants and dishes | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 197 passed); dual rankings, restaurant cross-filter, view all link |
-| S-070 | Orders table with virtualization | P1 | DONE | 2026-11-08 | Orders.tsx with @tanstack/react-virtual, proportional amount bar, status chips (verified/unverified/unbalanced), sticky header, skeletons, EmptyState; typecheck/lint/unit 293 passed |
+| S-070 | Orders table with virtualization | P1 | DONE | 2026-11-07 | --note |
 | S-071 | Search and quick filters | P1 | TODO | | |
 | S-072 | Order side sheet | P1 | TODO | | |
 | S-073 | Saved views | P2 | TODO | | |
@@ -1259,6 +1259,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-030 | 2026-11-07 | GATE-P3a: Phase P3a Overview Gate Audit Passed: All 6 overview stories (S-030 to S-035) and S-024 pass verification, 279 unit tests pass across 27 files, and the above-the-fold layout requirement at 1440x900 is verified (~673px content height budget) |  |  |  |  |
 | DEC-031 | 2026-11-07 | Installed @tanstack/react-virtual (MIT licensed) on master for Phase P3b orders table virtualization per S-070 pre-approved dependencies |  |  |  |  |
 | DEC-032 | 2026-11-08 | 2026-11-08 | S-070 | Orders table virtualization with @tanstack/react-virtual and server pagination | Virtualized orders table | Use @tanstack/react-virtual (useVirtualizer) for row virtualization inside scrollable table container with top/bottom spacer rows and sticky header; paired with existing /api/orders server pagination and URL search params for scalable performance on 5,000+ orders |
+| DEC-033 | 2026-11-07 | S-070: Orders table row virtualization using @tanstack/react-virtual (useVirtualizer) with windowed rows and top/bottom spacer rows, integrated with server pagination and URL query params |  |  |  |  |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1312,6 +1313,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-033: CalendarHeatmapChart unit tests pass, typecheck pass, lint pass, 237 tests pass |  |  |  |  |  |  |  |  |
 | 2026-11-07 | S-031: OverviewKpis unit tests pass, typecheck pass, lint pass, 255 tests pass across 24 files |  |  |  |  |  |  |  |  |
 | 2026-11-07 | S-024: useDashboardCompare, calculateComparisonDates, MonthlyTrendChart compare overlay, and KpiDelta tests pass; 259 tests pass across 25 files |  |  |  |  |  |  |  |  |
+| 2026-11-07 | S-070: Orders table unit tests pass, typecheck pass, lint pass, 293 unit tests pass across 28 files |  |  |  |  |  |  |  |  |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1347,6 +1349,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-033: added CalendarHeatmapChart component and tests (1fea15d) |  |  |
 | 2026-11-07 | S-031: added OverviewKpis component and unit tests (0500c5f) |  |  |
 | 2026-11-07 | S-024: added compare query, dashed overlay series in MonthlyTrendChart, and KpiDelta component (34aa064) |  |  |
+| 2026-11-07 | S-070: added Orders table with virtualization and status chips (a54c8e4) |  |  |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1396,6 +1399,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-033 | Year calendar heatmap | DONE | 1fea15d | gemini-high |  |  |  |
 | 2026-11-07 | S-031 | Overview KPI cards | DONE | 0500c5f | gemini-med |  |  |  |
 | 2026-11-07 | S-024 | Compare mode overlay | DONE | 34aa064 | gemini-med |  |  |  |
+| 2026-11-07 | S-070 | Orders table with virtualization | DONE | a54c8e4 | gemini-med |  |  |  |
 
 ---
 
