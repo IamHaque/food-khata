@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 export interface SegmentedControlOption {
   value: string;
   label: string;
+  icon?: React.ReactNode;
 }
 
 export interface SegmentedControlProps {
@@ -33,12 +34,13 @@ function SegmentedControl({ options, value, onChange, className }: SegmentedCont
             aria-checked={selected}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-sm px-3 py-1 text-xs font-medium transition-colors",
+              "inline-flex items-center gap-1.5 rounded-sm px-3 py-1 text-xs font-medium transition-colors",
               selected
                 ? "bg-background text-foreground shadow"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
+            {opt.icon}
             {opt.label}
           </button>
         );

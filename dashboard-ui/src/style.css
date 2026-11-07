@@ -226,6 +226,9 @@
   * {
     border-color: hsl(var(--border));
   }
+  html {
+    transition: background-color var(--motion-standard, 240ms) var(--ease), color var(--motion-standard, 240ms) var(--ease);
+  }
   body {
     margin: 0;
     font-family: "Inter Variable", sans-serif;
