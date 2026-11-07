@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { components } from '../types/api';
 import { Chart } from './Chart';
+import { tokenAlpha } from '../lib/tokens';
 
 const money = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -219,7 +220,7 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
                     text: ['High', '₹0'],
                     dimension: 1,
                     inRange: {
-                      color: ['#e2f3ea', '#70d9a4', '#15803d', '#052e16'],
+                      color: [0.25, 0.5, 0.75, 1].map((alpha) => tokenAlpha('--success', alpha)),
                     },
                   },
                   series: [

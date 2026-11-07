@@ -6,8 +6,8 @@ export default {
       fontFamily: { sans: ["Inter Variable", "sans-serif"] },
       colors: {
         border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        input: "hsl(var(--border))",
+        ring: "hsl(var(--primary))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
@@ -15,28 +15,36 @@ export default {
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         muted: {
-          DEFAULT: "var(--muted-bg)",
+          DEFAULT: "var(--surface-2)",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          foreground: "hsl(var(--foreground))",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "hsl(var(--surface))",
+          foreground: "hsl(var(--foreground))",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "hsl(var(--surface))",
+          foreground: "hsl(var(--foreground))",
         },
         chart: {
           1: "var(--chart-1)",
@@ -44,10 +52,18 @@ export default {
           3: "var(--chart-3)",
           4: "var(--chart-4)",
           5: "var(--chart-5)",
+          6: "var(--chart-6)",
+          7: "var(--chart-7)",
+          8: "var(--chart-8)",
         },
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        DEFAULT: "var(--shadow-2)",
+        "2xs": "var(--shadow-1)",
+        xs: "var(--shadow-1)",
+        sm: "var(--shadow-2)",
+        md: "var(--shadow-3)",
+        lg: "var(--shadow-3)",
       },
     },
   },

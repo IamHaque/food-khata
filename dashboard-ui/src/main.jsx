@@ -29,6 +29,17 @@ import {
   TrendingUp,
 } from "lucide-react";
 import "./style.css";
+import { tokenColor } from "./lib/tokens.ts";
+const CHART_TOKENS = [
+  "--chart-1",
+  "--chart-2",
+  "--chart-3",
+  "--chart-4",
+  "--chart-5",
+  "--chart-6",
+  "--chart-7",
+  "--chart-8",
+];
 import { Button } from "./components/ui/button.tsx";
 import { Card } from "./components/ui/card.tsx";
 import { Input } from "./components/ui/input.tsx";
@@ -100,20 +111,13 @@ const fieldLabels = {
   location: "Location",
   payment: "Payment",
 };
-const palette = [
-  "#10a67b",
-  "#58bda0",
-  "#9bd4bf",
-  "#d5aa79",
-  "#b8a39b",
-  "#777f78",
-];
-const chartConfig = {
-  spend: { label: "Spend", color: "#10a67b" },
-  orders: { label: "Orders", color: "#10a67b" },
-  savings: { label: "Discounts", color: "#10a67b" },
-  value: { label: "Amount", color: "#10a67b" },
-};
+const paletteAt = (i) => tokenColor(CHART_TOKENS[i % CHART_TOKENS.length]);
+const chartConfig = () => ({
+  spend: { label: "Spend", color: tokenColor("--primary") },
+  orders: { label: "Orders", color: tokenColor("--primary") },
+  savings: { label: "Discounts", color: tokenColor("--primary") },
+  value: { label: "Amount", color: tokenColor("--primary") },
+});
 const readTheme = () => {
   try {
     return localStorage.getItem("food-khata-theme");
@@ -857,7 +861,7 @@ function App() {
                     }
                   >
                     <ChartContainer
-                      config={chartConfig}
+                      config={chartConfig()}
                       className="h-72 w-full"
                     >
                       {series.length ? (
@@ -872,12 +876,12 @@ function App() {
                             >
                               <stop
                                 offset="0%"
-                                stopColor="#10a67b"
+                                stopColor={tokenColor("--primary")}
                                 stopOpacity={0.25}
                               />
                               <stop
                                 offset="100%"
-                                stopColor="#10a67b"
+                                stopColor={tokenColor("--primary")}
                                 stopOpacity={0}
                               />
                             </linearGradient>
@@ -908,7 +912,7 @@ function App() {
                           <Area
                             type="monotone"
                             dataKey={measure}
-                            stroke="#10a67b"
+                            stroke={tokenColor("--primary")}
                             strokeWidth={2.5}
                             fill="url(#area)"
                             isAnimationActive={!reduced}
@@ -926,7 +930,7 @@ function App() {
                   title="By platform"
                   description="Orders include all statuses; monetary measures include delivered orders only."
                 >
-                  <ChartContainer config={chartConfig} className="h-72 w-full">
+                  <ChartContainer config={chartConfig()} className="h-72 w-full">
                     <BarChart data={platforms} layout="vertical">
                       <CartesianGrid horizontal={false} />
                       <XAxis type="number" hide />
@@ -949,7 +953,7 @@ function App() {
                       />
                       <Bar
                         dataKey={measure}
-                        fill="#10a67b"
+                        fill={tokenColor("--primary")}
                         radius={[0, 5, 5, 0]}
                         isAnimationActive={!reduced}
                       />
@@ -964,7 +968,7 @@ function App() {
                 >
                   <div className="flex h-60 items-center">
                     <ChartContainer
-                      config={chartConfig}
+                      config={chartConfig()}
                       className="h-full w-1/2"
                     >
                       <PieChart>
@@ -978,7 +982,7 @@ function App() {
                           isAnimationActive={!reduced}
                         >
                           {fees.map((_, i) => (
-                            <Cell key={i} fill={palette[i % palette.length]} />
+                            <Cell key={i} fill={paletteAt(i)} />
                           ))}
                         </Pie>
                         <ChartTooltip
@@ -996,7 +1000,7 @@ function App() {
                             <i
                               className="h-2 w-2 rounded-full"
                               style={{
-                                background: palette[i % palette.length],
+                                background: paletteAt(i),
                               }}
                             />
                             {x.name}
@@ -1016,7 +1020,7 @@ function App() {
                   title="Order value"
                   description="Distribution of final paid amounts for delivered orders."
                 >
-                  <ChartContainer config={chartConfig} className="h-60 w-full">
+                  <ChartContainer config={chartConfig()} className="h-60 w-full">
                     <BarChart data={distribution}>
                       <CartesianGrid vertical={false} />
                       <XAxis
@@ -1035,7 +1039,7 @@ function App() {
                       <ChartTooltip content={<CountTooltip />} />
                       <Bar
                         dataKey="value"
-                        fill="#10a67b"
+                        fill={tokenColor("--primary")}
                         radius={[5, 5, 0, 0]}
                         isAnimationActive={!reduced}
                       />
@@ -1076,8 +1080,8 @@ function App() {
                                 className="aspect-square rounded-sm"
                                 style={{
                                   backgroundColor: cell.count
-                                    ? `rgba(16,166,123,${0.18 + (0.82 * cell.count) / heatMax})`
-                                    : "var(--muted-bg)",
+                                    ? `hsl(var(--primary) / ${0.18 + (0.82 * cell.count) / heatMax})`
+                                    : "var(--surface-2)",
                                 }}
                               />
                             </TooltipTrigger>
@@ -1128,7 +1132,7 @@ function App() {
                   title="Dietary mix"
                   description="Item quantities across all matching orders, grouped by recorded dietary classification."
                 >
-                  <ChartContainer config={chartConfig} className="h-56 w-full">
+                  <ChartContainer config={chartConfig()} className="h-56 w-full">
                     <PieChart>
                       <Pie
                         data={diet}
@@ -1140,7 +1144,7 @@ function App() {
                         label
                       >
                         {diet.map((_, i) => (
-                          <Cell key={i} fill={palette[i % palette.length]} />
+                          <Cell key={i} fill={paletteAt(i)} />
                         ))}
                       </Pie>
                       <ChartTooltip content={<CountTooltip nameKey="name" />} />
@@ -1160,7 +1164,7 @@ function App() {
                         <span className="flex items-center gap-2">
                           <i
                             className="h-2 w-2 rounded-full"
-                            style={{ background: palette[i % palette.length] }}
+                            style={{ background: paletteAt(i) }}
                           />
                           {c.name}
                         </span>
