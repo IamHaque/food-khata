@@ -35,8 +35,16 @@ export { exportLedger } from '../lib/ledger';
 import { OrderModal } from './OrderModal';
 import type { components } from '../types/api';
 import {
+  loadSavedViews,
+  saveView,
+  deleteView,
+  renameView,
+  type SavedView,
+} from '../lib/saved-views';
+import {
   Download,
   SlidersHorizontal,
+  Bookmark,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -540,17 +548,61 @@ export const PAGE_SIZE_OPTIONS: SegmentedControlOption[] = [
   { value: '100', label: '100' },
   { value: '200', label: '200' },
 ];
+export function applySavedView(
+  view: SavedView,
+  actions: {
+    update: (filters: Record<string, any>) => void;
+    change: (params: Record<string, string>) => void;
+    setVisibility?: (visibility: VisibilityState) => void;
+  },
+) {
+  actions.update(view.filters);
+
+  const sortPatch: Record<string, string> = { page: '1' };
+  if (view.sort) sortPatch.sort = view.sort;
+  if (view.direction) sortPatch.direction = view.direction;
+  actions.change(sortPatch);
+
+  if (view.columnVisibility) {
+    actions.setVisibility?.(view.columnVisibility);
+    saveTablePrefs({ columnVisibility: view.columnVisibility });
+  }
+}
+
+export function saveCurrentView(
+  name: string,
+  state: {
+    filters: Record<string, any>;
+    sort?: string;
+    direction?: string;
+    columnVisibility?: Record<string, boolean>;
+  },
+): SavedView {
+  return saveView({
+    name,
+    filters: state.filters,
+    sort: state.sort,
+    direction: state.direction,
+    columnVisibility: state.columnVisibility,
+  });
+}
+
+export function deleteSavedView(id: string): SavedView[] {
+  return deleteView(id);
+}
 
 export interface OrdersProps {
   initialExporting?: boolean;
   initialExportStatus?: ExportStatus | null;
   initialColumnsOpen?: boolean;
+  initialViewsOpen?: boolean;
 }
 
 export function Orders({
   initialExporting = false,
   initialExportStatus = null,
   initialColumnsOpen = false,
+  initialViewsOpen = false,
 }: OrdersProps = {}) {
   const { filters, update, clear, metadata } = useFilters();
   const [params, setParams] = useSearchParams();
@@ -560,11 +612,42 @@ export function Orders({
   const compact = density === 'compact';
   const [visibility, setVisibility] = useState<VisibilityState>(initialPrefs.columnVisibility);
   const [columnsOpen, setColumnsOpen] = useState(initialColumnsOpen);
+  const [viewsOpen, setViewsOpen] = useState(initialViewsOpen);
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => loadSavedViews());
+  const [newViewName, setNewViewName] = useState('');
+  const [editingViewId, setEditingViewId] = useState<string | null>(null);
+  const [editingViewName, setEditingViewName] = useState('');
 
   useEffect(() => {
     const prefs = loadTablePrefs();
     setDensity(prefs.density);
     setVisibility(prefs.columnVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (viewsOpen) {
+      setSavedViews(loadSavedViews());
+    }
+  }, [viewsOpen]);
+
+  useEffect(() => {
+    const handleViewsSync = () => {
+      setSavedViews(loadSavedViews());
+    };
+    const handlePrefsSync = () => {
+      const prefs = loadTablePrefs();
+      setVisibility(prefs.columnVisibility);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleViewsSync);
+      window.addEventListener('food-khata-views-changed', handleViewsSync);
+      window.addEventListener('food-khata-prefs-changed', handlePrefsSync);
+      return () => {
+        window.removeEventListener('storage', handleViewsSync);
+        window.removeEventListener('food-khata-views-changed', handleViewsSync);
+        window.removeEventListener('food-khata-prefs-changed', handlePrefsSync);
+      };
+    }
   }, []);
 
   const { searchQuery, setSearchQuery, clearSearch } = useDebouncedSearch(
@@ -639,6 +722,46 @@ export function Orders({
       saveTablePrefs({ columnVisibility: next });
       return next;
     });
+  };
+
+  const handleSaveView = () => {
+    const trimmed = newViewName.trim();
+    if (!trimmed) return;
+    saveCurrentView(trimmed, {
+      filters,
+      sort,
+      direction,
+      columnVisibility: visibility,
+    });
+    setSavedViews(loadSavedViews());
+    setNewViewName('');
+  };
+
+  const handleApplyView = (view: SavedView) => {
+    applySavedView(view, {
+      update,
+      change,
+      setVisibility,
+    });
+  };
+
+  const handleStartRename = (view: SavedView) => {
+    setEditingViewId(view.id);
+    setEditingViewName(view.name);
+  };
+
+  const handleSaveRename = (id: string) => {
+    renameView(id, editingViewName);
+    setSavedViews(loadSavedViews());
+    setEditingViewId(null);
+  };
+
+  const handleDeleteView = (id: string) => {
+    deleteSavedView(id);
+    setSavedViews(loadSavedViews());
+    if (editingViewId === id) {
+      setEditingViewId(null);
+    }
   };
 
   const open = (id: string) => {
@@ -898,6 +1021,138 @@ export function Orders({
               onChange={handleDensityChange}
             />
           </div>
+
+          {/* Views Popover */}
+          <Popover open={viewsOpen} onOpenChange={setViewsOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Views"
+                className="cursor-pointer min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
+              >
+                <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Views</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 p-3 space-y-3" data-testid="views-popover-content">
+              {/* Save current view section */}
+              <div className="space-y-2 border-b pb-3">
+                <span className="text-xs font-semibold text-foreground">Save current view</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="View name"
+                    aria-label="View name"
+                    value={newViewName}
+                    onChange={e => setNewViewName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveView();
+                      }
+                    }}
+                    className="flex-1 rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveView}
+                    disabled={!newViewName.trim()}
+                    className="cursor-pointer rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* List of saved views */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-foreground">Saved views</span>
+                {savedViews.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-1">No saved views</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    {savedViews.map(view => (
+                      <div
+                        key={view.id}
+                        className="flex items-center justify-between gap-2 rounded-md p-1.5 hover:bg-accent text-xs"
+                        data-testid={`saved-view-item-${view.id}`}
+                      >
+                        {editingViewId === view.id ? (
+                          <div className="flex items-center gap-1 flex-1">
+                            <input
+                              type="text"
+                              aria-label="Rename view input"
+                              value={editingViewName}
+                              onChange={e => setEditingViewName(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSaveRename(view.id);
+                                } else if (e.key === 'Escape') {
+                                  setEditingViewId(null);
+                                }
+                              }}
+                              className="flex-1 rounded border border-input bg-background px-1.5 py-0.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveRename(view.id)}
+                              className="px-1.5 py-0.5 text-xs font-medium text-primary hover:underline cursor-pointer"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingViewId(null)}
+                              className="px-1 py-0.5 text-xs text-muted-foreground hover:underline cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span
+                              className="font-medium text-foreground truncate max-w-[130px]"
+                              title={view.name}
+                            >
+                              {view.name}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleApplyView(view)}
+                                className="px-2 py-0.5 rounded bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 cursor-pointer"
+                                aria-label={`Apply ${view.name}`}
+                              >
+                                Apply
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartRename(view)}
+                                className="px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                                aria-label={`Rename ${view.name}`}
+                              >
+                                Rename
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteView(view.id)}
+                                className="px-1.5 py-0.5 text-xs text-destructive hover:underline cursor-pointer"
+                                aria-label={`Delete ${view.name}`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
             <PopoverTrigger asChild>

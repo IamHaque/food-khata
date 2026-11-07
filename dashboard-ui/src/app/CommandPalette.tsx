@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { useFilters } from './FilterContext';
-import { validateFilters, calculatePresetDates } from '../lib/filters';
+import { calculatePresetDates, defaultFilters, serializeFilters } from '../lib/filters';
+import { loadSavedViews, saveView, type SavedView } from '../lib/saved-views';
+import { saveTablePrefs } from '../lib/table-prefs';
 import { useTheme } from './theme';
 import type { ThemeMode, ThemeAccent } from './theme';
 import {
@@ -29,8 +31,57 @@ const MODES: ThemeMode[] = ['light', 'dark', 'system'];
 const ACCENTS: ThemeAccent[] = ['emerald', 'indigo', 'amber', 'rose', 'slate'];
 const PLATFORMS = ['SWIGGY', 'ZOMATO'];
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export interface CommandPaletteProps {
+  initialOpen?: boolean;
+}
+
+export function activateSavedView(
+  view: SavedView,
+  context: {
+    update: (patch: Record<string, any>) => void;
+    navigate: (to: { pathname: string; search: string }) => void;
+    currentSearch?: string;
+    savePrefs?: typeof saveTablePrefs;
+  },
+) {
+  context.update(view.filters);
+
+  if (view.columnVisibility) {
+    (context.savePrefs ?? saveTablePrefs)({ columnVisibility: view.columnVisibility });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('food-khata-prefs-changed'));
+    }
+  }
+
+  const targetParams = serializeFilters(
+    { ...defaultFilters(), ...view.filters },
+    new URLSearchParams(context.currentSearch ?? ''),
+    true,
+  );
+  if (view.sort) targetParams.set('sort', view.sort);
+  if (view.direction) targetParams.set('direction', view.direction);
+  targetParams.set('page', '1');
+
+  context.navigate({ pathname: '/orders', search: targetParams.toString() });
+}
+
+export function saveCurrentViewFromPalette(
+  state: {
+    filters: Record<string, any>;
+    search?: string;
+  },
+  saveFn: typeof saveView = saveView,
+): SavedView {
+  const views = loadSavedViews();
+  const name = `View ${views.length + 1}`;
+  const params = new URLSearchParams(state.search ?? '');
+  const sort = params.get('sort') ?? undefined;
+  const direction = params.get('direction') ?? undefined;
+  return saveFn({ name, filters: state.filters, sort, direction });
+}
+
+export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}) {
+  const [open, setOpen] = useState(initialOpen);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [message, setMessage] = useState('');
@@ -42,6 +93,27 @@ export function CommandPalette() {
   const location = useLocation();
   const { filters, update } = useFilters();
   const { mode, setMode, setAccent } = useTheme();
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => loadSavedViews());
+
+  useEffect(() => {
+    if (open) {
+      setSavedViews(loadSavedViews());
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handleViewsSync = () => {
+      setSavedViews(loadSavedViews());
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleViewsSync);
+      window.addEventListener('food-khata-views-changed', handleViewsSync);
+      return () => {
+        window.removeEventListener('storage', handleViewsSync);
+        window.removeEventListener('food-khata-views-changed', handleViewsSync);
+      };
+    }
+  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -210,37 +282,35 @@ export function CommandPalette() {
     // Saved views
     {
       group: 'Saved views',
-      label: 'Save view',
+      label: 'Save current view',
+      keywords: 'save view bookmark',
       icon: Bookmark,
       run: () => {
         try {
-          localStorage.setItem('food-khata-preset', JSON.stringify(filters));
-          setMessage('Saved view.');
+          const saved = saveCurrentViewFromPalette({ filters, search: location.search });
+          setSavedViews(loadSavedViews());
+          setMessage(`Saved view "${saved.name}".`);
           setAnnouncement('Saved current view.');
         } catch {
           setMessage('Could not save view.');
         }
       },
     },
-    {
-      group: 'Saved views',
-      label: 'Load view',
+    ...savedViews.map(view => ({
+      group: 'Saved views' as Group,
+      label: view.name,
+      keywords: `saved view ${view.name}`,
       icon: Bookmark,
       run: () => {
-        try {
-          const raw = localStorage.getItem('food-khata-preset');
-          if (raw) {
-            update(validateFilters(JSON.parse(raw)));
-            setAnnouncement('Loaded saved view.');
-          } else {
-            setMessage('No saved view.');
-            setAnnouncement('No saved view found.');
-          }
-        } catch {
-          setMessage('Saved view could not load.');
-        }
+        activateSavedView(view, {
+          update,
+          navigate,
+          currentSearch: location.search,
+          savePrefs: saveTablePrefs,
+        });
+        setAnnouncement(`Applied view ${view.name}`);
       },
-    },
+    })),
   ];
 
   const filtered = commands.filter(c => {

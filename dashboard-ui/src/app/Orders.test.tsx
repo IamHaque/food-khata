@@ -19,6 +19,9 @@ import {
   exportLedger,
   type ExportStatus,
   type Order,
+  saveCurrentView,
+  applySavedView,
+  deleteSavedView,
 } from './Orders';
 import * as apiHooks from '../hooks/api';
 import * as apiModule from '../lib/api';
@@ -28,6 +31,11 @@ import {
   saveTablePrefs,
   DEFAULT_TABLE_PREFS,
 } from '../lib/table-prefs';
+import {
+  SAVED_VIEWS_KEY,
+  loadSavedViews,
+  type SavedView,
+} from '../lib/saved-views';
 
 vi.mock('@radix-ui/react-popover', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -1256,6 +1264,134 @@ describe('Orders search and quick filters (S-071)', () => {
         );
         expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>50<\/button>/);
         expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>Comfortable<\/button>/);
+      });
+    });
+
+    describe('S-073: Saved views', () => {
+      it('renders Views trigger button in the toolbar', () => {
+        const html = renderOrders('/orders');
+        expect(html).toContain('aria-label="Views"');
+        expect(html).toContain('Views');
+      });
+
+      it('renders Views popover with "Save current view" section and empty state', () => {
+        const html = renderOrders('/orders', { initialViewsOpen: true });
+        expect(html).toContain('Save current view');
+        expect(html).toContain('placeholder="View name"');
+        expect(html).toContain('aria-label="View name"');
+        expect(html).toContain('>Save</button>');
+        expect(html).toContain('No saved views');
+      });
+
+      it('renders list of saved views with Apply, Rename, and Delete buttons', () => {
+        mockStorage[SAVED_VIEWS_KEY] = JSON.stringify([
+          {
+            id: 'v1',
+            name: 'Biryani Feast',
+            createdAt: new Date().toISOString(),
+            filters: { search: 'biryani' },
+            sort: 'amount',
+            direction: 'desc',
+            columnVisibility: { items: false },
+          },
+        ]);
+
+        const html = renderOrders('/orders', { initialViewsOpen: true });
+        expect(html).toContain('Biryani Feast');
+        expect(html).toContain('aria-label="Apply Biryani Feast"');
+        expect(html).toContain('aria-label="Rename Biryani Feast"');
+        expect(html).toContain('aria-label="Delete Biryani Feast"');
+        expect(html).not.toContain('No saved views');
+      });
+
+      it('saving a view from Views popover stores filters, sort, direction, and columnVisibility in food-khata-views', () => {
+        const view = saveCurrentView('High Value Orders', {
+          filters: { platforms: ['SWIGGY'], search: 'burger' },
+          sort: 'amount',
+          direction: 'asc',
+          columnVisibility: { fees: false },
+        });
+
+        expect(view.name).toBe('High Value Orders');
+        expect(mockStorage[SAVED_VIEWS_KEY]).toBeDefined();
+
+        const stored = JSON.parse(mockStorage[SAVED_VIEWS_KEY]);
+        expect(stored).toHaveLength(1);
+        expect(stored[0].name).toBe('High Value Orders');
+        expect(stored[0].filters).toEqual({ platforms: ['SWIGGY'], search: 'burger' });
+        expect(stored[0].sort).toBe('amount');
+        expect(stored[0].direction).toBe('asc');
+        expect(stored[0].columnVisibility).toEqual({ fees: false });
+
+        const html = renderOrders('/orders', { initialViewsOpen: true });
+        expect(html).toContain('High Value Orders');
+      });
+
+      it('applying a saved view updates FilterContext, URL sort params, and column visibility', () => {
+        const mockChange = vi.fn();
+        const mockSetVisibility = vi.fn();
+
+        const sampleView: SavedView = {
+          id: 'v-test',
+          name: 'Weekend Zomato',
+          createdAt: new Date().toISOString(),
+          filters: { platforms: ['ZOMATO'], verified_only: true },
+          sort: 'date',
+          direction: 'asc',
+          columnVisibility: { discount: false },
+        };
+
+        applySavedView(sampleView, {
+          update: mockUpdate,
+          change: mockChange,
+          setVisibility: mockSetVisibility,
+        });
+
+        // Updates FilterContext
+        expect(mockUpdate).toHaveBeenCalledWith(sampleView.filters);
+
+        // Updates URL sort params
+        expect(mockChange).toHaveBeenCalledWith({
+          sort: 'date',
+          direction: 'asc',
+          page: '1',
+        });
+
+        // Updates column visibility state and persists to table prefs
+        expect(mockSetVisibility).toHaveBeenCalledWith({ discount: false });
+        expect(mockStorage[TABLE_PREFS_KEY]).toBeDefined();
+        const prefs = JSON.parse(mockStorage[TABLE_PREFS_KEY]);
+        expect(prefs.columnVisibility).toEqual({ discount: false });
+      });
+
+      it('deleting a saved view removes it from food-khata-views and list', () => {
+        mockStorage[SAVED_VIEWS_KEY] = JSON.stringify([
+          {
+            id: 'v-delete-me',
+            name: 'Temporary View',
+            createdAt: new Date().toISOString(),
+            filters: {},
+          },
+        ]);
+
+        const remaining = deleteSavedView('v-delete-me');
+        expect(remaining).toHaveLength(0);
+
+        const loaded = loadSavedViews();
+        expect(loaded).toHaveLength(0);
+
+        const html = renderOrders('/orders', { initialViewsOpen: true });
+        expect(html).toContain('No saved views');
+        expect(html).not.toContain('Temporary View');
+      });
+
+      it('corrupted or unavailable storage never breaks the page or views popover', () => {
+        mockStorage[SAVED_VIEWS_KEY] = '{{corrupt-json-123***';
+
+        expect(() => renderOrders('/orders', { initialViewsOpen: true })).not.toThrow();
+        const html = renderOrders('/orders', { initialViewsOpen: true });
+        expect(html).toContain('Save current view');
+        expect(html).toContain('No saved views');
       });
     });
   });
