@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 2 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 4 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1163,13 +1163,13 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | Story | Title | Priority | Status | Updated | Evidence |
 |---|---|---|---|---|---|
 | S-001 | Baseline and safety net | P0 | DONE | 2026-11-07 | merge 721ed34; 28 PNGs in docs/redesign/before/; test:browser pass; npm run build pass |
-| S-002 | Token consolidation | P0 | TODO | | |
+| S-002 | Token consolidation | P0 | DONE | 2026-11-07 | merge 232a499; verify.mjs PASS (typecheck/lint/unit/check-colors); D-03 tokens, check-colors.mjs |
 | S-003 | Theme engine (mode and accent) | P0 | TODO | | |
 | S-004 | Theme picker | P0 | TODO | | |
 | S-005 | Typography, spacing and motion tokens | P0 | TODO | | |
 | S-006 | Chart theme adapter and library consolidation | P0 | TODO | | |
 | S-007 | Shared primitives | P0 | TODO | | |
-| S-008 | Synthetic dev database and backend harness | P0 | TODO | | |
+| S-008 | Synthetic dev database and backend harness | P0 | DONE | 2026-11-07 | merge d77f311; verify.mjs --backend PASS (109 passed); scripts/make_dev_db.py, tests/test_make_dev_db.py |
 | S-009 | Orchestration harness | P0 | DONE | 2026-11-07 | merge 6ac38d3; verify PASS guardrails/typecheck/lint/unit; verify.mjs created, .gitignore updated |
 | S-010 | App shell | P0 | TODO | | |
 | S-011 | Five-page routing | P0 | TODO | | |
@@ -1229,11 +1229,14 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | ID | Date | Story | Context | Options considered | Decision | Consequence |
 |---|---|---|---|---|---|---|
 | DEC-001 | 2026-11-07 | 2026-11-07 | S-009 | gemini CLI and opencode CLI probe | gemini CLI returns IneligibleTierError (blocked); opencode run subcommand does not exist. Both CLI command templates in models.json are wrong for this environment. | Use delegate_task via T3 MCP for all sub-agents: antigravity provider for gemini-*/claude models, opencode provider for beam/deepseek/glm/mimo/nemotron. Command templates updated accordingly. Probe method changed to delegate_task health check. |
+| DEC-002 | 2026-11-07 | 2026-11-07 | S-008 | Synthetic DB ingest method | Checkout has no ingest_order_batch | Use per-order ingest_swiggy_order and ingest_zomato_order |
+| DEC-003 | 2026-11-07 | 2026-11-07 | S-002 | Legacy tokens remapped | Old tailwind classes in use | Remap card/popover to surface, muted-bg to surface-2, input to border |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
 |---|---|---|---|---|---|---|---|
-| DEV-001 | | | | | | | |
+| DEV-001 | 2026-11-07 | 2026-11-07 | S-002 | D-03 danger token | destructive-foreground remapped to primary-foreground | D-03 lacks danger-foreground | Clean token consolidation |
+| DEV-002 | 2026-11-07 | 2026-11-07 | S-008 | Venv setup in worktree | Root venv lacked httpx2 | Installed httpx2 in venv via uv pip install | Unblocked all 109 pytest tests |
 
 ### 8.4 Backlog
 | ID | Date | Origin (story or discovery) | Description | Priority | Reason deferred |
@@ -1251,12 +1254,15 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | d6c9f8f | FAIL-needs httpx2 | pass | pass | pass | 13/13 pass | not_run | not_run |
 | 2026-11-07 | 2026-11-07 | merge-6ac38d3 | n/a | pass | pass | pass | 13 pass | not_run | not_run |
 | 2026-11-07 | 2026-11-07 | merge-721ed34 | n/a | n/a | n/a | n/a | n/a | pass | pass |
+| 2026-11-07 | 2026-11-07 | merge-d77f311-232a499 | pass (109 passed) | pass | pass | pass | pass (13 passed) | not_run | not_run |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
 |---|---|---|---|
 | 2026-11-07 | 2026-11-07 | merge-6ac38d3 | S-009 |
 | 2026-11-07 | 2026-11-07 | merge-721ed34 | S-001 |
+| 2026-11-07 | 2026-11-07 | merge-d77f311 | S-008 |
+| 2026-11-07 | 2026-11-07 | merge-232a499 | S-002 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1265,6 +1271,10 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | D-003-S009-harness | S-009 | T2 | gemini-med | 1 | running | 0 |
 | 2026-11-07 | 2026-11-07 | D-003-S009-harness | S-009 | T2 | gemini-med | 1 | pass | 10 |
 | 2026-11-07 | 2026-11-07 | D-002-S001-screenshots | S-001 | T1 | gemini-low | 1 | pass | 12 |
+| 2026-11-07 | 2026-11-07 | D-004-S002-tokens | S-002 | T1 | glm | 1 | running | 0 |
+| 2026-11-07 | 2026-11-07 | D-005-S008-devdb | S-008 | T8 | deepseek | 1 | running | 0 |
+| 2026-11-07 | 2026-11-07 | D-004-S002-tokens | S-002 | T1 | glm | 1 | pass | 14 |
+| 2026-11-07 | 2026-11-07 | D-005-S008-devdb | S-008 | T8 | deepseek | 1 | pass | 6 |
 
 ---
 
