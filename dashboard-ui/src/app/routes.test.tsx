@@ -60,4 +60,18 @@ describe('Routes (S-011)', () => {
     expect(html).toContain('Page not found');
     expect(html).toContain('Back to Overview');
   });
+
+  it('preserves query parameters across navigation links (S-015)', () => {
+    const html = render('/spending?platforms=ZOMATO&date_from=2025-01-01');
+    expect(html).toContain('href="/?platforms=ZOMATO&amp;date_from=2025-01-01"');
+    expect(html).toContain('href="/food?platforms=ZOMATO&amp;date_from=2025-01-01"');
+    expect(html).toContain('href="/habits?platforms=ZOMATO&amp;date_from=2025-01-01"');
+    expect(html).toContain('href="/orders?platforms=ZOMATO&amp;date_from=2025-01-01"');
+  });
+
+  it('preserves query parameters on 404 page Back to Overview link (S-015)', () => {
+    const html = render('/nonexistent?platforms=SWIGGY');
+    expect(html).toContain('Page not found');
+    expect(html).toContain('href="/?platforms=SWIGGY"');
+  });
 });

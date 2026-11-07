@@ -39,13 +39,14 @@ const pages = [
 ];
 
 export function NotFoundPage() {
+  const location = useLocation();
   return (
     <div className="p-8 text-center space-y-3">
       <h1 className="text-2xl font-bold">Page not found</h1>
       <p className="text-sm text-muted-foreground mt-2">
         The page you're looking for doesn't exist or has moved.
       </p>
-      <Link to="/" className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent">
+      <Link to={{ pathname: '/', search: location.search }} className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent">
         Back to Overview
       </Link>
     </div>

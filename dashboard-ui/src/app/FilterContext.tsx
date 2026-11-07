@@ -1,7 +1,7 @@
 import {createContext,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useSearchParams,useLocation} from 'react-router-dom';
 import {useMetadata} from '../hooks/api';
-import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters,type FilterState} from '../lib/filters';
+import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters,hasActiveFilters,type FilterState} from '../lib/filters';
 
 type Scope = {
   filters: FilterState;
@@ -22,6 +22,23 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const account = filters.account_ids.join('|');
   const previousAccount = useRef(account);
   const [notice, setNotice] = useState('');
+
+  const previousPathname = useRef(location.pathname);
+  const lastActiveFilters = useRef(filters);
+
+  useEffect(() => {
+    lastActiveFilters.current = filters;
+  }, [filters]);
+
+  useEffect(() => {
+    if (previousPathname.current !== location.pathname) {
+      previousPathname.current = location.pathname;
+      if (!location.search && hasActiveFilters(lastActiveFilters.current)) {
+        const carried = serializeFilters(lastActiveFilters.current, new URLSearchParams(), false);
+        setParams(carried, { replace: true });
+      }
+    }
+  }, [location.pathname, location.search, setParams]);
 
   function update(patch: Partial<FilterState>, options?: { replace?: boolean }) {
     const prior = new URLSearchParams(params);
@@ -52,7 +69,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         clear: () =>
           update({
             ...defaultFilters(),
-            statuses: location.pathname === '/ledger' ? [] : ['DELIVERED'],
+            statuses: location.pathname === '/orders' || location.pathname === '/ledger' ? [] : ['DELIVERED'],
             account_ids: filters.account_ids,
           }),
         notice,
