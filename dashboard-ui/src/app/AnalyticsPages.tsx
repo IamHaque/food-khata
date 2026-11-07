@@ -4,7 +4,7 @@ import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
 
-export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' }) {
+export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
   const query = useDashboard(filters);
   const data = query.data;

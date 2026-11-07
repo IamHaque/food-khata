@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { CommandPalette } from './CommandPalette';
 import { DesignSystem } from './DesignSystem';
-import { DataPage, HealthPage } from './DataPages';
 import { AnalyticsPage } from './AnalyticsPages';
 import { Overview } from './Overview';
 import { Ledger } from './Ledger';
-import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useHealth } from '../hooks/api';
 import { FilterProvider, useFilters } from './FilterContext';
 import { AccountSelector } from './AccountSelector';
@@ -18,9 +17,7 @@ import {
   TrendingUp,
   Utensils,
   Clock,
-  MapPin,
   Receipt,
-  Activity,
   Palette,
   ExternalLink,
   ChevronLeft,
@@ -36,11 +33,23 @@ const pages = [
   { name: 'Overview', icon: LayoutDashboard },
   { name: 'Spending', icon: TrendingUp },
   { name: 'Food', icon: Utensils },
-  { name: 'Behavior', icon: Clock },
-  { name: 'Places', icon: MapPin },
-  { name: 'Ledger', icon: Receipt },
-  { name: 'Data health', icon: Activity },
+  { name: 'Habits', icon: Clock },
+  { name: 'Orders', icon: Receipt },
 ];
+
+export function NotFoundPage() {
+  return (
+    <div className="p-8 text-center space-y-3">
+      <h1 className="text-2xl font-bold">Page not found</h1>
+      <p className="text-sm text-muted-foreground mt-2">
+        The page you're looking for doesn't exist or has moved.
+      </p>
+      <Link to="/" className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent">
+        Back to Overview
+      </Link>
+    </div>
+  );
+}
 
 function Shell() {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -215,31 +224,33 @@ function Shell() {
             })}
           </div>
 
-          {/* Secondary Links */}
-          <div className="hidden lg:flex flex-col border-t pt-2 space-y-1">
-            <Link
-              to="/design-system"
-              title="Design system"
-              aria-label="Design system"
-              className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors ${
-                collapsed ? 'justify-center px-2' : ''
-              }`}
-            >
-              <Palette className="h-3.5 w-3.5 shrink-0" />
-              {!collapsed && <span>Design system</span>}
-            </Link>
-            <a
-              href="/legacy"
-              title="Legacy dashboard"
-              aria-label="Legacy dashboard"
-              className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors ${
-                collapsed ? 'justify-center px-2' : ''
-              }`}
-            >
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-              {!collapsed && <span>Legacy dashboard</span>}
-            </a>
-          </div>
+          {/* Secondary Links (dev only) */}
+          {import.meta.env.DEV && (
+            <div className="hidden lg:flex flex-col border-t pt-2 space-y-1">
+              <Link
+                to="/design-system"
+                title="Design system"
+                aria-label="Design system"
+                className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  collapsed ? 'justify-center px-2' : ''
+                }`}
+              >
+                <Palette className="h-3.5 w-3.5 shrink-0" />
+                {!collapsed && <span>Design system</span>}
+              </Link>
+              <a
+                href="/legacy"
+                title="Legacy dashboard"
+                aria-label="Legacy dashboard"
+                className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  collapsed ? 'justify-center px-2' : ''
+                }`}
+              >
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                {!collapsed && <span>Legacy dashboard</span>}
+              </a>
+            </div>
+          )}
         </nav>
 
         {/* Content Area */}
@@ -289,39 +300,17 @@ function Shell() {
           {/* Routes */}
           <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
             <Routes>
-              {pages.map((p, i) => (
-                <Route
-                  key={p.name}
-                  path={i === 0 ? '/' : `/${p.name.toLowerCase().replace(' ', '-')}`}
-                  element={
-                    p.name === 'Overview' ? (
-                      <Overview />
-                    ) : p.name === 'Ledger' ? (
-                      <Ledger />
-                    ) : p.name === 'Behavior' || p.name === 'Places' ? (
-                      <DataPage page={p.name} />
-                    ) : p.name === 'Data health' ? (
-                      <HealthPage />
-                    ) : p.name === 'Food' || p.name === 'Spending' ? (
-                      <AnalyticsPage page={p.name} />
-                    ) : (
-                      <section className="page-panel rounded-xl border bg-card p-6 shadow-xs">
-                        <h1 className="text-xl font-bold">{p.name}</h1>
-                        <p className="text-sm text-muted-foreground mt-2">This page is not available yet.</p>
-                      </section>
-                    )
-                  }
-                />
-              ))}
-              <Route path="/design-system" element={<DesignSystem />} />
-              <Route
-                path="*"
-                element={
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Page not found</h1>
-                  </div>
-                }
-              />
+              <Route path="/" element={<Overview />} />
+              <Route path="/spending" element={<AnalyticsPage page="Spending" />} />
+              <Route path="/food" element={<AnalyticsPage page="Food" />} />
+              <Route path="/habits" element={<AnalyticsPage page="Habits" />} />
+              <Route path="/orders" element={<Ledger />} />
+              <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
+              <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
+              <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
+              <Route path="/data-health" element={<Navigate to={`/?sync=open`} replace />} />
+              {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
 
