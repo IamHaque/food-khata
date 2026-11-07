@@ -128,7 +128,7 @@ export function buildTopRestaurantsDishesOption(
   const option: EChartsCoreOption = {
     ...base,
     tooltip: {
-      ...base.tooltip,
+      ...(base.tooltip as object),
       trigger: "axis",
       axisPointer: { type: "shadow" },
       formatter: (params: unknown) => {

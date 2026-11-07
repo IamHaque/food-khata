@@ -166,7 +166,7 @@ export function buildMonthlyTrendOption(
   const option: EChartsCoreOption = {
     ...base,
     tooltip: {
-      ...base.tooltip,
+      ...(base.tooltip as object),
       trigger: "axis",
       formatter: (params: unknown) => {
         if (!Array.isArray(params)) return "";
