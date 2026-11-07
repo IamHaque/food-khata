@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from '../components/ui/sheet';
 import { useBill } from '../hooks/api';
 import { orders, type OrdersParams } from '../lib/api';
 import type { components } from '../types/api';
+import {
+  formatOrderDate,
+  getOrderVerificationStatus,
+  OrderStatusChip,
+  PlatformBadge,
+} from './Orders';
 import { ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Receipt } from 'lucide-react';
 import '../styles/modal.css';
 
@@ -37,17 +50,30 @@ export function OrderModal({
   useEffect(() => {
     if (id) {
       last.current = id;
-      if (!origin.current && document.activeElement instanceof HTMLElement) origin.current = document.activeElement;
+      if (!origin.current && document.activeElement instanceof HTMLElement) {
+        origin.current = document.activeElement;
+      }
     }
   }, [id]);
 
   useEffect(() => () => controller.current?.abort(), [scope]);
 
-  const close = () => {
+  const close = useCallback(() => {
     const next = new URLSearchParams(params);
     next.delete('order');
     setParams(next);
-  };
+    const targetId = last.current;
+    const row = targetId
+      ? document.querySelector<HTMLElement>(`[data-order-id="${targetId}"]`)
+      : null;
+    const targetElement =
+      row ??
+      (origin.current?.isConnected
+        ? origin.current
+        : document.querySelector<HTMLElement>('[aria-label="Order history"]'));
+    targetElement?.focus();
+    origin.current = null;
+  }, [params, setParams]);
 
   const currentIndex = rows.findIndex(row => row.id === id);
   const currentPage = Number(request.page ?? 1);
@@ -120,81 +146,115 @@ export function OrderModal({
       if (e.key === 'Escape') {
         e.preventDefault();
         close();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        void adjacent(1);
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         e.preventDefault();
         void adjacent(-1);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        void adjacent(1);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [id, adjacent]);
+  }, [id, adjacent, close]);
 
   const o = data?.order;
   const ladder: [string, number | null | undefined][] = [];
-  if (o)
+  if (o) {
     ladder.push(
-      ['Item subtotal', o.item_subtotal],
-      ['Food discount (deducted)', o.food_discount],
-      ['Net delivery fee', o.delivery_fee],
-      ['Delivery discount (already included in net delivery)', o.delivery_fee_discount],
+      ['Subtotal', o.item_subtotal],
+      ['Food discount', o.food_discount],
+      ['Delivery fee', o.delivery_fee],
+      ['Delivery discount', o.delivery_fee_discount],
       ['Packaging', o.packaging_fee],
       ['Platform fee', o.platform_fee],
-      ['Tax', o.total_tax],
-      ['Tip', o.tip],
+      ['Taxes', o.total_tax],
+      ['Tips', o.tip],
       ['Other charges', o.other_charges],
-      ['Refund (reported separately)', o.refund_amount]
+      ['Refunds', o.refund_amount]
     );
+  }
 
   return (
-    <Dialog
+    <Sheet
       open={!!id}
       onOpenChange={open => {
         if (!open) close();
       }}
     >
-      <DialogContent
-        className="order-modal max-w-xl p-0 overflow-hidden rounded-2xl border bg-card shadow-2xl"
+      <SheetContent
+        side="right"
+        className="order-sheet w-full sm:max-w-md lg:max-w-lg p-0 flex flex-col h-full bg-card shadow-2xl border-l overflow-hidden"
         onCloseAutoFocus={event => {
           event.preventDefault();
-          const row = Array.from(document.querySelectorAll<HTMLElement>('[data-order-id]')).find(
-            node => node.dataset.orderId === last.current
-          );
-          (
+          const targetId = last.current;
+          const row = targetId
+            ? document.querySelector<HTMLElement>(`[data-order-id="${targetId}"]`)
+            : null;
+          const targetElement =
             row ??
             (origin.current?.isConnected
               ? origin.current
-              : document.querySelector<HTMLElement>('[aria-label="Order history"]'))
-          )?.focus();
+              : document.querySelector<HTMLElement>('[aria-label="Order history"]'));
+          targetElement?.focus();
           origin.current = null;
         }}
         onKeyDown={event => {
           if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,pre,[contenteditable=true]'))
             return;
-          if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+          if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
             event.preventDefault();
-            void adjacent(event.key === 'ArrowRight' ? 1 : -1);
+            void adjacent(-1);
+          } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            void adjacent(1);
           }
         }}
       >
-        {/* Receipt Header */}
-        <header className="order-modal-header p-5 border-b bg-card">
-          <div className="flex items-center gap-2 mb-1">
-            <Receipt className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order receipt</span>
+        {/* Sheet Header */}
+        <SheetHeader className="order-sheet-header p-5 border-b bg-card space-y-2 text-left pr-12">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order receipt</span>
+            </div>
+            {o && (
+              <span className="font-mono text-xs text-muted-foreground font-semibold" data-testid="order-sheet-id">
+                {`#${o.platform_order_id}`}
+              </span>
+            )}
           </div>
-          <DialogTitle className="text-lg font-bold text-foreground" title={o?.restaurant_name ?? undefined}>
-            {o?.restaurant_name ?? 'Order details'}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-            {o ? `${o.platform} · ${o.order_status} · ${o.order_timestamp}` : 'Loading the selected order'}
-          </DialogDescription>
-        </header>
+          <div>
+            <SheetTitle className="text-lg font-bold text-foreground text-left" title={o?.restaurant_name ?? undefined}>
+              {o?.restaurant_name ?? 'Order details'}
+            </SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground mt-1 text-left" asChild>
+              <div>
+                {o ? (
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <PlatformBadge platform={o.platform} />
+                    <OrderStatusChip status={getOrderVerificationStatus(o)} />
+                    <span className="text-muted-foreground font-medium">
+                      {formatOrderDate(o.order_timestamp || o.order_date)}
+                      {o.order_time ? ` · ${o.order_time}` : ''}
+                    </span>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground uppercase">
+                      {o.order_status}
+                    </span>
+                  </div>
+                ) : (
+                  <span>Loading the selected order…</span>
+                )}
+              </div>
+            </SheetDescription>
+          </div>
+        </SheetHeader>
 
-        {/* Receipt Body */}
-        <div className="order-modal-body p-5 max-h-[65vh] overflow-y-auto space-y-5" aria-busy={bill.isFetching || navigating}>
+        {/* Sheet Body */}
+        <div
+          className="order-sheet-body p-5 flex-1 overflow-y-auto space-y-5"
+          aria-busy={bill.isFetching || navigating}
+        >
           {bill.isError ? (
             <div role="alert" className="p-4 rounded-lg border border-destructive/20 bg-destructive/10 text-xs text-destructive">
               <p>Order details could not load.</p>
@@ -259,7 +319,7 @@ export function OrderModal({
                   role="region"
                   aria-label="Order items"
                 >
-                  <table className="w-full text-xs">
+                  <table className="w-full text-xs" aria-label="Order items table">
                     <thead className="bg-muted/40 border-b">
                       <tr>
                         <th className="text-left p-2.5 font-medium">Item</th>
@@ -310,23 +370,30 @@ export function OrderModal({
                       </div>
                     ))}
                   <div className="bill-final flex items-center justify-between pt-2 border-t font-sans text-sm font-bold text-foreground">
-                    <dt>Final paid</dt>
+                    <dt>Net paid</dt>
                     <dd className="text-base font-mono text-primary font-bold">{money(o?.final_amount_paid)}</dd>
                   </div>
                 </dl>
               </div>
 
               {/* Itemized discounts */}
-              {!!data.discount_items.length && (
+              {(data.discount_items.length > 0 || (o?.total_discount != null && o.total_discount > 0)) && (
                 <section className="space-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Itemized discounts</h3>
                   <dl className="bill-ladder rounded-lg border p-3 bg-muted/20 text-xs space-y-1 font-mono">
-                    {data.discount_items.map((discount, index) => (
-                      <div key={index} className="flex items-center justify-between py-1 border-b border-border/40 font-sans last:border-0">
-                        <dt className="text-muted-foreground text-xs">{discount.label}</dt>
-                        <dd className="font-mono font-medium">{money(discount.amount)}</dd>
+                    {data.discount_items.length > 0 ? (
+                      data.discount_items.map((discount, index) => (
+                        <div key={index} className="flex items-center justify-between py-1 border-b border-border/40 font-sans last:border-0">
+                          <dt className="text-muted-foreground text-xs">{discount.label}</dt>
+                          <dd className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{`-${money(discount.amount)}`}</dd>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-between py-1 font-sans">
+                        <dt className="text-muted-foreground text-xs">Total discount</dt>
+                        <dd className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{`-${money(o?.total_discount)}`}</dd>
                       </div>
-                    ))}
+                    )}
                   </dl>
                 </section>
               )}
@@ -370,8 +437,8 @@ export function OrderModal({
           )}
         </div>
 
-        {/* Modal Footer with Actions */}
-        <footer className="order-modal-footer flex items-center justify-between p-4 border-t bg-card">
+        {/* Sheet Footer with Actions */}
+        <footer className="order-sheet-footer flex items-center justify-between p-4 border-t bg-card mt-auto">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -402,15 +469,19 @@ export function OrderModal({
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
-          <button
-            type="button"
-            onClick={close}
-            className="min-h-[44px] rounded-md border border-input bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
-          >
-            Close receipt
-          </button>
+          <SheetClose asChild>
+            <button
+              type="button"
+              onClick={close}
+              className="min-h-[44px] rounded-md border border-input bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
+            >
+              Close receipt
+            </button>
+          </SheetClose>
         </footer>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
+
+export const OrderSheet = OrderModal;

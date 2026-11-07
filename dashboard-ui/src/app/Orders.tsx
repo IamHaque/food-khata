@@ -964,6 +964,7 @@ export function Orders() {
                 {virtualRows.map(virtualRow => {
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
+                  const isActive = row.original.id === params.get('order');
                   return (
                     <TableRow
                       key={row.original.id}
@@ -971,6 +972,8 @@ export function Orders() {
                       data-index={virtualRow.index}
                       tabIndex={0}
                       data-order-id={row.original.id}
+                      data-active={isActive ? 'true' : undefined}
+                      aria-selected={isActive}
                       onClick={() => open(row.original.id)}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
@@ -980,8 +983,8 @@ export function Orders() {
                       }}
                       aria-label={`Open order ${row.original.platform_order_id}`}
                       className={`hover:bg-accent/50 focus-visible:bg-accent focus-visible:outline-none cursor-pointer transition-colors ${
-                        compact ? 'py-1' : 'py-2.5'
-                      }`}
+                        isActive ? 'bg-primary/10 ring-2 ring-inset ring-primary' : ''
+                      } ${compact ? 'py-1' : 'py-2.5'}`}
                     >
                       {row.getVisibleCells().map(cell => (
                         <TableCell
