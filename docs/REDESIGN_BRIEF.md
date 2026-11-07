@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 27 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
+**Overall progress:** 28 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
 
 ---
 
@@ -1182,7 +1182,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-021 | Linked hover | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 158 passed); linked hover bus, 120ms debounce, zero rerenders |
 | S-022 | Chart toolkit actions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); table toggle, fullscreen dialog, PNG/CSV export |
 | S-023 | Takeaway captions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); pure caption generators, safe zero/null fallbacks |
-| S-024 | Compare mode overlay | P1 | DONE | 2026-11-08 | compare date calculations, useDashboardCompare query, MonthlyTrendChart dashed overlay series, KpiDelta arrow and color |
+| S-024 | Compare mode overlay | P1 | DONE | 2026-11-07 | --note |
 | S-025 | Motion system | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 174 passed); motion system, useCountUp hook, reduced-motion |
 | S-030 | Insight strip | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 201 passed); insight cards, filter patch click, keyboard access |
 | S-031 | KPI cards | P0 | DONE | 2026-11-07 | --note |
@@ -1308,6 +1308,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S034 | n/a | n/a | pass | pass | pass (206 passed) | not_run | pass |
 | 2026-11-07 | S-033: CalendarHeatmapChart unit tests pass, typecheck pass, lint pass, 237 tests pass |  |  |  |  |  |  |  |  |
 | 2026-11-07 | S-031: OverviewKpis unit tests pass, typecheck pass, lint pass, 255 tests pass across 24 files |  |  |  |  |  |  |  |  |
+| 2026-11-07 | S-024: useDashboardCompare, calculateComparisonDates, MonthlyTrendChart compare overlay, and KpiDelta tests pass; 259 tests pass across 25 files |  |  |  |  |  |  |  |  |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1342,6 +1343,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S034 | S-034 |
 | 2026-11-07 | S-033: added CalendarHeatmapChart component and tests (1fea15d) |  |  |
 | 2026-11-07 | S-031: added OverviewKpis component and unit tests (0500c5f) |  |  |
+| 2026-11-07 | S-024: added compare query, dashed overlay series in MonthlyTrendChart, and KpiDelta component (34aa064) |  |  |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1390,6 +1392,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-028-S034-platform-split | S-034 | T2 | gemini-med | 1 | pass | 7 |
 | 2026-11-07 | S-033 | Year calendar heatmap | DONE | 1fea15d | gemini-high |  |  |  |
 | 2026-11-07 | S-031 | Overview KPI cards | DONE | 0500c5f | gemini-med |  |  |  |
+| 2026-11-07 | S-024 | Compare mode overlay | DONE | 34aa064 | gemini-med |  |  |  |
 
 ---
 
