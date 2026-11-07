@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 21 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
+**Overall progress:** 22 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
 
 ---
 
@@ -1186,7 +1186,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-025 | Motion system | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 174 passed); motion system, useCountUp hook, reduced-motion |
 | S-030 | Insight strip | P0 | TODO | | |
 | S-031 | KPI cards | P0 | TODO | | |
-| S-032 | Monthly trend combo | P0 | TODO | | |
+| S-032 | Monthly trend combo | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 193 passed); dual-axis, brush zoom, metric toggle, month cross-filter |
 | S-033 | Year calendar heatmap | P0 | TODO | | |
 | S-034 | Platform split | P0 | TODO | | |
 | S-035 | Top restaurants and dishes | P0 | TODO | | |
@@ -1250,6 +1250,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-020 | 2026-11-07 | 2026-11-08 | S-025 | Motion tokens, useCountUp hook, and strict reduced-motion | Animation and motion | Composite-only transitions (transform/opacity), 600ms count-up with tabular nums, 240ms page slide, 40ms card stagger up to 12 cards, 2px card lift, button compress, reduced-motion bypass |
 | DEC-021 | 2026-11-07 | 2026-11-08 | GATE-P2 | Phase P2 Interaction Gate Audit Passed | Phase Gate P2 | Independent audit by gemini-med verified all 5 criteria: cross-filter engine across 7 dimensions with multi-select and Escape undo, linked hover pub-sub bus with zero React re-renders and 120ms debounce, ChartCard toolkit with sortable table and fullscreen modal, pure takeaway captions with Indian rupee formatting, composite-only motion system with 600ms count-up and strict reduced-motion bypass |
 | DEC-022 | 2026-11-07 | 2026-11-08 | S-024 | Defer S-024 compare mode overlay to Phase P3a | Phase dependency alignment | S-024 explicitly depends on S-032 (Monthly trend combo in Phase P3a). Deferring S-024 until S-032 is implemented on Overview page |
+| DEC-023 | 2026-11-07 | 2026-11-08 | S-032 | Monthly trend combo chart with dual axis and brush zoom | Overview charts | Gradient area spend + bars orders on dual y-axes, metric toggle (Spend/Orders/Both), brush zoom with reset button, month click cross-filter, and Table view |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1296,6 +1297,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S021 | n/a | n/a | pass | pass | pass (158 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S025 | n/a | n/a | pass | pass | pass (174 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | P2-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (189 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-S032 | n/a | n/a | pass | pass | pass (193 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1324,6 +1326,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S021 | S-021 |
 | 2026-11-07 | 2026-11-08 | merge-S025 | S-025 |
 | 2026-11-07 | 2026-11-08 | P2-GATE-PASS | Phase P2 Interaction completed: cross-filter engine across 7 dimensions, linked hover bus with 120ms debounce, sortable table toggle & fullscreen modal in ChartCard, pure takeaway captions, and composite-only motion system with useCountUp hook |
+| 2026-11-07 | 2026-11-08 | merge-S032 | S-032 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1366,6 +1369,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-021-S021-linked-hover | S-021 | T3 | gemini-high | 1 | pass | 8 |
 | 2026-11-07 | 2026-11-08 | D-024-S025-motion | S-025 | T3 | deepseek | 1 | pass | 8 |
 | 2026-11-07 | 2026-11-08 | D-025-GATE-P2 | GATE-P2 | T9 | gemini-med | 1 | pass | 7 |
+| 2026-11-07 | 2026-11-08 | D-026-S032-monthly-trend | S-032 | T2 | beam | 1 | pass | 7 |
 
 ---
 
