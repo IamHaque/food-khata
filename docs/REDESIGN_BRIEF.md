@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 16 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P1 · Last updated: 2026-11-07
+**Overall progress:** 16 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-08
 
 ---
 
@@ -1242,6 +1242,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-012 | 2026-11-07 | 2026-11-08 | S-014 | Filter summary row and advanced panel | Filter bar UX | Replaced accordion with compact summary row (period, platform, compare, more filters button) + Sheet side panel, removable Chip primitives, inline range validation |
 | DEC-013 | 2026-11-07 | 2026-11-08 | S-015 | Comprehensive URL state and test coverage | URL state & validation | Validate all 19 FilterState fields, robust fallbacks for malformed query params, preserve search query during page navigation |
 | DEC-014 | 2026-11-07 | 2026-11-08 | S-016 | Command palette and keyboard shortcuts | Global app shortcuts and quick actions | Accessible Radix Dialog with focus trap, grouped actions (navigate, filters, appearance, orders, saved views), g-prefix navigation, input-focus immunity |
+| DEC-015 | 2026-11-07 | 2026-11-08 | GATE-P1 | Phase P1 Shell Gate Audit Passed | Phase Gate P1 | Independent audit by gemini-med verified all 4 criteria: 5 canonical routes + query-preserving redirects + 404, URL state round-trip across 19 filter fields, single mobile drawer nav, account switcher, sync status sheet, filter summary & advanced panel, command palette & shortcuts |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1280,6 +1281,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-968acab | n/a | n/a | pass | pass | pass (84 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-ec2cc9b | n/a | n/a | pass | pass | pass (84 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-15a891a | n/a | n/a | pass | pass | pass (85 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | P1-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (101 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1301,6 +1303,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-968acab | S-014 |
 | 2026-11-07 | 2026-11-08 | merge-ec2cc9b | S-015 |
 | 2026-11-07 | 2026-11-08 | merge-15a891a | S-016 |
+| 2026-11-07 | 2026-11-08 | P1-GATE-PASS | Phase P1 Shell completed: responsive app shell with desktop rail and mobile drawer, 5 canonical routes, account switcher, sync health sheet, filter summary row with advanced panel, URL state fidelity across 19 fields, and command palette with shortcuts |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1336,6 +1339,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-016-S014-filters | S-014 | T2 | beam | 1 | pass | 7 |
 | 2026-11-07 | 2026-11-08 | D-017-S015-url-state | S-015 | T3 | gemini-high | 1 | pass | 8 |
 | 2026-11-07 | 2026-11-08 | D-018-S016-command-palette | S-016 | T2 | beam | 1 | pass | 8 |
+| 2026-11-07 | 2026-11-08 | D-019-GATE-P1 | GATE-P1 | T9 | gemini-med | 1 | pass | 6 |
 
 ---
 
