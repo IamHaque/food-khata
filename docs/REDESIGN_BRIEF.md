@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 8 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 9 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1165,7 +1165,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-001 | Baseline and safety net | P0 | DONE | 2026-11-07 | merge 721ed34; 28 PNGs in docs/redesign/before/; test:browser pass; npm run build pass |
 | S-002 | Token consolidation | P0 | DONE | 2026-11-07 | merge 232a499; verify.mjs PASS (typecheck/lint/unit/check-colors); D-03 tokens, check-colors.mjs |
 | S-003 | Theme engine (mode and accent) | P0 | DONE | 2026-11-07 | merge 96e3459; verify.mjs PASS (typecheck/lint/unit); theme.ts, contrast-check.mjs 10-theme WCAG gate, index.html blocking script |
-| S-004 | Theme picker | P0 | TODO | | |
+| S-004 | Theme picker | P0 | DONE | 2026-11-07 | merge e680506; verify.mjs PASS (typecheck/lint/unit 47 passed); Appearance Popover, segmented control, 5 accents, live preview |
 | S-005 | Typography, spacing and motion tokens | P0 | DONE | 2026-11-07 | merge 7a65a5c; verify.mjs PASS (typecheck/lint/unit); >=14px body, >=12px captions, tabular-nums display-number, 16px radius, motion clamp |
 | S-006 | Chart theme adapter and library consolidation | P0 | DONE | 2026-11-07 | merge 30d26cf; verify.mjs PASS (typecheck/lint/unit 44 passed); chart-theme.ts 10 themes, Chart.tsx live re-theme, recharts removed |
 | S-007 | Shared primitives | P0 | DONE | 2026-11-07 | merge f7433ea; verify.mjs PASS (typecheck/lint/unit 46 passed); ChartCard, KpiCard, Skeleton, Chip, SegmentedControl, /design-system route |
@@ -1234,6 +1234,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-004 | 2026-11-07 | 2026-11-07 | S-005 | Typography adjustments | Sub-12px classes present | Bump receipt table to 14px, heat-hour to 12px, tabular numbers display-number class |
 | DEC-005 | 2026-11-07 | 2026-11-08 | S-006 | Recharts removal and chart adapter | Recharts was unused/redundant | Purged recharts from package.json and components/ui/chart.tsx; pure chart-theme.ts for all 10 theme combos |
 | DEC-006 | 2026-11-07 | 2026-11-08 | S-007 | Shared primitives and design system route | Primitives kit needed for dashboard redesign | Created ChartCard, KpiCard, Skeleton, EmptyState, ErrorState, Chip, SegmentedControl, ToolbarButton, and /design-system showcase |
+| DEC-007 | 2026-11-07 | 2026-11-08 | S-004 | Appearance Popover and live preview | Replace native select with Radix Popover | Mode segmented control, 5 accent swatches, live preview on hover/focus with ref revert |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1263,6 +1264,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-7a65a5c | n/a | n/a | pass | pass | pass (30 passed) | not_run | not_run |
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | n/a | n/a | pass | pass | pass (44 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-f7433ea | n/a | n/a | pass | pass | pass (46 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-e680506 | n/a | n/a | pass | pass | pass (47 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1275,6 +1277,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-7a65a5c | S-005 |
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | S-006 |
 | 2026-11-07 | 2026-11-08 | merge-f7433ea | S-007 |
+| 2026-11-07 | 2026-11-08 | merge-e680506 | S-004 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1295,6 +1298,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-008-S006-chart-adapter | S-006 | T3 | gemini-high | 1 | pass | 22 |
 | 2026-11-07 | 2026-11-08 | D-009-S007-primitives | S-007 | T2 | beam | 1 | running | 0 |
 | 2026-11-07 | 2026-11-08 | D-009-S007-primitives | S-007 | T2 | beam | 1 | pass | 4 |
+| 2026-11-07 | 2026-11-08 | D-010-S004-theme-picker | S-004 | T2 | beam | 1 | running | 0 |
+| 2026-11-07 | 2026-11-08 | D-010-S004-theme-picker | S-004 | T2 | beam | 1 | pass | 2 |
 
 ---
 
