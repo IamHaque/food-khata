@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 17 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-07
+**Overall progress:** 18 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-07
 
 ---
 
@@ -1181,7 +1181,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-020 | Cross-filter engine | P1 | DONE | 2026-11-07 | merge 5b5cd3b; verify.mjs PASS (typecheck/lint/unit 106 passed); crossfilter engine, declarative mappings, shift multi-select, undo |
 | S-021 | Linked hover | P1 | TODO | | |
 | S-022 | Chart toolkit actions | P1 | TODO | | |
-| S-023 | Takeaway captions | P1 | TODO | | |
+| S-023 | Takeaway captions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); pure caption generators, safe zero/null fallbacks |
 | S-024 | Compare mode overlay | P1 | TODO | | |
 | S-025 | Motion system | P1 | TODO | | |
 | S-030 | Insight strip | P0 | TODO | | |
@@ -1244,6 +1244,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-014 | 2026-11-07 | 2026-11-08 | S-016 | Command palette and keyboard shortcuts | Global app shortcuts and quick actions | Accessible Radix Dialog with focus trap, grouped actions (navigate, filters, appearance, orders, saved views), g-prefix navigation, input-focus immunity |
 | DEC-015 | 2026-11-07 | 2026-11-08 | GATE-P1 | Phase P1 Shell Gate Audit Passed | Phase Gate P1 | Independent audit by gemini-med verified all 4 criteria: 5 canonical routes + query-preserving redirects + 404, URL state round-trip across 19 filter fields, single mobile drawer nav, account switcher, sync status sheet, filter summary & advanced panel, command palette & shortcuts |
 | DEC-016 | 2026-11-07 | 2026-11-08 | S-020 | Declarative cross-filtering engine and undo stack | Chart interaction cross-filtering | DECLARATIVE_MAPPINGS across 7 dimensions (platform, restaurant, cuisine, month, weekday, hour, meal_slot), shift-click multi-select, toggle-to-remove, and Escape undo stack |
+| DEC-017 | 2026-11-07 | 2026-11-08 | S-023 | Pure takeaway captions with zero and tie fallbacks | Chart insights | Pure functions aggregating category rows, Indian rupee formatting, null on zero/empty/tie data, Math.round percentages |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1284,6 +1285,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-15a891a | n/a | n/a | pass | pass | pass (85 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | P1-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (101 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-5b5cd3b | n/a | n/a | pass | pass | pass (106 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-S023 | n/a | n/a | pass | pass | pass (151 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1307,6 +1309,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-15a891a | S-016 |
 | 2026-11-07 | 2026-11-08 | P1-GATE-PASS | Phase P1 Shell completed: responsive app shell with desktop rail and mobile drawer, 5 canonical routes, account switcher, sync health sheet, filter summary row with advanced panel, URL state fidelity across 19 fields, and command palette with shortcuts |
 | 2026-11-07 | 2026-11-08 | merge-5b5cd3b | S-020 |
+| 2026-11-07 | 2026-11-08 | merge-S023 | S-023 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1344,6 +1347,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-018-S016-command-palette | S-016 | T2 | beam | 1 | pass | 8 |
 | 2026-11-07 | 2026-11-08 | D-019-GATE-P1 | GATE-P1 | T9 | gemini-med | 1 | pass | 6 |
 | 2026-11-07 | 2026-11-08 | D-020-S020-crossfilter | S-020 | T3 | gemini-high | 1 | pass | 9 |
+| 2026-11-07 | 2026-11-08 | D-023-S023-captions | S-023 | T2 | deepseek | 1 | pass | 3 |
 
 ---
 
