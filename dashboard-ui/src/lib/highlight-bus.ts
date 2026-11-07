@@ -407,11 +407,39 @@ export function unregisterChart(id: string): void {
   chartRegistry.delete(id);
 }
 
+export type HighlightPayload = {
+  type?: string;
+  dimension?: string;
+  value: string;
+  sourceId?: string;
+};
+
 /**
  * Emits a highlight event for a hovered dimension and value.
+ * Accepts either an object payload ({ type/dimension, value, sourceId }) or positional arguments.
  * Cancels any pending clear timer and broadcasts to all other registered charts.
  */
-export function emitHighlight(sourceId: string, dimension: string, value: string): void {
+export function emitHighlight(payload: HighlightPayload): void;
+export function emitHighlight(sourceId: string, dimension: string, value: string): void;
+export function emitHighlight(
+  sourceIdOrPayload: string | HighlightPayload,
+  dimension?: string,
+  value?: string
+): void {
+  let sourceId = "kpi-sparkline";
+  let dim = "month";
+  let val = "";
+
+  if (typeof sourceIdOrPayload === "object" && sourceIdOrPayload !== null) {
+    sourceId = sourceIdOrPayload.sourceId ?? "kpi-sparkline";
+    dim = sourceIdOrPayload.dimension ?? sourceIdOrPayload.type ?? "month";
+    val = sourceIdOrPayload.value;
+  } else {
+    sourceId = sourceIdOrPayload;
+    dim = dimension ?? "month";
+    val = value ?? "";
+  }
+
   if (clearTimer !== null) {
     clearTimeout(clearTimer);
     clearTimer = null;
@@ -421,7 +449,7 @@ export function emitHighlight(sourceId: string, dimension: string, value: string
     if (id === sourceId) continue;
     try {
       if (entry.chart.isDisposed && entry.chart.isDisposed()) continue;
-      dispatchHighlightToChart(entry, dimension, value);
+      dispatchHighlightToChart(entry, dim, val);
     } catch {
       // Ignore disposed or errored chart instances
     }
