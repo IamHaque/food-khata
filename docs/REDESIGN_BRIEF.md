@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 4 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 4 / 62 stories DONE · 1 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1164,7 +1164,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 |---|---|---|---|---|---|
 | S-001 | Baseline and safety net | P0 | DONE | 2026-11-07 | merge 721ed34; 28 PNGs in docs/redesign/before/; test:browser pass; npm run build pass |
 | S-002 | Token consolidation | P0 | DONE | 2026-11-07 | merge 232a499; verify.mjs PASS (typecheck/lint/unit/check-colors); D-03 tokens, check-colors.mjs |
-| S-003 | Theme engine (mode and accent) | P0 | TODO | | |
+| S-003 | Theme engine (mode and accent) | P0 | IN_PROGRESS | 2026-11-07 |  |
 | S-004 | Theme picker | P0 | TODO | | |
 | S-005 | Typography, spacing and motion tokens | P0 | TODO | | |
 | S-006 | Chart theme adapter and library consolidation | P0 | TODO | | |
@@ -1275,6 +1275,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | D-005-S008-devdb | S-008 | T8 | deepseek | 1 | running | 0 |
 | 2026-11-07 | 2026-11-07 | D-004-S002-tokens | S-002 | T1 | glm | 1 | pass | 14 |
 | 2026-11-07 | 2026-11-07 | D-005-S008-devdb | S-008 | T8 | deepseek | 1 | pass | 6 |
+| 2026-11-07 | 2026-11-07 | D-006-S003-theme | S-003 | T3 | gemini-high | 1 | running | 0 |
 
 ---
 
