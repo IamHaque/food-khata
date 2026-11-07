@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 24 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
+**Overall progress:** 25 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 1 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-07
 
 ---
 
@@ -1188,7 +1188,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-031 | KPI cards | P0 | TODO | | |
 | S-032 | Monthly trend combo | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 193 passed); dual-axis, brush zoom, metric toggle, month cross-filter |
 | S-033 | Year calendar heatmap | P0 | TODO | | |
-| S-034 | Platform split | P0 | TODO | | |
+| S-034 | Platform split | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 206 passed); donut, center total spend, platform toggle |
 | S-035 | Top restaurants and dishes | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 197 passed); dual rankings, restaurant cross-filter, view all link |
 | S-070 | Orders table with virtualization | P1 | TODO | | |
 | S-071 | Search and quick filters | P1 | TODO | | |
@@ -1253,6 +1253,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-023 | 2026-11-07 | 2026-11-08 | S-032 | Monthly trend combo chart with dual axis and brush zoom | Overview charts | Gradient area spend + bars orders on dual y-axes, metric toggle (Spend/Orders/Both), brush zoom with reset button, month click cross-filter, and Table view |
 | DEC-024 | 2026-11-07 | 2026-11-08 | S-035 | Top restaurants and dishes ranking charts | Overview rankings | Dual horizontal bar ranking charts for top 5 restaurants and top 5 dishes by amount with quantities beside each bar, restaurant cross-filter click, and preserved /food view-all link |
 | DEC-025 | 2026-11-07 | 2026-11-08 | S-030 | Insight strip cards with filter patch click and keyboard access | Overview insights | Up to 4 insight cards with icons, values, and text; clicking applies filter_patch via FilterContext; hides cleanly when no insights; keyboard button access |
+| DEC-026 | 2026-11-07 | 2026-11-08 | S-034 | Platform split donut chart with center total and platform toggle | Overview charts | Donut chart (50-75% radius) with total spend center label, spend share/orders/discounts/fees tooltip, platform cross-filter toggle click, and linked hover |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1302,6 +1303,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S032 | n/a | n/a | pass | pass | pass (193 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S035 | n/a | n/a | pass | pass | pass (197 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S030 | n/a | n/a | pass | pass | pass (201 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-S034 | n/a | n/a | pass | pass | pass (206 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1333,6 +1335,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S032 | S-032 |
 | 2026-11-07 | 2026-11-08 | merge-S035 | S-035 |
 | 2026-11-07 | 2026-11-08 | merge-S030 | S-030 |
+| 2026-11-07 | 2026-11-08 | merge-S034 | S-034 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1378,6 +1381,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-026-S032-monthly-trend | S-032 | T2 | beam | 1 | pass | 7 |
 | 2026-11-07 | 2026-11-08 | D-029-S035-top-lists | S-035 | T2 | beam | 1 | pass | 6 |
 | 2026-11-07 | 2026-11-08 | D-031-S030-insight-strip | S-030 | T2 | beam | 1 | pass | 4 |
+| 2026-11-07 | 2026-11-08 | D-028-S034-platform-split | S-034 | T2 | gemini-med | 1 | pass | 7 |
 
 ---
 
