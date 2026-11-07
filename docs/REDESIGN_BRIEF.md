@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 5 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 6 / 62 stories DONE · 1 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1166,8 +1166,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-002 | Token consolidation | P0 | DONE | 2026-11-07 | merge 232a499; verify.mjs PASS (typecheck/lint/unit/check-colors); D-03 tokens, check-colors.mjs |
 | S-003 | Theme engine (mode and accent) | P0 | DONE | 2026-11-07 | merge 96e3459; verify.mjs PASS (typecheck/lint/unit); theme.ts, contrast-check.mjs 10-theme WCAG gate, index.html blocking script |
 | S-004 | Theme picker | P0 | TODO | | |
-| S-005 | Typography, spacing and motion tokens | P0 | TODO | | |
-| S-006 | Chart theme adapter and library consolidation | P0 | TODO | | |
+| S-005 | Typography, spacing and motion tokens | P0 | DONE | 2026-11-07 | merge 7a65a5c; verify.mjs PASS (typecheck/lint/unit); >=14px body, >=12px captions, tabular-nums display-number, 16px radius, motion clamp |
+| S-006 | Chart theme adapter and library consolidation | P0 | IN_PROGRESS | 2026-11-07 |  |
 | S-007 | Shared primitives | P0 | TODO | | |
 | S-008 | Synthetic dev database and backend harness | P0 | DONE | 2026-11-07 | merge d77f311; verify.mjs --backend PASS (109 passed); scripts/make_dev_db.py, tests/test_make_dev_db.py |
 | S-009 | Orchestration harness | P0 | DONE | 2026-11-07 | merge 6ac38d3; verify PASS guardrails/typecheck/lint/unit; verify.mjs created, .gitignore updated |
@@ -1231,6 +1231,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-001 | 2026-11-07 | 2026-11-07 | S-009 | gemini CLI and opencode CLI probe | gemini CLI returns IneligibleTierError (blocked); opencode run subcommand does not exist. Both CLI command templates in models.json are wrong for this environment. | Use delegate_task via T3 MCP for all sub-agents: antigravity provider for gemini-*/claude models, opencode provider for beam/deepseek/glm/mimo/nemotron. Command templates updated accordingly. Probe method changed to delegate_task health check. |
 | DEC-002 | 2026-11-07 | 2026-11-07 | S-008 | Synthetic DB ingest method | Checkout has no ingest_order_batch | Use per-order ingest_swiggy_order and ingest_zomato_order |
 | DEC-003 | 2026-11-07 | 2026-11-07 | S-002 | Legacy tokens remapped | Old tailwind classes in use | Remap card/popover to surface, muted-bg to surface-2, input to border |
+| DEC-004 | 2026-11-07 | 2026-11-07 | S-005 | Typography adjustments | Sub-12px classes present | Bump receipt table to 14px, heat-hour to 12px, tabular numbers display-number class |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1242,6 +1243,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | ID | Date | Origin (story or discovery) | Description | Priority | Reason deferred |
 |---|---|---|---|---|---|
 | BL-001 | 2026-11-07 | 2026-11-07 | S-001 | pytest fails: httpx2 not installed (starlette.testclient import error). Pre-existing. Must fix before S-008 or any serve test. | P1 |
+| BL-002 | 2026-11-07 | 2026-11-07 | S-005 | Adopt rounded-card aliases across remaining containers | P2 |
 
 ### 8.5 Blockers and open issues
 | ID | Date | Story | Description | Needed to unblock | Status |
@@ -1256,6 +1258,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-721ed34 | n/a | n/a | n/a | n/a | n/a | pass | pass |
 | 2026-11-07 | 2026-11-07 | merge-d77f311-232a499 | pass (109 passed) | pass | pass | pass | pass (13 passed) | not_run | not_run |
 | 2026-11-07 | 2026-11-07 | merge-96e3459 | n/a | n/a | pass | pass | pass (17 passed) | not_run | not_run |
+| 2026-11-07 | 2026-11-07 | merge-7a65a5c | n/a | n/a | pass | pass | pass (30 passed) | not_run | not_run |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1265,6 +1268,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-d77f311 | S-008 |
 | 2026-11-07 | 2026-11-07 | merge-232a499 | S-002 |
 | 2026-11-07 | 2026-11-07 | merge-96e3459 | S-003 |
+| 2026-11-07 | 2026-11-07 | merge-7a65a5c | S-005 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1279,6 +1283,9 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | D-005-S008-devdb | S-008 | T8 | deepseek | 1 | pass | 6 |
 | 2026-11-07 | 2026-11-07 | D-006-S003-theme | S-003 | T3 | gemini-high | 1 | running | 0 |
 | 2026-11-07 | 2026-11-07 | D-006-S003-theme | S-003 | T3 | gemini-high | 1 | pass | 18 |
+| 2026-11-07 | 2026-11-07 | D-007-S005-typography | S-005 | T1 | glm | 1 | running | 0 |
+| 2026-11-07 | 2026-11-07 | D-008-S006-chart-adapter | S-006 | T3 | gemini-high | 1 | running | 0 |
+| 2026-11-07 | 2026-11-07 | D-007-S005-typography | S-005 | T1 | glm | 1 | pass | 5 |
 
 ---
 
