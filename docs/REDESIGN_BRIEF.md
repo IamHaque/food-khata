@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 32 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3b Orders · Last updated: 2026-11-07
+**Overall progress:** 33 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3b Orders · Last updated: 2026-11-07
 
 ---
 
@@ -1195,7 +1195,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-072 | Order side sheet | P1 | DONE | 2026-11-07 | --note |
 | S-073 | Saved views | P2 | TODO | | |
 | S-074 | Export | P1 | DONE | 2026-11-07 | --note |
-| S-075 | Columns and density | P2 | TODO | | |
+| S-075 | Columns and density | P2 | DONE | 2026-11-07 | --note |
 | S-040 | Bill waterfall | P1 | TODO | | |
 | S-041 | Discounts breakdown | P1 | TODO | | |
 | S-042 | Year-over-year | P1 | TODO | | |
@@ -1263,6 +1263,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-034 | 2026-11-07 | S-071: Order search debounces by 250ms and case-insensitively highlights matches with <mark>, pinned alongside quick filter chips for Platform, Verified, and Needs review |  |  |  |  |
 | DEC-035 | 2026-11-07 | S-072: Order side sheet slides in from right using Radix Sheet with items, full payment breakdown ladder, itemized discounts, keyboard ArrowUp/ArrowDown navigation with table row selection styling, and ?order=<id> deep linking |  |  |  |  |
 | DEC-036 | 2026-11-07 | S-074: Export feedback announces in-flight progress with role=status (aria-live=polite), success and cancellation with role=status, and failure with role=alert, preserving UTF-8 BOM, sanitization and CSV file structure |  |  |  |  |
+| DEC-037 | 2026-11-07 | S-075: Table preferences (columnVisibility, density, pageSize) persist to food-khata-table-prefs in localStorage, controls use shared SegmentedControl and Radix Popover eliminating native selects |  |  |  |  |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1320,6 +1321,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-071: Orders search and quick filters unit tests pass, typecheck pass, lint pass, 307 unit tests pass across 28 files |  |  |  |  |  |  |  |  |
 | 2026-11-07 | S-072: Order side sheet unit tests pass, typecheck pass, lint pass, 318 unit tests pass across 29 files |  |  |  |  |  |  |  |  |
 | 2026-11-07 | S-074: Orders export unit tests pass, typecheck pass, lint pass, 326 unit tests pass across 29 files |  |  |  |  |  |  |  |  |
+| 2026-11-07 | S-075: Table preferences unit tests pass, typecheck pass, lint pass, 346 unit tests pass across 30 files |  |  |  |  |  |  |  |  |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1359,6 +1361,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-071: added pinned order search with debounce and quick filters (c173c3a) |  |  |
 | 2026-11-07 | S-072: added Radix OrderSheet with arrow navigation and deep linking (c8ea0ae) |  |  |
 | 2026-11-07 | S-074: added accessible export status/alert feedback and file format preservation (f1ffd0b) |  |  |
+| 2026-11-07 | S-075: added table-prefs persistence and SegmentedControl/Popover preferences controls (604721c) |  |  |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1412,6 +1415,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | S-071 | Search and quick filters | DONE | c173c3a | gemini-med |  |  |  |
 | 2026-11-07 | S-072 | Order side sheet | DONE | c8ea0ae | gemini-med |  |  |  |
 | 2026-11-07 | S-074 | Export | DONE | f1ffd0b | gemini-med |  |  |  |
+| 2026-11-07 | S-075 | Columns and density | DONE | 604721c | gemini-med |  |  |  |
 
 ---
 
