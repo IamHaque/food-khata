@@ -257,7 +257,7 @@ export function TopRestaurantsDishesChart({
         filters.applyCrossFilter("restaurant", String(id));
       }
     };
-    const handleOver = (params: any) => {
+    const _handleOver = (params: any) => {
       const name = params?.name;
       if (name != null) {
         // emitHighlight optional; skip to avoid import complexity
