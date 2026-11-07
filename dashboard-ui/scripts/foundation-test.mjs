@@ -52,7 +52,7 @@ try{
  await page.getByRole('button',{name:'Load preset',exact:true}).click();
  assert.equal(await page.getByLabel('Search restaurant or item',{exact:true}).inputValue(),'noodles');
  await page.getByLabel('Theme',{exact:true}).selectOption('dark');
- assert.equal(await page.locator('html').getAttribute('data-v2theme'),'dark');
+ assert.ok(await page.evaluate(()=>document.documentElement.classList.contains('dark')),'dark theme');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'mobile page overflow');
  single=true;await page.reload();await page.getByText(/Account: ••••0001/).waitFor();
  assert.equal(await page.getByLabel('Account',{exact:true}).count(),0);

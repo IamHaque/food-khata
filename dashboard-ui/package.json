@@ -11,7 +11,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "generate:api": "openapi-typescript src/types/openapi.json -o src/types/api.d.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/response-schema.ts src/lib/filters.ts src/lib/ledger.ts src/hooks/api.ts"
+    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/response-schema.ts src/lib/filters.ts src/lib/ledger.ts src/lib/tokens.ts src/hooks/api.ts && node scripts/check-colors.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",

@@ -12,6 +12,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsCoreOption } from 'echarts/core';
 import { Table, TableHead, TableHeader, TableRow, TableBody, TableCell } from '../components/ui/table';
+import { tokenColor } from '../lib/tokens';
 
 echarts.use([
   BarChart,
@@ -29,59 +30,37 @@ echarts.use([
 ]);
 
 function getChartTheme() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return {
-      colors: ['#087448', '#3565b0', '#a1467c', '#986100', '#6d28d9'],
-      textColor: '#162b23',
-      mutedColor: '#4b5563',
-      borderColor: '#e5e7eb',
+      colors: [],
+      textColor: "",
+      mutedColor: "",
+      borderColor: "",
       prefersReducedMotion: false,
     };
   }
-  const css = getComputedStyle(document.documentElement);
-  const isDark =
-    document.documentElement.classList.contains('dark') ||
-    document.documentElement.getAttribute('data-v2theme') === 'dark';
+  const colors = ([
+    "--chart-1",
+    "--chart-2",
+    "--chart-3",
+    "--chart-4",
+    "--chart-5",
+    "--chart-6",
+    "--chart-7",
+    "--chart-8",
+  ] as const)
+    .map(tokenColor)
+    .filter(Boolean);
 
-  const chart1 =
-    css.getPropertyValue('--chart-1').trim() ||
-    css.getPropertyValue('--primary').trim() ||
-    css.getPropertyValue('--v2-primary').trim() ||
-    (isDark ? '#70d9a4' : '#087448');
-  const chart2 =
-    css.getPropertyValue('--chart-2').trim() ||
-    css.getPropertyValue('--v2-chart-2').trim() ||
-    (isDark ? '#60a5fa' : '#3565b0');
-  const chart3 =
-    css.getPropertyValue('--chart-3').trim() ||
-    css.getPropertyValue('--v2-chart-3').trim() ||
-    (isDark ? '#f472b6' : '#a1467c');
-  const chart4 =
-    css.getPropertyValue('--chart-4').trim() ||
-    css.getPropertyValue('--v2-chart-4').trim() ||
-    (isDark ? '#fbbf24' : '#986100');
-  const chart5 =
-    css.getPropertyValue('--chart-5').trim() ||
-    (isDark ? '#a78bfa' : '#6d28d9');
-
-  const textColor =
-    css.getPropertyValue('--foreground').trim() ||
-    css.getPropertyValue('--v2-foreground').trim() ||
-    (isDark ? '#f0fdf4' : '#162b23');
-
-  const mutedColor =
-    css.getPropertyValue('--muted-foreground').trim() ||
-    (isDark ? '#aec2b4' : '#3d5045');
-
-  const borderColor =
-    css.getPropertyValue('--border').trim() ||
-    (isDark ? '#1e382b' : '#e5e7eb');
+  const textColor = tokenColor("--foreground");
+  const mutedColor = tokenColor("--muted-foreground");
+  const borderColor = tokenColor("--border");
 
   const prefersReducedMotion =
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   return {
-    colors: [chart1, chart2, chart3, chart4, chart5],
+    colors,
     textColor,
     mutedColor,
     borderColor,
@@ -155,7 +134,7 @@ export function Chart({
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['data-v2theme', 'class'],
+      attributeFilter: ['class'],
     });
 
     return () => {

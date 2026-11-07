@@ -10,83 +10,68 @@
 @tailwind components;
 @tailwind utilities;
 @layer base {
-  :root, :root[data-v2theme="light"] {
+  /* D-03 token set (docs/REDESIGN_BRIEF.md, decision D-03).
+     UI color tokens are HSL channel triplets (usable with hsl(var(--x) / alpha));
+     chart, surface level 2 and shadow/motion tokens are literal values in hex/shadow/etc form. */
+  :root {
     --background: 150 20% 98%;
+    --surface: 0 0% 100%;
+    --surface-2: #eef3f0;
     --foreground: 158 18% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 158 18% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 158 18% 12%;
-    --border: 150 10% 80%;
-    --input: 150 10% 55%;
-    --muted-bg: #eef3f0;
-    --muted: #eef3f0;
     --muted-foreground: 143 14% 28%;
+    --border: 150 10% 80%;
     --primary: 156 90% 20%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 150 15% 95%;
-    --secondary-foreground: 158 18% 12%;
     --accent: 150 15% 95%;
-    --accent-foreground: 158 18% 12%;
-    --ring: 156 90% 20%;
-    --destructive: 0 72% 38%;
-    --destructive-foreground: 0 0% 100%;
+    --success: 156 72% 24%;
+    --warning: 38 100% 25%;
+    --danger: 0 72% 38%;
     --chart-1: #05623d;
     --chart-2: #24528c;
     --chart-3: #8a3465;
     --chart-4: #804e00;
     --chart-5: #475a50;
-    --v2-background: #f5f8f6;
-    --v2-surface: #ffffff;
-    --v2-foreground: #162b23;
-    --v2-muted: #3d5045;
-    --v2-border: #73887b;
-    --v2-primary: #05623d;
-    --v2-on-primary: #ffffff;
-    --v2-warning: #804e00;
-    --v2-ring: #05623d;
-    --v2-chart-2: #24528c;
-    --v2-chart-3: #8a3465;
-    --v2-chart-4: #804e00;
+    --chart-6: #6d28d9;
+    --chart-7: #0e7490;
+    --chart-8: #be123c;
+    --radius: 1rem;
+    --shadow-1: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-2: 0 2px 8px -2px rgb(0 0 0 / 0.08);
+    --shadow-3: 0 12px 32px -12px rgb(0 0 0 / 0.18);
+    --motion-micro: 120ms;
+    --motion-standard: 240ms;
+    --motion-chart: 600ms;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  .dark, :root[data-v2theme="dark"] {
+  .dark {
     --background: 160 15% 7%;
+    --surface: 160 13% 10%;
+    --surface-2: #1c2721;
     --foreground: 150 14% 93%;
-    --card: 160 13% 10%;
-    --card-foreground: 150 14% 93%;
-    --popover: 160 13% 10%;
-    --popover-foreground: 150 14% 93%;
-    --border: 155 9% 22%;
-    --input: 155 10% 40%;
-    --muted-bg: #1c2721;
-    --muted: #1c2721;
     --muted-foreground: 150 14% 72%;
+    --border: 155 9% 22%;
     --primary: 150 58% 65%;
     --primary-foreground: 160 20% 7%;
-    --secondary: 155 9% 16%;
-    --secondary-foreground: 150 14% 93%;
     --accent: 155 9% 16%;
-    --accent-foreground: 150 14% 93%;
-    --ring: 150 58% 65%;
-    --destructive: 0 65% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --success: 151 55% 62%;
+    --warning: 44 70% 68%;
+    --danger: 0 65% 60%;
     --chart-1: #70d9a4;
     --chart-2: #8db8ff;
     --chart-3: #ef9bcb;
     --chart-4: #e6c272;
     --chart-5: #aec2b4;
-    --v2-background: #101b16;
-    --v2-surface: #16241e;
-    --v2-foreground: #edf5ef;
-    --v2-muted: #aec2b4;
-    --v2-border: #5c7064;
-    --v2-primary: #70d9a4;
-    --v2-on-primary: #0f1c15;
-    --v2-warning: #e6c272;
-    --v2-ring: #70d9a4;
-    --v2-chart-2: #8db8ff;
-    --v2-chart-3: #ef9bcb;
-    --v2-chart-4: #e6c272;
+    --chart-6: #a78bfa;
+    --chart-7: #7dd3fc;
+    --chart-8: #fda4af;
+    --radius: 1rem;
+    --shadow-1: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-2: 0 2px 8px -2px rgb(0 0 0 / 0.35);
+    --shadow-3: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    --motion-micro: 120ms;
+    --motion-standard: 240ms;
+    --motion-chart: 600ms;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   * {
     border-color: hsl(var(--border));
@@ -111,7 +96,7 @@
   button:focus-visible,
   input:focus-visible,
   select:focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
   }
 }
