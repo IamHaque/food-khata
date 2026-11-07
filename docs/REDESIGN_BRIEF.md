@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 19 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-07
+**Overall progress:** 20 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-07
 
 ---
 
@@ -1179,7 +1179,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-015 | URL state | P0 | DONE | 2026-11-07 | merge ec2cc9b; verify.mjs PASS (typecheck/lint/unit all passed); URL roundtrip, invalid query fallback, full field coverage |
 | S-016 | Command palette and shortcuts | P1 | DONE | 2026-11-07 | merge 15a891a; verify.mjs PASS (typecheck/lint/unit 85 passed); palette, shortcuts, actions, accessibility |
 | S-020 | Cross-filter engine | P1 | DONE | 2026-11-07 | merge 5b5cd3b; verify.mjs PASS (typecheck/lint/unit 106 passed); crossfilter engine, declarative mappings, shift multi-select, undo |
-| S-021 | Linked hover | P1 | TODO | | |
+| S-021 | Linked hover | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 158 passed); linked hover bus, 120ms debounce, zero rerenders |
 | S-022 | Chart toolkit actions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); table toggle, fullscreen dialog, PNG/CSV export |
 | S-023 | Takeaway captions | P1 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 151 passed); pure caption generators, safe zero/null fallbacks |
 | S-024 | Compare mode overlay | P1 | TODO | | |
@@ -1246,6 +1246,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-016 | 2026-11-07 | 2026-11-08 | S-020 | Declarative cross-filtering engine and undo stack | Chart interaction cross-filtering | DECLARATIVE_MAPPINGS across 7 dimensions (platform, restaurant, cuisine, month, weekday, hour, meal_slot), shift-click multi-select, toggle-to-remove, and Escape undo stack |
 | DEC-017 | 2026-11-07 | 2026-11-08 | S-023 | Pure takeaway captions with zero and tie fallbacks | Chart insights | Pure functions aggregating category rows, Indian rupee formatting, null on zero/empty/tie data, Math.round percentages |
 | DEC-018 | 2026-11-07 | 2026-11-08 | S-022 | ChartCard toolkit actions with fullscreen modal and data exports | Chart actions | Table view toggle with accessible sortable columns, Radix Dialog fullscreen modal, PNG capture with theme background, CSV export with raw numbers |
+| DEC-019 | 2026-11-07 | 2026-11-08 | S-021 | Imperative linked hover highlight bus with 120ms debounce | Linked chart hover | Pub-sub bus dispatching native ECharts highlight/downplay actions directly, 120ms cancelable debounce on pointer leave, zero React re-renders |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1288,6 +1289,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-5b5cd3b | n/a | n/a | pass | pass | pass (106 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S023 | n/a | n/a | pass | pass | pass (151 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S022 | n/a | n/a | pass | pass | pass (151 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-S021 | n/a | n/a | pass | pass | pass (158 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1313,6 +1315,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-5b5cd3b | S-020 |
 | 2026-11-07 | 2026-11-08 | merge-S023 | S-023 |
 | 2026-11-07 | 2026-11-08 | merge-S022 | S-022 |
+| 2026-11-07 | 2026-11-08 | merge-S021 | S-021 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1352,6 +1355,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-020-S020-crossfilter | S-020 | T3 | gemini-high | 1 | pass | 9 |
 | 2026-11-07 | 2026-11-08 | D-023-S023-captions | S-023 | T2 | deepseek | 1 | pass | 3 |
 | 2026-11-07 | 2026-11-08 | D-022-S022-chart-actions | S-022 | T2 | beam | 1 | pass | 7 |
+| 2026-11-07 | 2026-11-08 | D-021-S021-linked-hover | S-021 | T3 | gemini-high | 1 | pass | 8 |
 
 ---
 
