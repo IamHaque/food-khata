@@ -69,7 +69,7 @@ export function FoodLeaders() {
         {/* Filter inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Minimum restaurant orders</span>
+            <span className="text-xs text-muted-foreground">Minimum restaurant orders</span>
             <input
               type="number"
               min="1"
@@ -83,7 +83,7 @@ export function FoodLeaders() {
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Restaurant grouping</span>
+            <span className="text-xs text-muted-foreground">Restaurant grouping</span>
             <select
               value={grouping}
               onChange={e => {
@@ -98,7 +98,7 @@ export function FoodLeaders() {
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Minimum dish quantity</span>
+            <span className="text-xs text-muted-foreground">Minimum dish quantity</span>
             <input
               type="number"
               min="1"
@@ -120,7 +120,7 @@ export function FoodLeaders() {
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Restaurants</h3>
                 {restaurants.data?.total != null && (
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {restaurants.data.total} {restaurants.data.total === 1 ? 'vendor' : 'vendors'}
                   </span>
                 )}
@@ -200,7 +200,7 @@ export function FoodLeaders() {
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dishes</h3>
                 {items.data?.total != null && (
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {items.data.total} {items.data.total === 1 ? 'item' : 'items'}
                   </span>
                 )}
@@ -294,7 +294,7 @@ export function FoodLeaders() {
                   Unit price history: {currentSelection.name}
                 </h2>
                 {!dishInCurrentPage && (
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
+                  <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
                     Retained from prior view
                   </span>
                 )}

@@ -69,7 +69,7 @@ export function AccountSelector() {
       </div>
 
       {isMulti && (
-        <div className="flex flex-wrap items-center gap-1 text-[11px]" aria-label="Active account filters">
+        <div className="flex flex-wrap items-center gap-1 text-xs" aria-label="Active account filters">
           {filters.account_ids.map(id => {
             const match = accounts.find(a => a.id === id);
             const label = match ? match.label : id;

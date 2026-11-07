@@ -65,6 +65,22 @@ export default {
         md: "var(--shadow-3)",
         lg: "var(--shadow-3)",
       },
+      borderRadius: {
+        DEFAULT: "var(--radius)",
+        card: "var(--radius)",
+        "card-sm": "var(--radius-sm)",
+        "card-md": "var(--radius-md)",
+        "card-lg": "var(--radius-lg)",
+        full: "var(--radius-full)",
+      },
+      transitionDuration: {
+        micro: "var(--motion-micro)",
+        standard: "var(--motion-standard)",
+        chart: "var(--motion-chart)",
+      },
+      transitionTimingFunction: {
+        custom: "var(--ease)",
+      },
     },
   },
   plugins: [],

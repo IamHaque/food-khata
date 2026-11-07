@@ -42,7 +42,7 @@ function Amount({
 
   return (
     <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <div className="relative">
         <span className="absolute left-2.5 top-2 text-xs text-muted-foreground pointer-events-none">₹</span>
         <input
@@ -93,7 +93,7 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
         >
           <span className="truncate">{label}</span>
           <span
-            className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+            className={`ml-1 text-xs px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
               selected.length > 0 ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
             }`}
           >
@@ -108,15 +108,15 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
             <button
               type="button"
               onClick={() => onChange(options.map(o => o.value))}
-              className="text-[11px] font-medium text-primary hover:underline"
+              className="text-xs font-medium text-primary hover:underline"
             >
               All
             </button>
-            <span className="text-muted-foreground text-[10px]">|</span>
+            <span className="text-muted-foreground text-xs">|</span>
             <button
               type="button"
               onClick={() => onChange([])}
-              className="text-[11px] font-medium text-muted-foreground hover:text-foreground hover:underline"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
             >
               Clear
             </button>
@@ -331,7 +331,7 @@ export function FilterBar() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Search */}
         <label className="flex flex-col gap-1 sm:col-span-2 text-xs font-medium text-foreground">
-          <span className="text-[11px] text-muted-foreground">Search restaurant or item</span>
+          <span className="text-xs text-muted-foreground">Search restaurant or item</span>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <input
@@ -351,7 +351,7 @@ export function FilterBar() {
 
         {/* Date Preset */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-          <span className="text-[11px] text-muted-foreground">Date preset</span>
+          <span className="text-xs text-muted-foreground">Date preset</span>
           <select
             aria-label="Date preset"
             value={detectPreset(filters.date_from, filters.date_to)}
@@ -385,7 +385,7 @@ export function FilterBar() {
 
         {/* From date */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-          <span className="text-[11px] text-muted-foreground">From date</span>
+          <span className="text-xs text-muted-foreground">From date</span>
           <input
             type="date"
             aria-label="From date"
@@ -397,7 +397,7 @@ export function FilterBar() {
 
         {/* To date */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-          <span className="text-[11px] text-muted-foreground">To date</span>
+          <span className="text-xs text-muted-foreground">To date</span>
           <input
             type="date"
             aria-label="To date"
@@ -421,7 +421,7 @@ export function FilterBar() {
             <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
             <span>Advanced filters</span>
             {advancedActiveCount > 0 && (
-              <Badge variant="default" className="text-[10px] h-4 px-1.5 font-bold">
+              <Badge variant="default" className="text-xs h-4 px-1.5 font-bold">
                 {advancedActiveCount} active
               </Badge>
             )}
@@ -448,7 +448,7 @@ export function FilterBar() {
 
           {/* Diet */}
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Diet</span>
+            <span className="text-xs text-muted-foreground">Diet</span>
             <select
               aria-label="Diet"
               value={filters.veg}
@@ -468,7 +468,7 @@ export function FilterBar() {
 
           {/* Day type */}
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Day type</span>
+            <span className="text-xs text-muted-foreground">Day type</span>
             <select
               aria-label="Day type"
               value={filters.day_type}
@@ -488,7 +488,7 @@ export function FilterBar() {
 
           {/* Compare */}
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-[11px] text-muted-foreground">Compare</span>
+            <span className="text-xs text-muted-foreground">Compare</span>
             <select
               aria-label="Compare"
               value={filters.compare}
@@ -532,7 +532,7 @@ export function FilterBar() {
 
         {/* Detailed Multi-selects (Platforms, Statuses, Restaurants, Cities, Localities, Cuisines, Payment methods, Meal slots) */}
         <div className="border-t pt-3 space-y-2">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Categorical Scopes (Accessible multiselect without modifier keys)
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2.5">
@@ -543,7 +543,7 @@ export function FilterBar() {
                   : (meta?.[key] ?? []).map(v => ({ value: v, label: v }));
               return (
                 <div key={key} className="flex flex-col gap-1">
-                  <span className="text-[11px] text-muted-foreground truncate">{labels[key]}</span>
+                  <span className="text-xs text-muted-foreground truncate">{labels[key]}</span>
                   <MultiSelectFilter
                     label={labels[key]}
                     options={options}
@@ -559,7 +559,7 @@ export function FilterBar() {
 
             {/* Meal slots */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] text-muted-foreground truncate">Meal slots</span>
+              <span className="text-xs text-muted-foreground truncate">Meal slots</span>
               <MultiSelectFilter
                 label="Meal slots"
                 options={['breakfast', 'lunch', 'snack', 'dinner', 'late_night'].map(v => ({

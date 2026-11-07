@@ -110,7 +110,7 @@ function Shell() {
           </div>
           <div className="brand leading-none">
             <span className="font-bold text-sm sm:text-base tracking-tight text-foreground block">Food Khata</span>
-            <span className="text-[10px] text-muted-foreground font-normal hidden sm:block mt-0.5">Your food story</span>
+            <span className="text-xs text-muted-foreground font-normal hidden sm:block mt-0.5">Your food story</span>
           </div>
         </div>
 

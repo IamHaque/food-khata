@@ -638,7 +638,7 @@ function App() {
                 <div className="font-semibold tracking-tight">
                   food khata<span className="text-emerald-600">.</span>
                 </div>
-                <div className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">
+                <div className="text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground">
                   Your food story
                 </div>
               </div>
@@ -1058,7 +1058,7 @@ function App() {
                       {Array.from({ length: 24 }, (_, h) => (
                         <span
                           key={h}
-                          className="text-center text-[9px] text-muted-foreground"
+                          className="text-center text-xs text-muted-foreground"
                         >
                           {h % 3 === 0 ? h : ""}
                         </span>
