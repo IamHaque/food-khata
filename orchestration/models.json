@@ -1,0 +1,74 @@
+{
+  "_notes": [
+    "Command templates are STARTING POINTS. S-009 must verify each one with `node scripts/orch.mjs probe` and correct it here.",
+    "Placeholders: {model} {packet} {worktree} {thinking}. The runner cd's into the worktree and passes the packet file contents as the prompt.",
+    "OpenCode models are addressed as opencode/<id>. Free Zen ids rotate; probe at the start of every phase.",
+    "Strength notes are priors from third-party reports, not guarantees. The live scorecard in orchestration/state.json overrides them."
+  ],
+  "defaults": {
+    "timeout_minutes": 25,
+    "max_parallel": 3,
+    "max_parallel_per_provider": 2,
+    "cooldown_minutes": 30,
+    "disable_after_consecutive_failures": 3,
+    "max_fix_attempts_same_model": 2,
+    "max_packet_input_tokens": 24000
+  },
+  "models": {
+    "gemini-low": {
+      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "low", "vision": true,
+      "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
+      "note": "Fast, cheap Gemini. Good for small edits, read-only exploration, summaries."
+    },
+    "gemini-med": {
+      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "medium", "vision": true,
+      "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
+      "note": "Default Gemini for review, audits and mid-complexity code."
+    },
+    "gemini-high": {
+      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "high", "vision": true,
+      "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
+      "note": "Reserve for hard cross-cutting work, escalations and phase-gate reviews."
+    },
+    "beam": {
+      "provider": "opencode", "id": "opencode/beam-free", "vision": false,
+      "cmd": "opencode run -m {id} \"$(cat {packet})\"",
+      "note": "Reported as the strongest free agentic coder. First choice for real implementation."
+    },
+    "deepseek": {
+      "provider": "opencode", "id": "opencode/deepseek-v4.1-flash-free", "vision": false,
+      "cmd": "opencode run -m {id} \"$(cat {packet})\"",
+      "note": "Solid general coder with large context. Tests, backend Python, refactors."
+    },
+    "glm": {
+      "provider": "opencode", "id": "opencode/glm-5.3-flash-free", "vision": false,
+      "cmd": "opencode run -m {id} \"$(cat {packet})\"",
+      "note": "Cheap and quick. Mechanical edits, CSS and token work, boilerplate."
+    },
+    "mimo": {
+      "provider": "opencode", "id": "opencode/mimo-v2.6-flash-free", "vision": false,
+      "cmd": "opencode run -m {id} \"$(cat {packet})\"",
+      "note": "Fast. Reported tool-call fragility (several calls batched in one block). Use for read-only or single-shot tasks, not long tool loops."
+    },
+    "nemotron-vl": {
+      "provider": "opencode", "id": "opencode/nemotron-3.5-super-vl-free", "vision": true,
+      "cmd": "opencode run -m {id} \"$(cat {packet})\"",
+      "note": "Multimodal. Screenshot review and visual checks."
+    }
+  },
+  "task_classes": {
+    "T1": { "name": "Mechanical edits (renames, tokens, CSS, config, boilerplate)", "chain": ["glm", "gemini-low", "deepseek", "gemini-med"] },
+    "T2": { "name": "Component or page implementation with unit tests", "chain": ["beam", "deepseek", "gemini-med", "gemini-high"] },
+    "T3": { "name": "Complex or cross-cutting logic (theme engine, cross-filter, URL state, virtualization, motion, chart adapter)", "chain": ["gemini-high", "beam", "gemini-med", "deepseek"] },
+    "T4": { "name": "Visual review of screenshots", "chain": ["nemotron-vl", "gemini-med", "gemini-high"], "needs_vision": true },
+    "T5": { "name": "Fix loop from failing tests, types or lint", "chain": ["deepseek", "glm", "beam", "gemini-med"] },
+    "T6": { "name": "Independent spec and Gherkin audit (must differ from the implementer)", "chain": ["gemini-med", "deepseek", "gemini-high"], "independent": true },
+    "T7": { "name": "Read-only exploration and summaries", "chain": ["mimo", "glm", "gemini-low", "deepseek"] },
+    "T8": { "name": "Backend Python (seed script, API additions, pytest)", "chain": ["deepseek", "beam", "gemini-med", "gemini-high"] },
+    "T9": { "name": "Phase-gate review (whole phase, high stakes)", "chain": ["gemini-high", "gemini-med", "beam"], "independent": true }
+  },
+  "escalation": {
+    "after_quality_failures": 2,
+    "note": "A class chain is also the escalation path: move to the next entry on infra failure, or after max_fix_attempts_same_model quality failures."
+  }
+}

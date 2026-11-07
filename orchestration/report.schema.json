@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sub-agent report",
+  "type": "object",
+  "required": ["story", "status", "files_changed", "scenarios", "notes"],
+  "properties": {
+    "story": { "type": "string", "pattern": "^S-\\d{3}$" },
+    "status": { "enum": ["done", "partial", "failed"] },
+    "files_changed": { "type": "array", "items": { "type": "string" } },
+    "tests_run": { "type": "array", "items": { "type": "object", "properties": { "cmd": { "type": "string" }, "result": { "enum": ["pass", "fail", "not_run"] } } } },
+    "scenarios": { "type": "object", "additionalProperties": { "enum": ["pass", "fail", "not_done", "na"] } },
+    "decisions": { "type": "array", "items": { "type": "string" } },
+    "deviations": { "type": "array", "items": { "type": "string" } },
+    "backlog": { "type": "array", "items": { "type": "string" } },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string", "maxLength": 600 }
+  }
+}
