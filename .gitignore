@@ -48,3 +48,5 @@ docs/parity.local.md
 *.gif
 *.bmp
 /uv.lock
+orchestration/runs/
+orchestration/state.json
