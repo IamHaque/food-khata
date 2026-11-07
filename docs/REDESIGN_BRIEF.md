@@ -1190,7 +1190,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-033 | Year calendar heatmap | P0 | DONE | 2026-11-07 | --note |
 | S-034 | Platform split | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 206 passed); donut, center total spend, platform toggle |
 | S-035 | Top restaurants and dishes | P0 | DONE | 2026-11-07 | merge; verify.mjs PASS (typecheck/lint/unit 197 passed); dual rankings, restaurant cross-filter, view all link |
-| S-070 | Orders table with virtualization | P1 | TODO | | |
+| S-070 | Orders table with virtualization | P1 | DONE | 2026-11-08 | Orders.tsx with @tanstack/react-virtual, proportional amount bar, status chips (verified/unverified/unbalanced), sticky header, skeletons, EmptyState; typecheck/lint/unit 293 passed |
 | S-071 | Search and quick filters | P1 | TODO | | |
 | S-072 | Order side sheet | P1 | TODO | | |
 | S-073 | Saved views | P2 | TODO | | |
@@ -1258,6 +1258,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-029 | 2026-11-08 | 2026-11-08 | S-024 | Compare mode overlay via second dashboard query with shifted dates | Compare mode overlay | Single dashboard endpoint returns current period and KPI percent_change; overlay time series fetched via separate dashboard query with date range shifted by duration (previous_period) or year (previous_year) and disabled when compare is 'none' |
 | DEC-030 | 2026-11-07 | GATE-P3a: Phase P3a Overview Gate Audit Passed: All 6 overview stories (S-030 to S-035) and S-024 pass verification, 279 unit tests pass across 27 files, and the above-the-fold layout requirement at 1440x900 is verified (~673px content height budget) |  |  |  |  |
 | DEC-031 | 2026-11-07 | Installed @tanstack/react-virtual (MIT licensed) on master for Phase P3b orders table virtualization per S-070 pre-approved dependencies |  |  |  |  |
+| DEC-032 | 2026-11-08 | 2026-11-08 | S-070 | Orders table virtualization with @tanstack/react-virtual and server pagination | Virtualized orders table | Use @tanstack/react-virtual (useVirtualizer) for row virtualization inside scrollable table container with top/bottom spacer rows and sticky header; paired with existing /api/orders server pagination and URL search params for scalable performance on 5,000+ orders |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |

@@ -3,7 +3,7 @@ import { CommandPalette } from './CommandPalette';
 import { DesignSystem } from './DesignSystem';
 import { AnalyticsPage } from './AnalyticsPages';
 import { Overview } from './Overview';
-import { Ledger } from './Ledger';
+import { Orders } from './Orders';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useHealth } from '../hooks/api';
 import { FilterProvider, useFilters } from './FilterContext';
@@ -298,7 +298,7 @@ function Shell() {
               <Route path="/spending" element={<AnalyticsPage page="Spending" />} />
               <Route path="/food" element={<AnalyticsPage page="Food" />} />
               <Route path="/habits" element={<AnalyticsPage page="Habits" />} />
-              <Route path="/orders" element={<Ledger />} />
+              <Route path="/orders" element={<Orders />} />
               <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
               <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
               <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
