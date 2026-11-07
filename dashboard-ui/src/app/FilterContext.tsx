@@ -3,6 +3,15 @@ import {useSearchParams,useLocation} from 'react-router-dom';
 import {useMetadata} from '../hooks/api';
 import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters,hasActiveFilters,type FilterState} from '../lib/filters';
 
+import {
+  crossFilter,
+  pushCrossFilterHistory,
+  popCrossFilterHistory,
+  clearCrossFilterHistory,
+  canUndoCrossFilter,
+  type CrossFilterDimension,
+} from '../lib/crossfilter';
+
 type Scope = {
   filters: FilterState;
   update: (patch: Partial<FilterState>, options?: { replace?: boolean }) => void;
@@ -10,6 +19,8 @@ type Scope = {
   notice: string;
   clearNotice: () => void;
   metadata: ReturnType<typeof useMetadata>;
+  applyCrossFilter: (dimension: CrossFilterDimension, value: string, isMulti?: boolean) => void;
+  undoCrossFilter: () => boolean;
 };
 const Context = createContext<Scope | null>(null);
 
@@ -61,20 +72,55 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     }
   }, [account, metadata.data, metadata.isPlaceholderData, filters, encoded, setParams]);
 
+  function applyCrossFilter(dimension: CrossFilterDimension, value: string, isMulti = false) {
+    pushCrossFilterHistory(filters);
+    const next = crossFilter(filters, dimension, value, isMulti);
+    update(next);
+  }
+
+  function undoCrossFilter(): boolean {
+    const previous = popCrossFilterHistory();
+    if (previous) {
+      update(previous);
+      return true;
+    }
+    return false;
+  }
+
+  const latestUndo = useRef(undoCrossFilter);
+  useEffect(() => {
+    latestUndo.current = undoCrossFilter;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      handleCrossFilterEscape(e, latestUndo.current, typeof document !== 'undefined' ? document : undefined);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <Context.Provider
       value={{
         filters,
         update,
-        clear: () =>
+        clear: () => {
+          clearCrossFilterHistory();
           update({
             ...defaultFilters(),
             statuses: location.pathname === '/orders' || location.pathname === '/ledger' ? [] : ['DELIVERED'],
             account_ids: filters.account_ids,
-          }),
+          });
+        },
         notice,
         clearNotice: () => setNotice(''),
         metadata,
+        applyCrossFilter,
+        undoCrossFilter,
       }}
     >
       {children}
@@ -86,5 +132,24 @@ export function useFilters() {
   if (!value) throw new Error('Missing filter provider');
   return value;
 }
+
+export function handleCrossFilterEscape(
+  e: { key: string; defaultPrevented?: boolean; preventDefault?: () => void },
+  undoFn: () => boolean,
+  documentObj: { querySelector: (selector: string) => unknown } | undefined = typeof document !== 'undefined' ? document : undefined
+): boolean {
+  if (e.key !== 'Escape') return false;
+  if (e.defaultPrevented) return false;
+  if (!canUndoCrossFilter()) return false;
+
+  const hasOpenDialog = Boolean(
+    documentObj?.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], dialog[open]')
+  );
+  if (hasOpenDialog) return false;
+
+  e.preventDefault?.();
+  return undoFn();
+}
+
 
 
