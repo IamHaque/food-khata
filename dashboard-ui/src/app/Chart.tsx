@@ -13,6 +13,13 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Table, TableHead, TableHeader, TableRow, TableBody, TableCell } from "../components/ui/table";
 import { getCurrentChartTheme, buildBaseChartOption } from "../lib/chart-theme";
+import {
+  registerChart,
+  emitHighlight,
+  emitClear,
+  extractHoverInfo,
+  type HighlightMatcher,
+} from "../lib/highlight-bus";
 import { subscribeTheme } from "./theme";
 
 // Scenario 3: Ensures ECharts core / modules / renderers are registered once, not re-registered per chart instance
@@ -37,19 +44,37 @@ function registerEChartsOnce() {
 }
 registerEChartsOnce();
 
+export interface ChartProps {
+  option: EChartsCoreOption;
+  summary: string;
+  headers: string[];
+  rows: (string | number | null)[][];
+  id?: string;
+  dimension?: string;
+  matcher?: HighlightMatcher;
+}
+
 export function Chart({
   option,
   summary,
   headers,
   rows,
-}: {
-  option: EChartsCoreOption;
-  summary: string;
-  headers: string[];
-  rows: (string | number | null)[][];
-}) {
+  id,
+  dimension,
+  matcher,
+}: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  const autoIdRef = useRef<string | null>(null);
+  if (!autoIdRef.current) {
+    autoIdRef.current = `chart-${Math.random().toString(36).slice(2, 9)}`;
+  }
+  const chartId = id || autoIdRef.current;
+
+  const propsRef = useRef({ summary, headers, dimension, matcher });
+  useEffect(() => {
+    propsRef.current = { summary, headers, dimension, matcher };
+  });
 
   // Scenario 3: Lifecycle - initialize once, observe container resize, dispose on unmount
   useEffect(() => {
@@ -63,6 +88,35 @@ export function Chart({
     }
     const chart = chartRef.current;
 
+    // Register with linked hover highlight bus
+    const unregister = registerChart(chartId, chart, (dim, val, ch) => {
+      if (propsRef.current.matcher) {
+        return propsRef.current.matcher(dim, val, ch);
+      }
+      return undefined;
+    });
+
+    const handleMouseOver = (params: unknown) => {
+      const extracted = extractHoverInfo(
+        params,
+        propsRef.current.dimension,
+        propsRef.current.headers,
+        propsRef.current.summary
+      );
+      if (extracted) {
+        emitHighlight(chartId, extracted.dimension, extracted.value);
+      }
+    };
+
+    const handleMouseOut = () => {
+      emitClear(chartId);
+    };
+
+    chart.on("mouseover", handleMouseOver);
+    chart.on("highlight", handleMouseOver);
+    chart.on("mouseout", handleMouseOut);
+    chart.on("globalout", handleMouseOut);
+
     const resizeObserver = new ResizeObserver(() => {
       if (chart && !chart.isDisposed()) {
         chart.resize();
@@ -71,13 +125,18 @@ export function Chart({
     resizeObserver.observe(node);
 
     return () => {
+      chart.off("mouseover", handleMouseOver);
+      chart.off("highlight", handleMouseOver);
+      chart.off("mouseout", handleMouseOut);
+      chart.off("globalout", handleMouseOut);
+      unregister();
       resizeObserver.disconnect();
       if (chartRef.current) {
         chartRef.current.dispose();
         chartRef.current = null;
       }
     };
-  }, []);
+  }, [chartId]);
 
   // Update chart option when option prop changes
   useEffect(() => {

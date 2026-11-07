@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "vite build && node scripts/licenses.mjs",
-    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts src/lib/filters.test.ts src/lib/crossfilter.test.ts src/lib/ledger.test.ts src/app/theme.test.ts src/app/ThemeControl.test.tsx src/app/AccountSelector.test.tsx src/app/App.test.tsx src/app/routes.test.tsx src/app/SyncStatus.test.tsx src/app/FilterBar.test.tsx src/app/CommandPalette.test.tsx src/lib/chart-theme.test.ts src/components/dashboard/ChartCard.test.tsx src/components/dashboard/KpiCard.test.tsx",
+    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts src/lib/filters.test.ts src/lib/crossfilter.test.ts src/lib/ledger.test.ts src/app/theme.test.ts src/app/ThemeControl.test.tsx src/app/AccountSelector.test.tsx src/app/App.test.tsx src/app/routes.test.tsx src/app/SyncStatus.test.tsx src/app/FilterBar.test.tsx src/app/CommandPalette.test.tsx src/lib/chart-theme.test.ts src/components/dashboard/ChartCard.test.tsx src/components/dashboard/KpiCard.test.tsx src/lib/highlight-bus.test.ts",
     "test:browser": "node scripts/browser-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
     "generate:api": "openapi-typescript src/types/openapi.json -o src/types/api.d.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/chart-theme.ts src/lib/response-schema.ts src/lib/filters.ts src/lib/crossfilter.ts src/lib/ledger.ts src/lib/tokens.ts src/hooks/api.ts && node scripts/check-colors.mjs && node scripts/contrast-check.mjs"
+    "lint": "eslint src/entry.tsx src/app src/lib/api.ts src/lib/chart-theme.ts src/lib/response-schema.ts src/lib/filters.ts src/lib/crossfilter.ts src/lib/ledger.ts src/lib/tokens.ts src/lib/highlight-bus.ts src/hooks/api.ts && node scripts/check-colors.mjs && node scripts/contrast-check.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
