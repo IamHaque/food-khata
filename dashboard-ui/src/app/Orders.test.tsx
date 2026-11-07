@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,6 +10,10 @@ import {
   OrderStatusChip,
   OrderAmountCell,
   PlatformBadge,
+  HighlightText,
+  QuickFilterChips,
+  OrderSearchInput,
+  debounceSearch,
   type Order,
 } from './Orders';
 import * as apiHooks from '../hooks/api';
@@ -23,11 +27,15 @@ vi.mock('../hooks/api', async (importOriginal) => {
   };
 });
 
+let mockCurrentFilters = defaultFilters();
+const mockUpdate = vi.fn();
+const mockClear = vi.fn();
+
 vi.mock('./FilterContext', () => ({
   useFilters: () => ({
-    filters: defaultFilters(),
-    update: vi.fn(),
-    clear: vi.fn(),
+    filters: mockCurrentFilters,
+    update: mockUpdate,
+    clear: mockClear,
     notice: '',
     clearNotice: vi.fn(),
     metadata: {
@@ -90,6 +98,7 @@ function renderOrders(url = '/orders') {
 
 describe('Orders table (S-070)', () => {
   beforeEach(() => {
+    mockCurrentFilters = defaultFilters();
     vi.clearAllMocks();
   });
 
@@ -397,6 +406,333 @@ describe('Orders table (S-070)', () => {
       expect(html).toContain('orders-scroll-container');
       expect(html).toContain('Showing');
       expect(html).toContain('5000');
+    });
+  });
+});
+
+describe('Orders search and quick filters (S-071)', () => {
+  beforeEach(() => {
+    mockCurrentFilters = defaultFilters();
+    vi.clearAllMocks();
+  });
+
+  describe('Scenario: Pinned controls', () => {
+    it('renders a search box and quick filters (Platform, Verified, Needs review) above the table', () => {
+      vi.mocked(apiHooks.useOrders).mockReturnValue({
+        data: {
+          rows: [mockOrderBase],
+          total: 1,
+          page: 1,
+          page_size: 50,
+          filtered_total_amount: 600,
+          generated_at: 'now',
+          filters_applied: defaultFilters(),
+        },
+        isPending: false,
+        isFetching: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof apiHooks.useOrders>);
+
+      const html = renderOrders();
+
+      // Pinned controls container exists and sits above the table scroll container
+      expect(html).toContain('data-testid="orders-pinned-controls"');
+      const controlsPos = html.indexOf('data-testid="orders-pinned-controls"');
+      const tablePos = html.indexOf('orders-scroll');
+      expect(controlsPos).toBeGreaterThan(-1);
+      expect(tablePos).toBeGreaterThan(-1);
+      expect(controlsPos).toBeLessThan(tablePos);
+
+      // Search input field with icon, placeholder, and accessible attributes
+      expect(html).toContain('role="searchbox"');
+      expect(html).toContain('aria-label="Search orders"');
+      expect(html).toContain('placeholder="Search orders, restaurants, items…"');
+
+      // Quick filters: Platform, Verified, Needs review
+      expect(html).toContain('Platform');
+      expect(html).toContain('Swiggy');
+      expect(html).toContain('Zomato');
+      expect(html).toContain('Verified');
+      expect(html).toContain('Needs review');
+    });
+
+    it('renders clear button on search input when value is non-empty and hides it when empty', () => {
+      const emptyHtml = renderToString(
+        <OrderSearchInput value="" onChange={vi.fn()} onClear={vi.fn()} />,
+      );
+      expect(emptyHtml).not.toContain('aria-label="Clear search"');
+
+      const filledHtml = renderToString(
+        <OrderSearchInput value="biryani" onChange={vi.fn()} onClear={vi.fn()} />,
+      );
+      expect(filledHtml).toContain('aria-label="Clear search"');
+    });
+  });
+
+  describe('Scenario: Quick filter toggling', () => {
+    it('toggles Platform quick filter chips and updates platforms in FilterContext', () => {
+      const onTogglePlatform = vi.fn();
+      const htmlInactive = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={[]}
+          verifiedOnly={false}
+          anomaly="all"
+          onTogglePlatform={onTogglePlatform}
+          onToggleVerified={vi.fn()}
+          onToggleAnomaly={vi.fn()}
+        />,
+      );
+      expect(htmlInactive).toContain('data-platform="SWIGGY"');
+      expect(htmlInactive).toContain('data-platform="ZOMATO"');
+      expect(htmlInactive).toContain('aria-pressed="false"');
+
+      const htmlActive = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={['SWIGGY']}
+          verifiedOnly={false}
+          anomaly="all"
+          onTogglePlatform={onTogglePlatform}
+          onToggleVerified={vi.fn()}
+          onToggleAnomaly={vi.fn()}
+        />,
+      );
+      expect(htmlActive).toContain('data-platform="SWIGGY"');
+      expect(htmlActive).toContain('aria-pressed="true"');
+
+      // Test platform array toggling calculation
+      const current = ['SWIGGY'];
+      const afterTogglingSwiggyOff = current.includes('SWIGGY')
+        ? current.filter(p => p !== 'SWIGGY')
+        : [...current, 'SWIGGY'];
+      expect(afterTogglingSwiggyOff).toEqual([]);
+
+      const afterTogglingZomatoOn = current.includes('ZOMATO')
+        ? current.filter(p => p !== 'ZOMATO')
+        : [...current, 'ZOMATO'];
+      expect(afterTogglingZomatoOn).toEqual(['SWIGGY', 'ZOMATO']);
+    });
+
+    it('toggles Verified quick filter chip between true and false', () => {
+      const onToggleVerified = vi.fn();
+      const htmlUnverified = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={[]}
+          verifiedOnly={false}
+          anomaly="all"
+          onTogglePlatform={vi.fn()}
+          onToggleVerified={onToggleVerified}
+          onToggleAnomaly={vi.fn()}
+        />,
+      );
+      expect(htmlUnverified).toContain('Verified');
+      expect(htmlUnverified).toContain('data-active="false"');
+      expect(htmlUnverified).toContain('aria-pressed="false"');
+
+      const htmlVerified = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={[]}
+          verifiedOnly={true}
+          anomaly="all"
+          onTogglePlatform={vi.fn()}
+          onToggleVerified={onToggleVerified}
+          onToggleAnomaly={vi.fn()}
+        />,
+      );
+      expect(htmlVerified).toContain('data-active="true"');
+      expect(htmlVerified).toContain('aria-pressed="true"');
+    });
+
+    it('toggles Needs review quick filter chip between review and all', () => {
+      const onToggleAnomaly = vi.fn();
+      const htmlAll = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={[]}
+          verifiedOnly={false}
+          anomaly="all"
+          onTogglePlatform={vi.fn()}
+          onToggleVerified={vi.fn()}
+          onToggleAnomaly={onToggleAnomaly}
+        />,
+      );
+      expect(htmlAll).toContain('Needs review');
+      expect(htmlAll).toContain('data-active="false"');
+      expect(htmlAll).toContain('aria-pressed="false"');
+
+      const htmlReview = renderToString(
+        <QuickFilterChips
+          platforms={['SWIGGY', 'ZOMATO']}
+          activePlatforms={[]}
+          verifiedOnly={false}
+          anomaly="review"
+          onTogglePlatform={vi.fn()}
+          onToggleVerified={vi.fn()}
+          onToggleAnomaly={onToggleAnomaly}
+        />,
+      );
+      expect(htmlReview).toContain('data-active="true"');
+      expect(htmlReview).toContain('aria-pressed="true"');
+    });
+  });
+
+  describe('Scenario: Search behavior (250ms debounce)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('debounces search filter updates by 250ms', () => {
+      const onSearchChange = vi.fn();
+      const { debounced } = debounceSearch(onSearchChange, 250);
+
+      // User types "dosa"
+      debounced('dosa');
+      expect(onSearchChange).not.toHaveBeenCalled();
+
+      // At 249ms, debounce has not fired
+      vi.advanceTimersByTime(249);
+      expect(onSearchChange).not.toHaveBeenCalled();
+
+      // At 250ms, update triggers
+      vi.advanceTimersByTime(1);
+      expect(onSearchChange).toHaveBeenCalledTimes(1);
+      expect(onSearchChange).toHaveBeenCalledWith('dosa');
+    });
+
+    it('resets 250ms countdown when typing continues rapidly', () => {
+      const onSearchChange = vi.fn();
+      const { debounced } = debounceSearch(onSearchChange, 250);
+
+      debounced('b');
+      vi.advanceTimersByTime(100);
+
+      debounced('bir');
+      vi.advanceTimersByTime(100);
+
+      debounced('biryani');
+      vi.advanceTimersByTime(200);
+      expect(onSearchChange).not.toHaveBeenCalled();
+
+      // 250ms after the last keystroke
+      vi.advanceTimersByTime(50);
+      expect(onSearchChange).toHaveBeenCalledTimes(1);
+      expect(onSearchChange).toHaveBeenCalledWith('biryani');
+    });
+
+    it('cancels pending debounce on cancel call', () => {
+      const onSearchChange = vi.fn();
+      const { debounced, cancel } = debounceSearch(onSearchChange, 250);
+
+      debounced('pizza');
+      vi.advanceTimersByTime(150);
+      cancel();
+
+      vi.advanceTimersByTime(200);
+      expect(onSearchChange).not.toHaveBeenCalled();
+    });
+
+    it('normalizes empty search strings to null', () => {
+      const onSearchChange = vi.fn();
+      const { debounced } = debounceSearch(onSearchChange, 250);
+
+      debounced('   ');
+      vi.advanceTimersByTime(250);
+      expect(onSearchChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('Scenario: Matched text highlight', () => {
+    it('HighlightText wraps matching text in <mark> with accessible styling', () => {
+      const html = renderToString(
+        <HighlightText text="Biryani Express" query="biryani" />,
+      );
+      expect(html).toContain(
+        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark> Express',
+      );
+    });
+
+    it('HighlightText highlights matching substrings case-insensitively while preserving original text case', () => {
+      const html = renderToString(
+        <HighlightText text="2x Chicken Biryani, 1x Raita" query="CHICKEN" />,
+      );
+      expect(html).toContain(
+        '2x <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Chicken</mark> Biryani, 1x Raita',
+      );
+    });
+
+    it('HighlightText safely handles regex metacharacters in query', () => {
+      const html = renderToString(
+        <HighlightText text="Meal (Special + Extra)" query="(special +" />,
+      );
+      expect(html).toContain(
+        'Meal <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">(Special +</mark> Extra)',
+      );
+    });
+
+    it('HighlightText returns plain text when query is empty, whitespace, or null', () => {
+      expect(renderToString(<HighlightText text="Pizza Corner" query="" />)).toBe('Pizza Corner');
+      expect(renderToString(<HighlightText text="Pizza Corner" query="   " />)).toBe('Pizza Corner');
+      expect(renderToString(<HighlightText text="Pizza Corner" query={null} />)).toBe('Pizza Corner');
+      expect(renderToString(<HighlightText text="Pizza Corner" query={undefined} />)).toBe('Pizza Corner');
+      expect(renderToString(<HighlightText text={null} query="pizza" />)).toBe('');
+    });
+
+    it('highlights matching text in restaurant name and items summary in Orders table rows when search is active', () => {
+      mockCurrentFilters = {
+        ...defaultFilters(),
+        search: 'biryani',
+      };
+
+      const orderWithMatches: Order = {
+        ...mockOrderBase,
+        id: 'ord-highlight-1',
+        restaurant_name: 'Biryani Express',
+        items_summary: '2x Chicken Biryani, 1x Raita',
+        final_amount_paid: 600,
+      };
+
+      vi.mocked(apiHooks.useOrders).mockReturnValue({
+        data: {
+          rows: [orderWithMatches],
+          total: 1,
+          page: 1,
+          page_size: 50,
+          filtered_total_amount: 600,
+          generated_at: 'now',
+          filters_applied: mockCurrentFilters,
+        },
+        isPending: false,
+        isFetching: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof apiHooks.useOrders>);
+
+      const html = renderOrders('/orders?search=biryani');
+
+      // Expect <mark> with the exact accessible styling to appear in matching rows
+      expect(html).toContain(
+        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark>',
+      );
+
+      // Verify it appears in restaurant column
+      expect(html).toContain(
+        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark> Express',
+      );
+
+      // Verify it appears in items column
+      expect(html).toContain(
+        '2x Chicken <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark>, 1x Raita',
+      );
     });
   });
 });

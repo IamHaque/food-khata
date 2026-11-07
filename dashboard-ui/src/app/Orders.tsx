@@ -38,6 +38,8 @@ import {
   ArrowDown,
   ArrowUpDown,
   Receipt,
+  Search,
+  X,
 } from 'lucide-react';
 
 export type Order = components['schemas']['Order'];
@@ -178,6 +180,233 @@ export function PlatformBadge({ platform }: { platform: string }) {
   );
 }
 
+export function HighlightText({
+  text,
+  query,
+}: {
+  text: string | null | undefined;
+  query?: string | null;
+}) {
+  if (!text) return null;
+  const q = query?.trim();
+  if (!q) return <>{text}</>;
+
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  const parts = text.split(regex);
+
+  if (parts.length === 1) return <>{text}</>;
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === q.toLowerCase() ? (
+          <mark
+            key={i}
+            className="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+export function debounceSearch(
+  fn: (search: string | null) => void,
+  delayMs = 250,
+) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const debounced = (query: string) => {
+    if (timer) clearTimeout(timer);
+    const trimmed = query.trim();
+    const nextSearch = trimmed || null;
+    timer = setTimeout(() => {
+      fn(nextSearch);
+    }, delayMs);
+  };
+  const cancel = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return { debounced, cancel };
+}
+
+export function useDebouncedSearch(
+  filterSearch: string | null | undefined,
+  onSearchChange: (search: string | null) => void,
+  delayMs = 250,
+) {
+  const [searchQuery, setSearchQuery] = useState(filterSearch ?? '');
+  const lastSyncedSearch = useRef(filterSearch);
+
+  useEffect(() => {
+    if (filterSearch !== lastSyncedSearch.current) {
+      lastSyncedSearch.current = filterSearch;
+      setSearchQuery(filterSearch ?? '');
+    }
+  }, [filterSearch]);
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    const nextSearch = trimmed || null;
+
+    if (nextSearch === (filterSearch ?? null)) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      lastSyncedSearch.current = nextSearch;
+      onSearchChange(nextSearch);
+    }, delayMs);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, filterSearch, onSearchChange, delayMs]);
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    lastSyncedSearch.current = null;
+    onSearchChange(null);
+  };
+
+  return {
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
+  };
+}
+
+export function OrderSearchInput({
+  value,
+  onChange,
+  onClear,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="relative flex-1 min-w-[240px] max-w-sm">
+      <label htmlFor="orders-search" className="sr-only">
+        Search orders
+      </label>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <input
+        id="orders-search"
+        type="text"
+        role="searchbox"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Escape' && value) {
+            e.stopPropagation();
+            onClear();
+          }
+        }}
+        placeholder="Search orders, restaurants, items…"
+        aria-label="Search orders"
+        className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function QuickFilterChips({
+  platforms = ['SWIGGY', 'ZOMATO'],
+  activePlatforms = [],
+  verifiedOnly = false,
+  anomaly = 'all',
+  onTogglePlatform,
+  onToggleVerified,
+  onToggleAnomaly,
+}: {
+  platforms?: string[];
+  activePlatforms?: string[];
+  verifiedOnly?: boolean;
+  anomaly?: string;
+  onTogglePlatform: (platform: string) => void;
+  onToggleVerified: () => void;
+  onToggleAnomaly: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Quick filters">
+      <span className="text-xs font-medium text-muted-foreground mr-1">Platform</span>
+      {platforms.map(platform => {
+        const isActive = activePlatforms.includes(platform);
+        const label =
+          platform.toUpperCase() === 'SWIGGY'
+            ? 'Swiggy'
+            : platform.toUpperCase() === 'ZOMATO'
+            ? 'Zomato'
+            : platform;
+        return (
+          <button
+            key={platform}
+            type="button"
+            aria-pressed={isActive}
+            data-active={isActive}
+            data-platform={platform}
+            onClick={() => onTogglePlatform(platform)}
+            className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+              isActive
+                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                : 'border-input bg-background hover:bg-accent text-foreground'
+            }`}
+          >
+            <span>{label}</span>
+          </button>
+        );
+      })}
+
+      <button
+        type="button"
+        aria-pressed={verifiedOnly}
+        data-active={verifiedOnly}
+        onClick={onToggleVerified}
+        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+          verifiedOnly
+            ? 'bg-emerald-600 text-white border-emerald-700 dark:bg-emerald-700 dark:border-emerald-800 font-semibold'
+            : 'border-input bg-background hover:bg-accent text-foreground'
+        }`}
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        <span>Verified</span>
+      </button>
+
+      <button
+        type="button"
+        aria-pressed={anomaly === 'review'}
+        data-active={anomaly === 'review'}
+        onClick={onToggleAnomaly}
+        title="Review unverified or unbalanced bills"
+        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+          anomaly === 'review'
+            ? 'bg-amber-600 text-white border-amber-700 dark:bg-amber-700 dark:border-amber-800 font-semibold'
+            : 'border-input bg-background hover:bg-accent text-foreground'
+        }`}
+      >
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>Needs review</span>
+      </button>
+    </div>
+  );
+}
+
 export const sortKeys = ['date', 'restaurant', 'platform', 'status', 'discount', 'fees', 'amount'];
 
 interface ExportStatus {
@@ -186,8 +415,22 @@ interface ExportStatus {
 }
 
 export function Orders() {
-  const { filters, update, clear } = useFilters();
+  const { filters, update, clear, metadata } = useFilters();
   const [params, setParams] = useSearchParams();
+
+  const { searchQuery, setSearchQuery, clearSearch } = useDebouncedSearch(
+    filters.search,
+    search => update({ search }),
+    250,
+  );
+
+  const availablePlatforms = useMemo(() => {
+    const list = metadata?.data?.platforms;
+    if (list && list.length > 0) return list;
+    return ['SWIGGY', 'ZOMATO'];
+  }, [metadata?.data?.platforms]);
+
+  const activeSearch = (filters.search || searchQuery || '').trim();
 
   useEffect(() => {
     if (!params.has('statuses')) update({ statuses: [] });
@@ -301,7 +544,10 @@ export function Orders() {
             className="truncate-cell font-medium text-xs max-w-[200px] truncate block"
             title={info.row.original.restaurant_name ?? 'Unknown'}
           >
-            {info.row.original.restaurant_name ?? 'Unknown'}
+            <HighlightText
+              text={info.row.original.restaurant_name ?? 'Unknown'}
+              query={activeSearch}
+            />
           </span>
         ),
       },
@@ -314,7 +560,10 @@ export function Orders() {
             className="truncate-cell text-xs text-muted-foreground max-w-[220px] truncate block"
             title={info.row.original.items_summary ?? 'No items'}
           >
-            {info.row.original.items_summary ?? 'No items'}
+            <HighlightText
+              text={info.row.original.items_summary ?? 'No items'}
+              query={activeSearch}
+            />
           </span>
         ),
       },
@@ -372,7 +621,7 @@ export function Orders() {
         ),
       },
     ],
-    [filters.account_ids.length, maxAmount, sort, direction],
+    [filters.account_ids.length, maxAmount, sort, direction, activeSearch],
   );
 
   const table = useReactTable({
@@ -452,21 +701,38 @@ export function Orders() {
         </div>
       </div>
 
+      {/* Pinned controls: Search box and quick filters */}
+      <div
+        className="orders-pinned-controls flex flex-wrap items-center justify-between gap-3"
+        data-testid="orders-pinned-controls"
+      >
+        <div className="flex flex-1 flex-wrap items-center gap-3 min-w-[280px]">
+          <OrderSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onClear={clearSearch}
+          />
+          <QuickFilterChips
+            platforms={availablePlatforms}
+            activePlatforms={filters.platforms}
+            verifiedOnly={filters.verified_only}
+            anomaly={filters.anomaly}
+            onTogglePlatform={platform => {
+              const current = filters.platforms;
+              const next = current.includes(platform)
+                ? current.filter(p => p !== platform)
+                : [...current, platform];
+              update({ platforms: next });
+            }}
+            onToggleVerified={() => update({ verified_only: !filters.verified_only })}
+            onToggleAnomaly={() => update({ anomaly: filters.anomaly === 'review' ? 'all' : 'review' })}
+          />
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="orders-tools flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            aria-pressed={filters.anomaly === 'review'}
-            onClick={() => update({ anomaly: filters.anomaly === 'review' ? 'all' : 'review' })}
-            className={`min-h-[44px] rounded-md px-3 py-2 text-xs font-semibold shadow-xs transition-colors border ${
-              filters.anomaly === 'review'
-                ? 'bg-amber-500 text-white border-amber-600'
-                : 'border-input bg-background hover:bg-accent text-foreground'
-            }`}
-          >
-            Review unverified or unbalanced bills
-          </button>
 
           <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
             <span className="text-muted-foreground">Rows per page</span>
