@@ -22,6 +22,8 @@ import { EmptyState } from '../components/dashboard/EmptyState';
 import { useOrders } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { exportLedger } from '../lib/ledger';
+import type { OrdersParams } from '../lib/api';
+export { exportLedger } from '../lib/ledger';
 import { OrderModal } from './OrderModal';
 import type { components } from '../types/api';
 import {
@@ -409,12 +411,125 @@ export function QuickFilterChips({
 
 export const sortKeys = ['date', 'restaurant', 'platform', 'status', 'discount', 'fees', 'amount'];
 
-interface ExportStatus {
+export interface ExportStatus {
   type: 'success' | 'cancelled' | 'error';
   message: string;
 }
 
-export function Orders() {
+export function ExportFeedback({
+  exporting,
+  exportStatus,
+}: {
+  exporting: boolean;
+  exportStatus: ExportStatus | null;
+}) {
+  if (exporting) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        data-testid="export-progress"
+        className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2"
+      >
+        <div
+          className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
+          aria-hidden="true"
+        />
+        <span>Exporting orders...</span>
+      </div>
+    );
+  }
+
+  if (!exportStatus) {
+    return null;
+  }
+
+  return (
+    <div
+      role={exportStatus.type === 'error' ? 'alert' : 'status'}
+      aria-live={exportStatus.type === 'error' ? 'assertive' : 'polite'}
+      data-testid="export-feedback"
+      className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
+        exportStatus.type === 'success'
+          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+          : exportStatus.type === 'cancelled'
+          ? 'bg-muted border-border text-muted-foreground'
+          : 'bg-destructive/10 border-destructive/20 text-destructive'
+      }`}
+    >
+      {exportStatus.type === 'success' ? (
+        <CheckCircle2 className="h-4 w-4 shrink-0" />
+      ) : exportStatus.type === 'cancelled' ? (
+        <XCircle className="h-4 w-4 shrink-0" />
+      ) : (
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+      )}
+      <span>{exportStatus.message}</span>
+    </div>
+  );
+}
+
+export async function executeExport({
+  request,
+  signal,
+  totalCount,
+  setExporting,
+  setExportStatus,
+  createBlobUrl = (csv: string) =>
+    URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })),
+  triggerDownload = (url: string) => {
+    if (typeof document !== 'undefined') {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'food-khata-orders.csv';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  },
+}: {
+  request: OrdersParams;
+  signal: AbortSignal;
+  totalCount?: number;
+  setExporting?: (exporting: boolean) => void;
+  setExportStatus?: (status: ExportStatus | null) => void;
+  createBlobUrl?: (csv: string) => string;
+  triggerDownload?: (url: string) => void;
+}): Promise<{ ok: boolean; status: ExportStatus; csv?: string }> {
+  setExporting?.(true);
+  setExportStatus?.(null);
+  try {
+    const csv = await exportLedger(request, signal);
+    const url = createBlobUrl(csv);
+    triggerDownload(url);
+    const countDisplay = totalCount != null ? `${totalCount}` : 'matching';
+    const status: ExportStatus = {
+      type: 'success',
+      message: `CSV exported successfully (${countDisplay} orders).`,
+    };
+    setExportStatus?.(status);
+    return { ok: true, status, csv };
+  } catch (error) {
+    const isAbort =
+      (error instanceof Error && error.name === 'AbortError') || signal.aborted;
+    const status: ExportStatus = isAbort
+      ? { type: 'cancelled', message: 'Export was cancelled.' }
+      : { type: 'error', message: 'Could not export orders. Please retry.' };
+    setExportStatus?.(status);
+    return { ok: false, status };
+  } finally {
+    setExporting?.(false);
+  }
+}
+
+export interface OrdersProps {
+  initialExporting?: boolean;
+  initialExportStatus?: ExportStatus | null;
+}
+
+export function Orders({
+  initialExporting = false,
+  initialExportStatus = null,
+}: OrdersProps = {}) {
   const { filters, update, clear, metadata } = useFilters();
   const [params, setParams] = useSearchParams();
 
@@ -459,8 +574,8 @@ export function Orders() {
   const query = useOrders(request);
   const [visibility, setVisibility] = useState<VisibilityState>({});
   const [compact, setCompact] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportStatus, setExportStatus] = useState<ExportStatus | null>(null);
+  const [exporting, setExporting] = useState(initialExporting);
+  const [exportStatus, setExportStatus] = useState<ExportStatus | null>(initialExportStatus);
   const abort = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -654,35 +769,13 @@ export function Orders() {
   async function download() {
     const controller = new AbortController();
     abort.current = controller;
-    setExporting(true);
-    setExportStatus(null);
-    try {
-      const csv = await exportLedger(request, controller.signal);
-      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'food-khata-orders.csv';
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setExportStatus({
-        type: 'success',
-        message: `CSV exported successfully (${query.data?.total ?? 'matching'} orders).`,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        setExportStatus({
-          type: 'cancelled',
-          message: 'Export was cancelled.',
-        });
-      } else {
-        setExportStatus({
-          type: 'error',
-          message: 'Could not export orders. Please retry.',
-        });
-      }
-    } finally {
-      setExporting(false);
-    }
+    await executeExport({
+      request,
+      signal: controller.signal,
+      totalCount: query.data?.total,
+      setExporting,
+      setExportStatus,
+    });
   }
 
   const total = query.data?.total ?? 0;
@@ -810,27 +903,7 @@ export function Orders() {
       </div>
 
       {/* Distinct Export Feedback */}
-      {exportStatus && (
-        <div
-          role={exportStatus.type === 'error' ? 'alert' : 'status'}
-          className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
-            exportStatus.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-              : exportStatus.type === 'cancelled'
-              ? 'bg-muted border-border text-muted-foreground'
-              : 'bg-destructive/10 border-destructive/20 text-destructive'
-          }`}
-        >
-          {exportStatus.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          ) : exportStatus.type === 'cancelled' ? (
-            <XCircle className="h-4 w-4 shrink-0" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-          )}
-          <span>{exportStatus.message}</span>
-        </div>
-      )}
+      <ExportFeedback exporting={exporting} exportStatus={exportStatus} />
 
       {/* Refresh error banner when retaining prior rows */}
       {query.isError && query.data && (
