@@ -7,6 +7,7 @@ import {
   flexRender,
   type ColumnDef,
   type VisibilityState,
+  type OnChangeFn,
 } from '@tanstack/react-table';
 import {
   Table,
@@ -19,6 +20,13 @@ import {
 import { Skeleton } from '../components/ui/skeleton';
 import { Chip } from '../components/ui/chip';
 import { EmptyState } from '../components/dashboard/EmptyState';
+import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { SegmentedControl, type SegmentedControlOption } from '../components/ui/segmented-control';
+import {
+  loadTablePrefs,
+  saveTablePrefs,
+  type TableDensity,
+} from '../lib/table-prefs';
 import { useOrders } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { exportLedger } from '../lib/ledger';
@@ -521,17 +529,43 @@ export async function executeExport({
   }
 }
 
+export const DENSITY_OPTIONS: SegmentedControlOption[] = [
+  { value: 'comfortable', label: 'Comfortable' },
+  { value: 'compact', label: 'Compact' },
+];
+
+export const PAGE_SIZE_OPTIONS: SegmentedControlOption[] = [
+  { value: '25', label: '25' },
+  { value: '50', label: '50' },
+  { value: '100', label: '100' },
+  { value: '200', label: '200' },
+];
+
 export interface OrdersProps {
   initialExporting?: boolean;
   initialExportStatus?: ExportStatus | null;
+  initialColumnsOpen?: boolean;
 }
 
 export function Orders({
   initialExporting = false,
   initialExportStatus = null,
+  initialColumnsOpen = false,
 }: OrdersProps = {}) {
   const { filters, update, clear, metadata } = useFilters();
   const [params, setParams] = useSearchParams();
+
+  const [initialPrefs] = useState(() => loadTablePrefs());
+  const [density, setDensity] = useState<TableDensity>(initialPrefs.density);
+  const compact = density === 'compact';
+  const [visibility, setVisibility] = useState<VisibilityState>(initialPrefs.columnVisibility);
+  const [columnsOpen, setColumnsOpen] = useState(initialColumnsOpen);
+
+  useEffect(() => {
+    const prefs = loadTablePrefs();
+    setDensity(prefs.density);
+    setVisibility(prefs.columnVisibility);
+  }, []);
 
   const { searchQuery, setSearchQuery, clearSearch } = useDebouncedSearch(
     filters.search,
@@ -553,7 +587,8 @@ export function Orders({
 
   const rawPage = Number(params.get('page') ?? 1);
   const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
-  const requestedSize = Number(params.get('page_size') ?? 50);
+  const paramSize = params.get('page_size');
+  const requestedSize = paramSize !== null ? Number(paramSize) : initialPrefs.pageSize;
   const pageSize = [25, 50, 100, 200].includes(requestedSize) ? requestedSize : 50;
   const requestedSort = params.get('sort') ?? 'date';
   const sort = sortKeys.includes(requestedSort) ? requestedSort : 'date';
@@ -572,8 +607,6 @@ export function Orders({
   );
 
   const query = useOrders(request);
-  const [visibility, setVisibility] = useState<VisibilityState>({});
-  const [compact, setCompact] = useState(false);
   const [exporting, setExporting] = useState(initialExporting);
   const [exportStatus, setExportStatus] = useState<ExportStatus | null>(initialExportStatus);
   const abort = useRef<AbortController | null>(null);
@@ -586,6 +619,26 @@ export function Orders({
     const next = new URLSearchParams(params);
     for (const [k, v] of Object.entries(patch)) next.set(k, v);
     setParams(next);
+  };
+
+  const handlePageSizeChange = (val: string) => {
+    const nextSize = Number(val);
+    change({ page_size: val, page: '1' });
+    saveTablePrefs({ pageSize: nextSize });
+  };
+
+  const handleDensityChange = (val: string) => {
+    const nextDensity = val === 'compact' ? 'compact' : 'comfortable';
+    setDensity(nextDensity);
+    saveTablePrefs({ density: nextDensity });
+  };
+
+  const handleVisibilityChange: OnChangeFn<VisibilityState> = updaterOrValue => {
+    setVisibility(old => {
+      const next = typeof updaterOrValue === 'function' ? updaterOrValue(old) : updaterOrValue;
+      saveTablePrefs({ columnVisibility: next });
+      return next;
+    });
   };
 
   const open = (id: string) => {
@@ -747,7 +800,7 @@ export function Orders({
     manualSorting: true,
     rowCount: query.data?.total ?? 0,
     state: { columnVisibility: visibility, pagination: { pageIndex: page - 1, pageSize } },
-    onColumnVisibilityChange: setVisibility,
+    onColumnVisibilityChange: handleVisibilityChange,
   });
 
   const rowVirtualizer = useVirtualizer({
@@ -825,43 +878,39 @@ export function Orders({
 
       {/* Toolbar */}
       <div className="orders-tools flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-
-          <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
             <span className="text-muted-foreground">Rows per page</span>
-            <select
+            <SegmentedControl
               aria-label="Rows per page"
-              value={pageSize}
-              onChange={e => change({ page_size: e.target.value, page: '1' })}
-              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
-            >
-              {[25, 50, 100, 200].map(n => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={PAGE_SIZE_OPTIONS}
+              value={String(pageSize)}
+              onChange={handlePageSizeChange}
+            />
+          </div>
 
-          <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
             <span className="text-muted-foreground">Density</span>
-            <select
+            <SegmentedControl
               aria-label="Density"
-              value={compact ? 'compact' : 'comfortable'}
-              onChange={e => setCompact(e.target.value === 'compact')}
-              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
-            >
-              <option value="comfortable">comfortable</option>
-              <option value="compact">compact</option>
-            </select>
-          </label>
+              options={DENSITY_OPTIONS}
+              value={density}
+              onChange={handleDensityChange}
+            />
+          </div>
 
-          <details className="relative">
-            <summary className="cursor-pointer min-h-[44px] rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-xs hover:bg-accent text-foreground list-none flex items-center gap-1">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Columns</span>
-            </summary>
-            <div className="absolute left-0 top-12 z-30 w-44 rounded-md border bg-popover p-2 shadow-lg space-y-1">
+          <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Columns"
+                className="cursor-pointer min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Columns</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-44 p-2 space-y-1">
               {table.getAllLeafColumns().map(column => (
                 <label
                   className="check flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer hover:bg-accent px-1.5 py-1 rounded"
@@ -876,8 +925,8 @@ export function Orders({
                   <span className="capitalize">{column.id}</span>
                 </label>
               ))}
-            </div>
-          </details>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="flex items-center gap-2">

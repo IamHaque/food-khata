@@ -22,6 +22,43 @@ import {
 } from './Orders';
 import * as apiHooks from '../hooks/api';
 import * as apiModule from '../lib/api';
+import {
+  TABLE_PREFS_KEY,
+  loadTablePrefs,
+  saveTablePrefs,
+  DEFAULT_TABLE_PREFS,
+} from '../lib/table-prefs';
+
+vi.mock('@radix-ui/react-popover', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
+
+let mockStorage: Record<string, string> = {};
+
+beforeEach(() => {
+  mockStorage = {};
+  const ls = {
+    getItem: vi.fn((k: string) => (k in mockStorage ? mockStorage[k] : null)),
+    setItem: vi.fn((k: string, v: string) => {
+      mockStorage[k] = String(v);
+    }),
+    removeItem: vi.fn((k: string) => {
+      delete mockStorage[k];
+    }),
+    clear: vi.fn(() => {
+      mockStorage = {};
+    }),
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: ls,
+    writable: true,
+    configurable: true,
+  });
+});
 
 vi.mock('../lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof apiModule>();
@@ -1084,6 +1121,141 @@ describe('Orders search and quick filters (S-071)', () => {
         expect(result.status.message).toBe('Could not export orders. Please retry.');
         expect(progressUpdates).toEqual([true, false]);
         expect(statusUpdates[statusUpdates.length - 1]?.type).toBe('error');
+      });
+    });
+  });
+
+  describe('S-075 - Table preferences (Columns, density, page size)', () => {
+    beforeEach(() => {
+      mockStorage = {};
+      mockCurrentFilters = defaultFilters();
+      vi.clearAllMocks();
+
+      vi.mocked(apiHooks.useOrders).mockReturnValue({
+        data: {
+          rows: [mockOrderBase],
+          total: 1,
+          page: 1,
+          page_size: 50,
+          filtered_total_amount: 600,
+          generated_at: '2025-06-16T20:00:00',
+          filters_applied: mockCurrentFilters,
+        },
+        isPending: false,
+        isFetching: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof apiHooks.useOrders>);
+    });
+
+    describe('Scenario: Controls', () => {
+      it('eliminates all native select elements for density and page size', () => {
+        const html = renderOrders();
+        expect(html).not.toContain('<select');
+        expect(html).not.toContain('<details');
+      });
+
+      it('renders SegmentedControl for Rows per page with 25, 50, 100, 200 options', () => {
+        const html = renderOrders();
+        expect(html).toContain('aria-label="Rows per page"');
+        expect(html).toContain('role="radiogroup"');
+        expect(html).toContain('>25</button>');
+        expect(html).toContain('>50</button>');
+        expect(html).toContain('>100</button>');
+        expect(html).toContain('>200</button>');
+
+        // Default page size 50 is checked
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>50<\/button>/);
+      });
+
+      it('switches page size selection based on URL parameter', () => {
+        const html = renderOrders('/orders?page=1&page_size=100');
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>100<\/button>/);
+        expect(html).toMatch(/<button[^>]*aria-checked="false"[^>]*>50<\/button>/);
+      });
+
+      it('renders SegmentedControl for Density with Comfortable and Compact options', () => {
+        const html = renderOrders();
+        expect(html).toContain('aria-label="Density"');
+        expect(html).toContain('>Comfortable</button>');
+        expect(html).toContain('>Compact</button>');
+
+        // Default comfortable is checked
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>Comfortable<\/button>/);
+      });
+
+      it('renders Radix Popover trigger and content with column visibility checkboxes', () => {
+        const html = renderOrders('/orders', { initialColumnsOpen: true });
+        expect(html).toContain('aria-label="Columns"');
+        expect(html).toContain('Columns');
+        expect(html).not.toContain('<details');
+
+        // Column checkboxes rendered in Popover content
+        expect(html).toContain('type="checkbox"');
+        expect(html).toContain('date</span>');
+        expect(html).toContain('platform</span>');
+        expect(html).toContain('restaurant</span>');
+      });
+    });
+
+    describe('Scenario: Persist', () => {
+      it('persists table preferences to food-khata-table-prefs in localStorage', () => {
+        saveTablePrefs({
+          density: 'compact',
+          pageSize: 25,
+          columnVisibility: { items_summary: false },
+        });
+
+        expect(mockStorage[TABLE_PREFS_KEY]).toBeDefined();
+        const stored = JSON.parse(mockStorage[TABLE_PREFS_KEY]);
+        expect(stored.density).toBe('compact');
+        expect(stored.pageSize).toBe(25);
+        expect(stored.columnVisibility).toEqual({ items_summary: false });
+      });
+
+      it('merges partial preference changes without overwriting other preferences', () => {
+        saveTablePrefs({ density: 'compact', pageSize: 100 });
+        saveTablePrefs({ density: 'comfortable' });
+
+        const stored = JSON.parse(mockStorage[TABLE_PREFS_KEY]);
+        expect(stored.density).toBe('comfortable');
+        expect(stored.pageSize).toBe(100);
+      });
+
+      it('loads saved preferences from localStorage on mount and applies them', () => {
+        mockStorage[TABLE_PREFS_KEY] = JSON.stringify({
+          density: 'compact',
+          pageSize: 100,
+          columnVisibility: { date: false },
+        });
+
+        const html = renderOrders('/orders');
+        expect(apiHooks.useOrders).toHaveBeenCalledWith(
+          expect.objectContaining({
+            page_size: 100,
+          }),
+        );
+
+        // Compact is checked
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>Compact<\/button>/);
+        // Row is rendered with compact height
+        expect(html).toContain('compact');
+      });
+
+      it('safely handles corrupt localStorage JSON without crashing and falls back to defaults', () => {
+        mockStorage[TABLE_PREFS_KEY] = '{{invalid-json--';
+
+        expect(() => renderOrders('/orders')).not.toThrow();
+        const html = renderOrders('/orders');
+
+        expect(apiHooks.useOrders).toHaveBeenCalledWith(
+          expect.objectContaining({
+            page_size: 50,
+          }),
+        );
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>50<\/button>/);
+        expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>Comfortable<\/button>/);
       });
     });
   });

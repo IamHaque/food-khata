@@ -8,14 +8,21 @@ export interface SegmentedControlOption {
   icon?: React.ReactNode;
 }
 
-export interface SegmentedControlProps {
+export interface SegmentedControlProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   options: SegmentedControlOption[];
   value: string;
   onChange: (value: string) => void;
   className?: string;
 }
 
-function SegmentedControl({ options, value, onChange, className }: SegmentedControlProps) {
+function SegmentedControl({
+  options,
+  value,
+  onChange,
+  className,
+  ...props
+}: SegmentedControlProps) {
   return (
     <div
       role="radiogroup"
@@ -23,6 +30,7 @@ function SegmentedControl({ options, value, onChange, className }: SegmentedCont
         "inline-flex items-center rounded-md border bg-muted p-1 gap-1",
         className,
       )}
+      {...props}
     >
       {options.map((opt) => {
         const selected = opt.value === value;
