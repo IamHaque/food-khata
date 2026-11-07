@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 21 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P2 Interaction · Last updated: 2026-11-07
+**Overall progress:** 21 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3a Overview · Last updated: 2026-11-08
 
 ---
 
@@ -1248,6 +1248,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-018 | 2026-11-07 | 2026-11-08 | S-022 | ChartCard toolkit actions with fullscreen modal and data exports | Chart actions | Table view toggle with accessible sortable columns, Radix Dialog fullscreen modal, PNG capture with theme background, CSV export with raw numbers |
 | DEC-019 | 2026-11-07 | 2026-11-08 | S-021 | Imperative linked hover highlight bus with 120ms debounce | Linked chart hover | Pub-sub bus dispatching native ECharts highlight/downplay actions directly, 120ms cancelable debounce on pointer leave, zero React re-renders |
 | DEC-020 | 2026-11-07 | 2026-11-08 | S-025 | Motion tokens, useCountUp hook, and strict reduced-motion | Animation and motion | Composite-only transitions (transform/opacity), 600ms count-up with tabular nums, 240ms page slide, 40ms card stagger up to 12 cards, 2px card lift, button compress, reduced-motion bypass |
+| DEC-021 | 2026-11-07 | 2026-11-08 | GATE-P2 | Phase P2 Interaction Gate Audit Passed | Phase Gate P2 | Independent audit by gemini-med verified all 5 criteria: cross-filter engine across 7 dimensions with multi-select and Escape undo, linked hover pub-sub bus with zero React re-renders and 120ms debounce, ChartCard toolkit with sortable table and fullscreen modal, pure takeaway captions with Indian rupee formatting, composite-only motion system with 600ms count-up and strict reduced-motion bypass |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1292,6 +1293,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S022 | n/a | n/a | pass | pass | pass (151 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S021 | n/a | n/a | pass | pass | pass (158 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-S025 | n/a | n/a | pass | pass | pass (174 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | P2-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (189 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1319,6 +1321,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | merge-S022 | S-022 |
 | 2026-11-07 | 2026-11-08 | merge-S021 | S-021 |
 | 2026-11-07 | 2026-11-08 | merge-S025 | S-025 |
+| 2026-11-07 | 2026-11-08 | P2-GATE-PASS | Phase P2 Interaction completed: cross-filter engine across 7 dimensions, linked hover bus with 120ms debounce, sortable table toggle & fullscreen modal in ChartCard, pure takeaway captions, and composite-only motion system with useCountUp hook |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1360,6 +1363,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-022-S022-chart-actions | S-022 | T2 | beam | 1 | pass | 7 |
 | 2026-11-07 | 2026-11-08 | D-021-S021-linked-hover | S-021 | T3 | gemini-high | 1 | pass | 8 |
 | 2026-11-07 | 2026-11-08 | D-024-S025-motion | S-025 | T3 | deepseek | 1 | pass | 8 |
+| 2026-11-07 | 2026-11-08 | D-025-GATE-P2 | GATE-P2 | T9 | gemini-med | 1 | pass | 7 |
 
 ---
 
