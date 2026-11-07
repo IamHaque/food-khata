@@ -7,9 +7,11 @@ import {
   detectPreset,
   type FilterState,
 } from '../lib/filters';
-import { SlidersHorizontal, Search, X } from 'lucide-react';
+import { SlidersHorizontal, Search } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { Badge } from '../components/ui/badge';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { Chip } from '../components/ui/chip';
 
 function Amount({
   field,
@@ -44,7 +46,7 @@ function Amount({
     <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
       <span className="text-xs text-muted-foreground">{label}</span>
       <div className="relative">
-        <span className="absolute left-2.5 top-2 text-xs text-muted-foreground pointer-events-none">₹</span>
+        <span className="absolute left-2.5 top-2 text-xs text-muted-foreground pointer-events-none">$</span>
         <input
           type="number"
           name={field}
@@ -169,27 +171,7 @@ export function FilterBar() {
   const [error, setError] = useState('');
   const [dateError, setDateError] = useState('');
   const [amountError, setAmountError] = useState('');
-
-  // Debounced search state
-  const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
-  const [isSearching, setIsSearching] = useState(false);
-
-  useEffect(() => {
-    setSearchQuery(filters.search ?? '');
-  }, [filters.search]);
-
-  useEffect(() => {
-    if (searchQuery === (filters.search ?? '')) {
-      setIsSearching(false);
-      return;
-    }
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      update({ search: searchQuery.trim() || null }, { replace: true });
-      setIsSearching(false);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [searchQuery, filters.search, update]);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   function clearMessages() {
     if (saved) setSaved('');
@@ -201,7 +183,6 @@ export function FilterBar() {
     clearMessages();
     setDateError('');
     setAmountError('');
-    setSearchQuery('');
     clear();
   }
 
@@ -224,7 +205,6 @@ export function FilterBar() {
       if (raw) {
         const candidate: unknown = JSON.parse(raw);
         const valid = validateFilters(candidate);
-        setSearchQuery(valid.search ?? '');
         update(valid);
         setSaved('Preset loaded successfully');
         setError('');
@@ -263,7 +243,7 @@ export function FilterBar() {
   function handleAmountMinChange(minVal: number | null) {
     clearMessages();
     if (minVal !== null && filters.amount_max !== null && minVal > filters.amount_max) {
-      setAmountError(`Minimum amount (₹${minVal}) cannot exceed maximum amount (₹${filters.amount_max})`);
+      setAmountError(`Minimum amount (${minVal}) cannot exceed maximum amount (${filters.amount_max})`);
     } else {
       setAmountError('');
       update({ amount_min: minVal });
@@ -273,16 +253,14 @@ export function FilterBar() {
   function handleAmountMaxChange(maxVal: number | null) {
     clearMessages();
     if (maxVal !== null && filters.amount_min !== null && maxVal < filters.amount_min) {
-      setAmountError(`Maximum amount (₹${maxVal}) cannot be less than minimum amount (₹${filters.amount_min})`);
+      setAmountError(`Maximum amount (${maxVal}) cannot be less than minimum amount (${filters.amount_min})`);
     } else {
       setAmountError('');
       update({ amount_max: maxVal });
     }
   }
 
-  const lists: ('platforms' | 'statuses' | 'restaurant_ids' | 'cities' | 'localities' | 'cuisines' | 'payment_methods')[] = [
-    'platforms',
-    'statuses',
+  const lists: ('restaurant_ids' | 'cities' | 'localities' | 'cuisines' | 'payment_methods')[] = [
     'restaurant_ids',
     'cities',
     'localities',
@@ -291,8 +269,6 @@ export function FilterBar() {
   ];
 
   const labels = {
-    platforms: 'Platforms',
-    statuses: 'Statuses',
     restaurant_ids: 'Restaurants',
     cities: 'Cities',
     localities: 'Localities',
@@ -313,43 +289,23 @@ export function FilterBar() {
     'amount_min',
     'amount_max',
     'day_type',
-    'compare',
-    'verified_only',
-    'platforms',
+    'statuses',
     'restaurant_ids',
     'cities',
     'localities',
     'cuisines',
     'payment_methods',
     'meal_slots',
+    'verified_only',
+    'anomaly',
   ];
   const advancedActiveCount = active.filter(([key]) => advancedKeys.includes(key)).length;
 
   return (
     <section aria-label="Global filters" className="filter-panel rounded-xl border bg-card p-4 sm:p-5 shadow-xs space-y-4">
-      {/* Primary Row: Search, Date Preset, Dates */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {/* Search */}
-        <label className="flex flex-col gap-1 sm:col-span-2 text-xs font-medium text-foreground">
-          <span className="text-xs text-muted-foreground">Search restaurant or item</span>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              aria-label="Search restaurant or item"
-              type="search"
-              placeholder="Dishes, places, keywords..."
-              value={searchQuery}
-              aria-busy={isSearching}
-              onChange={e => {
-                clearMessages();
-                setSearchQuery(e.target.value);
-              }}
-              className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-2.5 text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-            />
-          </div>
-        </label>
-
-        {/* Date Preset */}
+      {/* Summary row */}
+      <div className="flex flex-wrap items-end gap-3">
+        {/* Date preset */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
           <span className="text-xs text-muted-foreground">Date preset</span>
           <select
@@ -363,7 +319,7 @@ export function FilterBar() {
               const dates = calculatePresetDates(val);
               update(dates);
             }}
-            className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
           >
             {[
               ['7d', 'Last 7 days'],
@@ -376,9 +332,7 @@ export function FilterBar() {
               ['all', 'All time'],
               ['custom', 'Custom'],
             ].map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
+              <option key={v} value={v}>{l}</option>
             ))}
           </select>
         </label>
@@ -391,7 +345,7 @@ export function FilterBar() {
             aria-label="From date"
             value={filters.date_from ?? ''}
             onChange={e => handleDateFromChange(e.target.value)}
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
           />
         </label>
 
@@ -403,199 +357,195 @@ export function FilterBar() {
             aria-label="To date"
             value={filters.date_to ?? ''}
             onChange={e => handleDateToChange(e.target.value)}
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
           />
         </label>
+
+        {/* Platform */}
+        <div className="flex flex-col gap-1 text-xs font-medium text-foreground min-w-[160px]">
+          <span className="text-xs text-muted-foreground">Platform</span>
+          <MultiSelectFilter
+            label="Platforms"
+            options={(meta?.platforms ?? []).map(v => ({ value: v, label: v }))}
+            selected={filters.platforms}
+            onChange={selected => {
+              clearMessages();
+              update({ platforms: selected });
+            }}
+          />
+        </div>
+
+        {/* Compare */}
+        <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+          <span className="text-xs text-muted-foreground">Compare</span>
+          <select
+            aria-label="Compare"
+            value={filters.compare}
+            onChange={e => {
+              clearMessages();
+              update({ compare: e.target.value as FilterState['compare'] });
+            }}
+            className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+          >
+            {['none', 'previous_period', 'previous_year'].map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+
+        {/* More filters */}
+        <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-xs hover:bg-accent text-foreground"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              More filters
+              {advancedActiveCount > 0 && (
+                <Badge variant="default" className="text-xs h-4 px-1.5 font-bold">
+                  {advancedActiveCount} active
+                </Badge>
+              )}
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>More filters</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-4 pt-4">
+              {/* Amounts */}
+              <div className="grid grid-cols-2 gap-3">
+                <Amount field="amount_min" label="Minimum amount" value={filters.amount_min} onChange={handleAmountMinChange} />
+                <Amount field="amount_max" label="Maximum amount" value={filters.amount_max} onChange={handleAmountMaxChange} />
+              </div>
+
+              {/* Diet */}
+              <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+                <span className="text-xs text-muted-foreground">Diet</span>
+                <select
+                  aria-label="Diet"
+                  value={filters.veg}
+                  onChange={e => { clearMessages(); update({ veg: e.target.value as FilterState['veg'] }); }}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                >
+                  {['all', 'veg', 'nonveg', 'unknown'].map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+
+              {/* Day type */}
+              <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+                <span className="text-xs text-muted-foreground">Day type</span>
+                <select
+                  aria-label="Day type"
+                  value={filters.day_type}
+                  onChange={e => { clearMessages(); update({ day_type: e.target.value as FilterState['day_type'] }); }}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                >
+                  {['all', 'weekday', 'weekend'].map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+
+              {/* Status */}
+              <div className="flex flex-col gap-1 text-xs font-medium text-foreground">
+                <span className="text-xs text-muted-foreground">Statuses</span>
+                <MultiSelectFilter
+                  label="Statuses"
+                  options={(meta?.statuses ?? []).map(v => ({ value: v, label: v }))}
+                  selected={filters.statuses}
+                  onChange={selected => { clearMessages(); update({ statuses: selected }); }}
+                />
+              </div>
+
+              {/* Verified only */}
+              <label className="check flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  aria-label="Verified only"
+                  checked={filters.verified_only}
+                  onChange={e => { clearMessages(); update({ verified_only: e.target.checked }); }}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-1 focus:ring-ring"
+                />
+                <span>Verified only</span>
+              </label>
+
+              {/* Anomaly */}
+              <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+                <span className="text-xs text-muted-foreground">Anomaly</span>
+                <select
+                  aria-label="Anomaly"
+                  value={filters.anomaly}
+                  onChange={e => { clearMessages(); update({ anomaly: e.target.value as FilterState['anomaly'] }); }}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                >
+                  {['all', 'review'].map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+
+              {/* Categorical multiselects */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Categorical scopes</div>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {lists.map(key => {
+                    const options =
+                      key === 'restaurant_ids'
+                        ? meta?.restaurants.map(r => ({ value: r.id, label: r.name })) ?? []
+                        : (meta?.[key] ?? []).map(v => ({ value: v, label: v }));
+                    return (
+                      <div key={key} className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground truncate">{labels[key]}</span>
+                        <MultiSelectFilter
+                          label={labels[key]}
+                          options={options}
+                          selected={filters[key]}
+                          onChange={selected => { clearMessages(); update({ [key]: selected }); }}
+                        />
+                      </div>
+                    );
+                  })}
+
+                  {/* Meal slots */}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground truncate">Meal slots</span>
+                    <MultiSelectFilter
+                      label="Meal slots"
+                      options={['breakfast', 'lunch', 'snack', 'dinner', 'late_night'].map(v => ({
+                        value: v,
+                        label: v.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                      }))}
+                      selected={filters.meal_slots}
+                      onChange={selected => { clearMessages(); update({ meal_slots: selected as FilterState['meal_slots'] }); }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {amountError && (
+                <p role="alert" className="text-xs font-semibold text-destructive">{amountError}</p>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {dateError && (
-        <p role="alert" className="text-xs font-semibold text-destructive">
-          {dateError}
-        </p>
+        <p role="alert" className="text-xs font-semibold text-destructive">{dateError}</p>
       )}
 
-      {/* Advanced Filters Details Accordion (Closed by default to preserve vertical rhythm) */}
-      <details className="group space-y-4 border-t pt-3">
-        <summary className="flex items-center justify-between cursor-pointer select-none py-1 px-0.5 text-xs font-semibold text-foreground hover:text-primary transition-colors">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
-            <span>Advanced filters</span>
-            {advancedActiveCount > 0 && (
-              <Badge variant="default" className="text-xs h-4 px-1.5 font-bold">
-                {advancedActiveCount} active
-              </Badge>
-            )}
-          </div>
-          <span className="text-muted-foreground text-xs font-normal group-open:rotate-180 transition-transform">
-            ▼
-          </span>
-        </summary>
-
-        {/* Secondary Row: Amounts, Diet, Day type, Compare, Verified */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
-          <Amount
-            field="amount_min"
-            label="Minimum amount"
-            value={filters.amount_min}
-            onChange={handleAmountMinChange}
-          />
-          <Amount
-            field="amount_max"
-            label="Maximum amount"
-            value={filters.amount_max}
-            onChange={handleAmountMaxChange}
-          />
-
-          {/* Diet */}
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-xs text-muted-foreground">Diet</span>
-            <select
-              aria-label="Diet"
-              value={filters.veg}
-              onChange={e => {
-                clearMessages();
-                update({ veg: e.target.value as FilterState['veg'] });
-              }}
-              className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-            >
-              {['all', 'veg', 'nonveg', 'unknown'].map(v => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* Day type */}
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-xs text-muted-foreground">Day type</span>
-            <select
-              aria-label="Day type"
-              value={filters.day_type}
-              onChange={e => {
-                clearMessages();
-                update({ day_type: e.target.value as FilterState['day_type'] });
-              }}
-              className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-            >
-              {['all', 'weekday', 'weekend'].map(v => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* Compare */}
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-            <span className="text-xs text-muted-foreground">Compare</span>
-            <select
-              aria-label="Compare"
-              value={filters.compare}
-              onChange={e => {
-                clearMessages();
-                update({ compare: e.target.value as FilterState['compare'] });
-              }}
-              className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-            >
-              {['none', 'previous_period', 'previous_year'].map(v => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* Verified only */}
-          <div className="flex items-end pb-1.5">
-            <label className="check flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                aria-label="Verified only"
-                checked={filters.verified_only}
-                onChange={e => {
-                  clearMessages();
-                  update({ verified_only: e.target.checked });
-                }}
-                className="h-4 w-4 rounded border-input text-primary focus:ring-1 focus:ring-ring"
-              />
-              <span>Verified only</span>
-            </label>
-          </div>
-        </div>
-
-        {amountError && (
-          <p role="alert" className="text-xs font-semibold text-destructive">
-            {amountError}
-          </p>
-        )}
-
-        {/* Detailed Multi-selects (Platforms, Statuses, Restaurants, Cities, Localities, Cuisines, Payment methods, Meal slots) */}
-        <div className="border-t pt-3 space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Categorical Scopes (Accessible multiselect without modifier keys)
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2.5">
-            {lists.map(key => {
-              const options =
-                key === 'restaurant_ids'
-                  ? meta?.restaurants.map(r => ({ value: r.id, label: r.name })) ?? []
-                  : (meta?.[key] ?? []).map(v => ({ value: v, label: v }));
-              return (
-                <div key={key} className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground truncate">{labels[key]}</span>
-                  <MultiSelectFilter
-                    label={labels[key]}
-                    options={options}
-                    selected={filters[key]}
-                    onChange={selected => {
-                      clearMessages();
-                      update({ [key]: selected });
-                    }}
-                  />
-                </div>
-              );
-            })}
-
-            {/* Meal slots */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground truncate">Meal slots</span>
-              <MultiSelectFilter
-                label="Meal slots"
-                options={['breakfast', 'lunch', 'snack', 'dinner', 'late_night'].map(v => ({
-                  value: v,
-                  label: v.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                }))}
-                selected={filters.meal_slots}
-                onChange={selected => {
-                  clearMessages();
-                  update({ meal_slots: selected as FilterState['meal_slots'] });
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </details>
-
-      {/* Action Row & Active Filter Chips (Always visible) */}
+      {/* Chips */}
       <div className="chips flex flex-wrap items-center gap-1.5 pt-3 border-t">
         {active.map(([key, value]) => {
           const displayVal = Array.isArray(value) ? value.join(', ') : String(value);
           return (
-            <button
+            <Chip
               key={key}
-              type="button"
-              onClick={() => {
+              label={`${key.replaceAll('_', ' ')}: ${displayVal}`}
+              active
+              onRemove={() => {
                 clearMessages();
                 update({ [key]: defaultFilters()[key as keyof FilterState] });
               }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
-              aria-label={`Remove filter: ${key}`}
-            >
-              <span className="text-muted-foreground capitalize">{key.replaceAll('_', ' ')}:</span>
-              <span className="font-semibold truncate max-w-[150px]">{displayVal}</span>
-              <X className="h-3 w-3 text-muted-foreground hover:text-destructive shrink-0" />
-            </button>
+            />
           );
         })}
 
@@ -604,7 +554,7 @@ export function FilterBar() {
           onClick={handleClear}
           className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[32px]"
         >
-          Clear filters
+          Clear all
         </button>
 
         <button
@@ -625,15 +575,12 @@ export function FilterBar() {
       </div>
 
       {saved && (
-        <p role="status" className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          {saved}
-        </p>
+        <p role="status" className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{saved}</p>
       )}
       {error && (
-        <p role="alert" className="text-xs font-medium text-destructive">
-          {error}
-        </p>
+        <p role="alert" className="text-xs font-medium text-destructive">{error}</p>
       )}
     </section>
   );
 }
+
