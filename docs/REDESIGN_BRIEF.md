@@ -1257,6 +1257,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-028 | 2026-11-07 | S-031: OverviewKpis implements 6 cards in 1 row (grid-cols-2 md:grid-cols-3 xl:grid-cols-6) with useCountUp tabular-nums, Radix Popover calculation formulas, and SVG sparkline linked highlight |  |  |  |  |
 | DEC-029 | 2026-11-08 | 2026-11-08 | S-024 | Compare mode overlay via second dashboard query with shifted dates | Compare mode overlay | Single dashboard endpoint returns current period and KPI percent_change; overlay time series fetched via separate dashboard query with date range shifted by duration (previous_period) or year (previous_year) and disabled when compare is 'none' |
 | DEC-030 | 2026-11-07 | GATE-P3a: Phase P3a Overview Gate Audit Passed: All 6 overview stories (S-030 to S-035) and S-024 pass verification, 279 unit tests pass across 27 files, and the above-the-fold layout requirement at 1440x900 is verified (~673px content height budget) |  |  |  |  |
+| DEC-031 | 2026-11-07 | Installed @tanstack/react-virtual (MIT licensed) on master for Phase P3b orders table virtualization per S-070 pre-approved dependencies |  |  |  |  |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
