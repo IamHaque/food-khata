@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
+import { ScopeNotice } from './SyncStatusPanel';
 import {
   TrendingUp,
   ShoppingBag,
@@ -276,6 +277,8 @@ export function Overview() {
           </p>
         </div>
       </div>
+
+      <ScopeNotice />
 
       {query.isError && (
         <p role="alert" className="text-xs font-medium text-destructive flex items-center gap-2">

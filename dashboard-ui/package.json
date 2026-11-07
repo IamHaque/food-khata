@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build && node scripts/licenses.mjs",
-    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts src/lib/filters.test.ts src/lib/ledger.test.ts src/app/theme.test.ts src/app/ThemeControl.test.tsx src/app/App.test.tsx src/app/routes.test.tsx src/lib/chart-theme.test.ts src/components/dashboard/ChartCard.test.tsx src/components/dashboard/KpiCard.test.tsx",
+    "test": "node src/model.test.js && node src/loader.test.js && vitest run src/lib/api.test.ts src/lib/filters.test.ts src/lib/ledger.test.ts src/app/theme.test.ts src/app/ThemeControl.test.tsx src/app/App.test.tsx src/app/routes.test.tsx src/app/SyncStatus.test.tsx src/lib/chart-theme.test.ts src/components/dashboard/ChartCard.test.tsx src/components/dashboard/KpiCard.test.tsx",
     "test:browser": "node scripts/browser-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",

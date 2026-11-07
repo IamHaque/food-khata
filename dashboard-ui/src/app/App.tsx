@@ -10,6 +10,7 @@ import { FilterProvider, useFilters } from './FilterContext';
 import { AccountSelector } from './AccountSelector';
 import { FilterBar } from './FilterBar';
 import { ThemeControl } from './ThemeControl';
+import { SyncStatusChip } from './SyncStatusChip';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
 import {
@@ -145,15 +146,7 @@ function Shell() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {health.data && (
-            <small
-              role="status"
-              className="hidden xl:inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full border border-border/50"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Updated {new Date(health.data.generated_at).toLocaleString()}
-            </small>
-          )}
+          <SyncStatusChip />
           <CommandPalette />
           <ThemeControl />
         </div>
