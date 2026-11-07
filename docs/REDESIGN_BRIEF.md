@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 34 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3b Orders · Last updated: 2026-11-07
+**Overall progress:** 34 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3c Spending · Last updated: 2026-11-08
 
 ---
 
@@ -1265,6 +1265,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-036 | 2026-11-07 | S-074: Export feedback announces in-flight progress with role=status (aria-live=polite), success and cancellation with role=status, and failure with role=alert, preserving UTF-8 BOM, sanitization and CSV file structure |  |  |  |  |
 | DEC-037 | 2026-11-07 | S-075: Table preferences (columnVisibility, density, pageSize) persist to food-khata-table-prefs in localStorage, controls use shared SegmentedControl and Radix Popover eliminating native selects |  |  |  |  |
 | DEC-038 | 2026-11-07 | S-073: Saved views stored in food-khata-views with safe storage, managed via Views popover on Orders page, and integrated into Command Palette with live custom event reactivity |  |  |  |  |
+| DEC-039 | 2026-11-07 | GATE-P3b: Phase P3b Orders Gate Audit Passed: All 6 orders stories (S-070 to S-075) pass verification, 370 unit tests pass across 31 files, 5,000-row virtualization with @tanstack/react-virtual and keyboard-driven side sheet verified |  |  |  |  |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
