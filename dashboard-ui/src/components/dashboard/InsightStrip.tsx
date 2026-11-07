@@ -17,6 +17,7 @@ export interface InsightStripProps {
   items?: Insight[];
   data?: { charts?: { insights?: Insight[] } };
   className?: string;
+  onApplyFilterPatch?: (patch: Record<string, unknown> | any) => void;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -32,6 +33,7 @@ export function InsightStrip(props: InsightStripProps = {}) {
     const insights = props.insights ?? props.items ?? props.data?.charts?.insights ?? [];
     const visible = insights.slice(0, 4);
     if (!visible.length) return null;
+    const applyPatch = props.onApplyFilterPatch ?? update;
     return (
       <div
         className={props.className ?? "insight-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"}
@@ -44,7 +46,7 @@ export function InsightStrip(props: InsightStripProps = {}) {
             <button
               type="button"
               key={insight.key}
-              onClick={() => update(insight.filter_patch)}
+              onClick={() => applyPatch(insight.filter_patch)}
               className="insight-card inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left shadow-xs hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />

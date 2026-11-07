@@ -45,6 +45,7 @@ export interface BuildPlatformSplitOptionParams {
 
 export interface PlatformSplitChartProps {
   data?: PlatformSplitItem[] | null;
+  totalSpend?: number;
   isLoading?: boolean;
   isEmpty?: boolean;
   emptyReason?: string;
@@ -258,6 +259,7 @@ function useOptionalFilters() {
 
 export function PlatformSplitChart({
   data,
+  totalSpend: totalSpendProp,
   isLoading,
   isEmpty: isEmptyProp,
   emptyReason,
@@ -294,12 +296,14 @@ export function PlatformSplitChart({
   const resolvedEmptyReason =
     emptyReason ?? "No platform data available for the selected filters";
 
-  const totalSpend = React.useMemo(() => {
+  const computedTotalSpend = React.useMemo(() => {
     return (data ?? []).reduce(
       (sum, d) => sum + (Number.isFinite(d.spend) && d.spend > 0 ? d.spend : 0),
       0
     );
   }, [data]);
+
+  const totalSpend = totalSpendProp ?? computedTotalSpend;
 
   const tableData = React.useMemo(() => {
     if (!data || data.length === 0) return undefined;
