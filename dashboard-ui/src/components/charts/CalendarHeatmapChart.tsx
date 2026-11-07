@@ -208,7 +208,7 @@ export function buildCalendarHeatmapOption(
   const option: EChartsCoreOption = {
     ...base,
     tooltip: {
-      ...base.tooltip,
+      ...(base.tooltip as object),
       trigger: "item",
       formatter: (params: unknown) => {
         const p = params as {
