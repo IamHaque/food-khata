@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 7 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
+**Overall progress:** 8 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P0 · Last updated: 2026-11-07
 
 ---
 
@@ -1168,7 +1168,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-004 | Theme picker | P0 | TODO | | |
 | S-005 | Typography, spacing and motion tokens | P0 | DONE | 2026-11-07 | merge 7a65a5c; verify.mjs PASS (typecheck/lint/unit); >=14px body, >=12px captions, tabular-nums display-number, 16px radius, motion clamp |
 | S-006 | Chart theme adapter and library consolidation | P0 | DONE | 2026-11-07 | merge 30d26cf; verify.mjs PASS (typecheck/lint/unit 44 passed); chart-theme.ts 10 themes, Chart.tsx live re-theme, recharts removed |
-| S-007 | Shared primitives | P0 | TODO | | |
+| S-007 | Shared primitives | P0 | DONE | 2026-11-07 | merge f7433ea; verify.mjs PASS (typecheck/lint/unit 46 passed); ChartCard, KpiCard, Skeleton, Chip, SegmentedControl, /design-system route |
 | S-008 | Synthetic dev database and backend harness | P0 | DONE | 2026-11-07 | merge d77f311; verify.mjs --backend PASS (109 passed); scripts/make_dev_db.py, tests/test_make_dev_db.py |
 | S-009 | Orchestration harness | P0 | DONE | 2026-11-07 | merge 6ac38d3; verify PASS guardrails/typecheck/lint/unit; verify.mjs created, .gitignore updated |
 | S-010 | App shell | P0 | TODO | | |
@@ -1233,6 +1233,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-003 | 2026-11-07 | 2026-11-07 | S-002 | Legacy tokens remapped | Old tailwind classes in use | Remap card/popover to surface, muted-bg to surface-2, input to border |
 | DEC-004 | 2026-11-07 | 2026-11-07 | S-005 | Typography adjustments | Sub-12px classes present | Bump receipt table to 14px, heat-hour to 12px, tabular numbers display-number class |
 | DEC-005 | 2026-11-07 | 2026-11-08 | S-006 | Recharts removal and chart adapter | Recharts was unused/redundant | Purged recharts from package.json and components/ui/chart.tsx; pure chart-theme.ts for all 10 theme combos |
+| DEC-006 | 2026-11-07 | 2026-11-08 | S-007 | Shared primitives and design system route | Primitives kit needed for dashboard redesign | Created ChartCard, KpiCard, Skeleton, EmptyState, ErrorState, Chip, SegmentedControl, ToolbarButton, and /design-system showcase |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1261,6 +1262,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-96e3459 | n/a | n/a | pass | pass | pass (17 passed) | not_run | not_run |
 | 2026-11-07 | 2026-11-07 | merge-7a65a5c | n/a | n/a | pass | pass | pass (30 passed) | not_run | not_run |
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | n/a | n/a | pass | pass | pass (44 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-f7433ea | n/a | n/a | pass | pass | pass (46 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1272,6 +1274,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | merge-96e3459 | S-003 |
 | 2026-11-07 | 2026-11-07 | merge-7a65a5c | S-005 |
 | 2026-11-07 | 2026-11-08 | merge-30d26cf | S-006 |
+| 2026-11-07 | 2026-11-08 | merge-f7433ea | S-007 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1290,6 +1293,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-07 | D-008-S006-chart-adapter | S-006 | T3 | gemini-high | 1 | running | 0 |
 | 2026-11-07 | 2026-11-07 | D-007-S005-typography | S-005 | T1 | glm | 1 | pass | 5 |
 | 2026-11-07 | 2026-11-08 | D-008-S006-chart-adapter | S-006 | T3 | gemini-high | 1 | pass | 22 |
+| 2026-11-07 | 2026-11-08 | D-009-S007-primitives | S-007 | T2 | beam | 1 | running | 0 |
+| 2026-11-07 | 2026-11-08 | D-009-S007-primitives | S-007 | T2 | beam | 1 | pass | 4 |
 
 ---
 
