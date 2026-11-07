@@ -261,6 +261,134 @@
   .display-number {
     @apply tabular-nums tracking-tight font-semibold;
   }
+
+  /* S-025 motion utilities. Composite-only: every rule animates just
+     `transform` and/or `opacity` (D-10). Durations come from the tokens. */
+
+  /* Page change: crossfade with an 8px slide over 240ms. */
+  .motion-page,
+  .motion-page-enter {
+    animation: motion-page-enter var(--motion-standard, 240ms) var(--ease) both;
+  }
+  .motion-page-exit {
+    animation: motion-page-exit var(--motion-standard, 240ms) var(--ease) both;
+  }
+
+  /* Card reveal: 8px rise; the caller sets the 40ms stagger delay. */
+  .motion-card-reveal {
+    animation: motion-card-reveal var(--motion-standard, 240ms) var(--ease) both;
+  }
+
+  /* Card hover lift (2px) and button press compression, both within 120ms. */
+  .motion-lift {
+    transition: transform var(--motion-micro, 120ms) var(--ease);
+  }
+  .motion-lift:hover {
+    transform: translateY(-2px);
+  }
+  .motion-press {
+    transition: transform var(--motion-micro, 120ms) var(--ease);
+  }
+  .motion-press:active {
+    transform: scale(0.98);
+  }
+
+  /* Chip fade in/out within 120ms. */
+  .motion-chip {
+    transition:
+      opacity var(--motion-micro, 120ms) var(--ease),
+      transform var(--motion-micro, 120ms) var(--ease);
+  }
+  .motion-chip-in {
+    animation: motion-chip-in var(--motion-micro, 120ms) var(--ease) both;
+  }
+  .motion-chip-out {
+    animation: motion-chip-out var(--motion-micro, 120ms) var(--ease) both;
+  }
+
+  /* Counting numbers keep a fixed advance width so there is no layout shift. */
+  .motion-count {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Loading skeleton shimmer; the element keeps the final layout size. */
+  .motion-skeleton {
+    position: relative;
+    overflow: hidden;
+  }
+  .motion-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.08),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: motion-shimmer 1.2s var(--ease) infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes motion-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes motion-page-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes motion-card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes motion-chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes motion-chip-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes motion-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   :root,
@@ -272,9 +400,20 @@
   *,
   *::before,
   *::after {
+    animation-delay: 0.001ms !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    transition-delay: 0.001ms !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Nothing moves: movement-only utilities resolve to their resting state. */
+  .motion-lift:hover,
+  .motion-press:active {
+    transform: none !important;
+  }
+  .motion-skeleton::after {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }

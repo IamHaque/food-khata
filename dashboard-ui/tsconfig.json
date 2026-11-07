@@ -28,6 +28,8 @@
     "src/lib/filters.ts",
     "src/hooks/api.ts",
     "src/lib/chart-theme.ts",
-    "src/lib/captions.ts"
+    "src/lib/captions.ts",
+    "src/lib/motion.ts",
+    "src/hooks/useCountUp.ts"
   ]
 }
