@@ -2,92 +2,264 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { useFilters } from './FilterContext';
-import { validateFilters } from '../lib/filters';
-import { Search, Compass, Bookmark, SunMoon } from 'lucide-react';
+import { validateFilters, calculatePresetDates } from '../lib/filters';
+import { useTheme } from './theme';
+import type { ThemeMode, ThemeAccent } from './theme';
+import {
+  Search,
+  Compass,
+  Bookmark,
+  SunMoon,
+  Palette,
+  Filter,
+  Receipt,
+} from 'lucide-react';
+
+type Group = 'Navigate' | 'Filters' | 'Appearance' | 'Orders' | 'Saved views';
+
+interface Command {
+  group: Group;
+  label: string;
+  keywords?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  run: () => void;
+}
+
+const MODES: ThemeMode[] = ['light', 'dark', 'system'];
+const ACCENTS: ThemeAccent[] = ['emerald', 'indigo', 'amber', 'rose', 'slate'];
+const PLATFORMS = ['SWIGGY', 'ZOMATO'];
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [message, setMessage] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { update } = useFilters();
+  const { filters, update } = useFilters();
+  const { mode, setMode, setAccent } = useTheme();
 
+  // Global keyboard shortcuts
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
+    let gPending = false;
+    let gTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearG = () => {
+      gPending = false;
+      if (gTimer) {
+        clearTimeout(gTimer);
+        gTimer = null;
+      }
+    };
+
+    const isTyping = (target: EventTarget | null) => {
+      if (!target || !(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+    };
+
+    const cycleMode = () => {
+      const idx = MODES.indexOf(mode);
+      const next = MODES[(idx + 1) % MODES.length];
+      setMode(next);
+      setAnnouncement(`Switched mode to ${next}`);
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      // Ctrl/Cmd+K toggles palette (always)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen(x => !x);
+        return;
+      }
+
+      // Single/sequential shortcuts disabled while typing
+      if (isTyping(e.target)) return;
+
+      // Two-key sequence: g then o/s/f/h/d
+      if (gPending) {
+        clearG();
+        const map: Record<string, string> = {
+          o: '/',
+          s: '/spending',
+          f: '/food',
+          h: '/habits',
+          d: '/orders',
+        };
+        const path = map[e.key.toLowerCase()];
+        if (path) {
+          e.preventDefault();
+          navigate({ pathname: path, search: location.search });
+          setAnnouncement(`Navigated to ${path === '/' ? 'Overview' : path.slice(1)}`);
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'g' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        gPending = true;
+        gTimer = setTimeout(clearG, 1200);
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        setOpen(true);
+        setShowHelp(false);
+        return;
+      }
+
+      if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        cycleMode();
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setOpen(true);
+        setShowHelp(true);
+        return;
       }
     };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, []);
 
-  const actions = [
-    ...['Overview', 'Spending', 'Food', 'Behavior', 'Places', 'Ledger', 'Data health'].map((label, i) => ({
-      label: `Go to ${label}`,
-      icon: Compass,
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      clearG();
+    };
+  }, [location.search, mode, navigate, setMode]);
+
+  // Focus input when opening
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  const go = (path: string, label: string) => {
+    navigate({ pathname: path, search: location.search });
+    setAnnouncement(`Navigated to ${label}`);
+  };
+
+  const togglePlatform = (platform: string) => {
+    const has = filters.platforms.includes(platform);
+    const next = has
+      ? filters.platforms.filter(p => p !== platform)
+      : [...filters.platforms, platform];
+    update({ platforms: next });
+    setAnnouncement(`${has ? 'Removed' : 'Added'} platform ${platform}`);
+  };
+
+  const applyPreset = (preset: string) => {
+    const { date_from, date_to } = calculatePresetDates(preset);
+    update({ date_from, date_to });
+    setAnnouncement(`Applied ${preset} period`);
+  };
+
+  const commands: Command[] = [
+    // Navigate
+    { group: 'Navigate', label: 'Overview', icon: Compass, run: () => go('/', 'Overview') },
+    { group: 'Navigate', label: 'Spending', icon: Compass, run: () => go('/spending', 'Spending') },
+    { group: 'Navigate', label: 'Food', icon: Compass, run: () => go('/food', 'Food') },
+    { group: 'Navigate', label: 'Habits', icon: Compass, run: () => go('/habits', 'Habits') },
+    { group: 'Navigate', label: 'Orders', icon: Compass, run: () => go('/orders', 'Orders') },
+    // Filters
+    { group: 'Filters', label: 'Period: 7d', icon: Filter, run: () => applyPreset('7d') },
+    { group: 'Filters', label: 'Period: 30d', icon: Filter, run: () => applyPreset('30d') },
+    { group: 'Filters', label: 'Period: 90d', icon: Filter, run: () => applyPreset('90d') },
+    { group: 'Filters', label: 'Period: all-time', icon: Filter, run: () => applyPreset('all') },
+    ...PLATFORMS.map(p => ({
+      group: 'Filters' as Group,
+      label: `Toggle platform: ${p}`,
+      icon: Filter,
+      run: () => togglePlatform(p),
+    })),
+    // Appearance
+    ...MODES.map(m => ({
+      group: 'Appearance' as Group,
+      label: `Switch mode: ${m}`,
+      icon: SunMoon,
       run: () => {
-        const path = i === 0 ? '/' : `/${label.toLowerCase().replace(' ', '-')}`;
-        navigate({
-          pathname: path,
-          search: location.search,
-        });
-        setAnnouncement(`Navigated to ${label}`);
+        setMode(m);
+        setAnnouncement(`Switched mode to ${m}`);
       },
     })),
+    ...ACCENTS.map(a => ({
+      group: 'Appearance' as Group,
+      label: `Switch accent: ${a}`,
+      icon: Palette,
+      run: () => {
+        setAccent(a);
+        setAnnouncement(`Switched accent to ${a}`);
+      },
+    })),
+    // Orders
     {
-      label: 'Apply saved preset',
+      group: 'Orders',
+      label: 'Find order by restaurant or item',
+      icon: Receipt,
+      run: () => {
+        navigate({ pathname: '/orders', search: location.search });
+        setAnnouncement('Opened orders');
+      },
+    },
+    // Saved views
+    {
+      group: 'Saved views',
+      label: 'Save view',
+      icon: Bookmark,
+      run: () => {
+        try {
+          localStorage.setItem('food-khata-preset', JSON.stringify(filters));
+          setMessage('Saved view.');
+          setAnnouncement('Saved current view.');
+        } catch {
+          setMessage('Could not save view.');
+        }
+      },
+    },
+    {
+      group: 'Saved views',
+      label: 'Load view',
       icon: Bookmark,
       run: () => {
         try {
           const raw = localStorage.getItem('food-khata-preset');
           if (raw) {
             update(validateFilters(JSON.parse(raw)));
-            setAnnouncement('Applied saved filter preset.');
+            setAnnouncement('Loaded saved view.');
           } else {
-            setMessage('No saved preset.');
-            setAnnouncement('No saved preset found.');
+            setMessage('No saved view.');
+            setAnnouncement('No saved view found.');
           }
         } catch {
-          setMessage('Saved preset could not load.');
-          setAnnouncement('Saved preset could not load.');
-        }
-      },
-    },
-    {
-      label: 'Toggle theme',
-      icon: SunMoon,
-      run: () => {
-        const select = document.querySelector<HTMLSelectElement>('select[aria-label="Theme"]');
-        if (select) {
-          const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
-          const next = document.documentElement.dataset.v2theme === 'dark' ? 'light' : 'dark';
-          setter?.call(select, next);
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-          setAnnouncement(`Switched theme to ${next}`);
+          setMessage('Saved view could not load.');
         }
       },
     },
   ];
 
-  const filtered = actions.filter(x => x.label.toLowerCase().includes(search.toLowerCase()));
+  const filtered = commands.filter(c => {
+    const q = query.toLowerCase();
+    if (!q) return true;
+    return (c.label + ' ' + (c.keywords ?? '') + ' ' + c.group).toLowerCase().includes(q);
+  });
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [search]);
+  }, [query]);
 
   const runAction = (index: number) => {
     const target = filtered[index];
     if (target) {
       target.run();
       setOpen(false);
-      setSearch('');
+      setQuery('');
+      setShowHelp(false);
     }
   };
 
@@ -101,13 +273,22 @@ export function CommandPalette() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       runAction(selectedIndex);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
     }
   };
+
+  // Group filtered commands preserving group order
+  const groupOrder: Group[] = ['Navigate', 'Filters', 'Appearance', 'Orders', 'Saved views'];
+  const groups = groupOrder
+    .map(g => ({ group: g, items: filtered.filter(c => c.group === g) }))
+    .filter(g => g.items.length > 0);
 
   return (
     <>
       <button
         ref={triggerRef}
+        type="button"
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 min-h-[36px] text-xs font-medium text-muted-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
@@ -123,7 +304,6 @@ export function CommandPalette() {
         </span>
       )}
 
-      {/* Screen reader live announcement for navigation & commands */}
       <span className="sr-only" role="status" aria-live="polite">
         {announcement}
       </span>
@@ -137,9 +317,11 @@ export function CommandPalette() {
           }}
         >
           <div className="p-4 border-b bg-card">
-            <DialogTitle className="text-base font-semibold">Commands</DialogTitle>
+            <DialogTitle className="text-base font-semibold">Command palette</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-              Jump to a page, apply your saved preset, or change theme. Use arrow keys and Enter to execute.
+              {showHelp
+                ? 'Keyboard shortcuts: g then o/s/f/h/d to navigate, / search, t cycle mode, ? help, Ctrl/Cmd+K toggle.'
+                : 'Jump to a page, apply filters, change appearance, find orders, or manage saved views.'}
             </DialogDescription>
             <div className="relative mt-3">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -147,46 +329,60 @@ export function CommandPalette() {
                 ref={inputRef}
                 aria-label="Search commands"
                 placeholder="Search commands..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
               />
             </div>
           </div>
 
-          <div
-            className="p-2 max-h-72 overflow-y-auto space-y-1"
-            aria-label="Command suggestions"
-          >
+          <div className="p-2 max-h-72 overflow-y-auto space-y-2" aria-label="Command suggestions">
             {filtered.length === 0 ? (
               <p role="status" className="p-4 text-center text-xs text-muted-foreground">
                 No matching commands found.
               </p>
             ) : (
-              filtered.map((x, index) => {
-                const Icon = x.icon;
-                const isSelected = index === selectedIndex;
-                return (
-                  <button
-                    key={x.label}
-                    type="button"
-                    data-selected={isSelected}
-                    onClick={() => runAction(index)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                    className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
-                      isSelected
-                        ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                    <span>{x.label}</span>
-                  </button>
-                );
-              })
+              groups.map(g => (
+                <section key={g.group} aria-label={g.group}>
+                  <h3 className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {g.group}
+                  </h3>
+                  <div className="space-y-1">
+                    {g.items.map(c => {
+                      const idx = filtered.indexOf(c);
+                      const Icon = c.icon;
+                      const isSelected = idx === selectedIndex;
+                      return (
+                        <button
+                          key={c.label + c.group}
+                          type="button"
+                          data-selected={isSelected}
+                          onClick={() => runAction(idx)}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                              : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                          }`}
+                        >
+                          <Icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                          <span>{c.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))
             )}
           </div>
+
+          {showHelp && (
+            <div className="p-3 border-t text-xs text-muted-foreground space-y-1" role="note">
+              <p><kbd>g</kbd> then <kbd>o</kbd>/<kbd>s</kbd>/<kbd>f</kbd>/<kbd>h</kbd>/<kbd>d</kbd>: navigate</p>
+              <p><kbd>/</kbd>: search · <kbd>t</kbd>: cycle mode · <kbd>?</kbd>: help · <kbd>Ctrl/Cmd+K</kbd>: toggle</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
