@@ -112,7 +112,7 @@ export function CommandPalette() {
         className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 min-h-[36px] text-xs font-medium text-muted-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <span>Commands</span>
-        <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
           Ctrl K
         </kbd>
       </button>

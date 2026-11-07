@@ -86,7 +86,7 @@ export function Ledger() {
       className="inline-flex items-center gap-1 font-semibold text-xs text-foreground hover:text-primary transition-colors cursor-pointer select-none"
     >
       <span>{label}</span>
-      <span className="text-[11px] text-muted-foreground">{sort === id ? (direction === 'asc' ? ' ↑' : ' ↓') : ''}</span>
+      <span className="text-xs text-muted-foreground">{sort === id ? (direction === 'asc' ? ' ↑' : ' ↓') : ''}</span>
     </button>
   );
 
@@ -136,7 +136,7 @@ export function Ledger() {
         const plat = info.row.original.platform;
         return (
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase border ${
               plat === 'SWIGGY'
                 ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
@@ -156,7 +156,7 @@ export function Ledger() {
         const isDelivered = st === 'DELIVERED';
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase border ${
               isDelivered
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
@@ -198,11 +198,11 @@ export function Ledger() {
       header: 'Bill balance',
       cell: info =>
         info.row.original.financial_verified ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" /> Matches
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
             <AlertTriangle className="h-3 w-3" /> Review
           </span>
         ),

@@ -183,7 +183,7 @@ export function OrderModal({
         <header className="order-modal-header p-5 border-b bg-card">
           <div className="flex items-center gap-2 mb-1">
             <Receipt className="h-4 w-4 text-primary" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order receipt</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order receipt</span>
           </div>
           <DialogTitle className="text-lg font-bold text-foreground" title={o?.restaurant_name ?? undefined}>
             {o?.restaurant_name ?? 'Order details'}
@@ -215,36 +215,36 @@ export function OrderModal({
               {/* Order Meta Attributes */}
               <dl className="order-context grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-lg border bg-muted/20 text-xs">
                 <div>
-                  <dt className="text-[11px] text-muted-foreground font-medium">Order ID</dt>
+                  <dt className="text-xs text-muted-foreground font-medium">Order ID</dt>
                   <dd className="font-mono font-semibold text-foreground truncate">{o?.platform_order_id}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] text-muted-foreground font-medium">Account</dt>
+                  <dt className="text-xs text-muted-foreground font-medium">Account</dt>
                   <dd className="font-semibold text-foreground truncate">
                     {o?.account_label} · {o?.account_id}
                   </dd>
                 </div>
                 {o?.payment_method && (
                   <div>
-                    <dt className="text-[11px] text-muted-foreground font-medium">Payment</dt>
+                    <dt className="text-xs text-muted-foreground font-medium">Payment</dt>
                     <dd className="font-semibold text-foreground">{o.payment_method}</dd>
                   </div>
                 )}
                 {o?.address_label && (
                   <div>
-                    <dt className="text-[11px] text-muted-foreground font-medium">Delivery</dt>
+                    <dt className="text-xs text-muted-foreground font-medium">Delivery</dt>
                     <dd className="font-semibold text-foreground">{o.address_label}</dd>
                   </div>
                 )}
                 {o?.city && (
                   <div>
-                    <dt className="text-[11px] text-muted-foreground font-medium">City</dt>
+                    <dt className="text-xs text-muted-foreground font-medium">City</dt>
                     <dd className="font-semibold text-foreground">{o.city}</dd>
                   </div>
                 )}
                 {o?.user_rating != null && (
                   <div>
-                    <dt className="text-[11px] text-muted-foreground font-medium">Rating</dt>
+                    <dt className="text-xs text-muted-foreground font-medium">Rating</dt>
                     <dd className="font-semibold text-foreground">★ {o.user_rating}</dd>
                   </div>
                 )}
@@ -276,9 +276,9 @@ export function OrderModal({
                             <span className="block truncate max-w-[200px]" title={item.item_name}>
                               {item.item_name}
                             </span>
-                            {item.category && <small className="text-muted-foreground block text-[10px] font-normal">{item.category}</small>}
+                            {item.category && <small className="text-muted-foreground block text-xs font-normal">{item.category}</small>}
                           </td>
-                          <td className="p-2.5 text-center font-sans text-[11px]">
+                          <td className="p-2.5 text-center font-sans text-sm">
                             {item.is_veg == null ? (
                               <span className="text-muted-foreground">? Unknown</span>
                             ) : item.is_veg ? (
@@ -356,7 +356,7 @@ export function OrderModal({
                   <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground select-none">
                     Raw bill data
                   </summary>
-                  <pre tabIndex={0} className="mt-2 p-3 rounded-lg border bg-muted/40 font-mono text-[11px] overflow-auto max-h-48 text-muted-foreground">
+                  <pre tabIndex={0} className="mt-2 p-3 rounded-lg border bg-muted/40 font-mono text-sm overflow-auto max-h-48 text-muted-foreground">
                     {JSON.stringify(data.source_bill, null, 2)}
                   </pre>
                 </details>

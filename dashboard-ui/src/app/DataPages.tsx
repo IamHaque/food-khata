@@ -158,19 +158,19 @@ export function DataPage({ page }: { page: 'Behavior' | 'Places' }) {
             <h2 className="text-base font-semibold text-foreground mb-2">Ordering rhythm</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Orders / week</span>
+                <span className="text-muted-foreground block text-xs">Orders / week</span>
                 <strong className="text-lg font-bold font-mono text-foreground">
                   {b.orders_per_week ?? 'Unknown'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Longest streak</span>
+                <span className="text-muted-foreground block text-xs">Longest streak</span>
                 <strong className="text-lg font-bold font-mono text-foreground">
                   {b.longest_streak != null ? `${b.longest_streak} days` : 'Unknown'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Longest gap</span>
+                <span className="text-muted-foreground block text-xs">Longest gap</span>
                 <strong className="text-lg font-bold font-mono text-foreground">
                   {b.longest_gap != null ? `${b.longest_gap} days` : 'Unknown'}
                 </strong>
@@ -466,30 +466,30 @@ export function HealthPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">History Coverage</span>
+                <span className="text-muted-foreground block text-xs">History Coverage</span>
                 <strong className="font-semibold text-foreground">
                   {h.history_complete ? 'Complete' : 'Partial scope'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Details Coverage</span>
+                <span className="text-muted-foreground block text-xs">Details Coverage</span>
                 <strong className="font-semibold text-foreground">
                   {h.details_complete ? 'Complete' : 'Partial scope'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Verified Rate</span>
+                <span className="text-muted-foreground block text-xs">Verified Rate</span>
                 <strong className="font-semibold text-foreground">
                   {h.verified_percent != null ? `${h.verified_percent}%` : 'Unknown'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg border bg-muted/20">
-                <span className="text-muted-foreground block text-[11px]">Reconciliation Anomalies</span>
+                <span className="text-muted-foreground block text-xs">Reconciliation Anomalies</span>
                 <strong className="font-semibold text-foreground">{h.reconciliation_anomalies}</strong>
               </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Note: Lifetime coverage indicates whether the entire historical account record was imported. Partial scope
               is normal and expected when filtering by date or accounts without full historical imports.
             </p>
@@ -534,12 +534,12 @@ export function HealthPage() {
                       <td className="p-2.5">{x.account_id}</td>
                       <td className="p-2.5 font-semibold">{x.platform}</td>
                       <td className="p-2.5 text-center font-sans">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground border">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border">
                           {x.history_complete ? 'Complete' : 'Partial scope'}
                         </span>
                       </td>
                       <td className="p-2.5 text-center font-sans">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground border">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border">
                           {x.details_complete ? 'Complete' : 'Partial scope'}
                         </span>
                       </td>

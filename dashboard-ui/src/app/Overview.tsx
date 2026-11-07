@@ -332,7 +332,7 @@ export function Overview() {
                     </details>
                   </div>
 
-                  <strong className="text-3xl font-bold font-mono tracking-tight text-foreground block">
+                  <strong className="text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground block">
                     {formatMetricValue(value, format)}
                   </strong>
 
@@ -344,7 +344,7 @@ export function Overview() {
                     {data.comparison && (
                       <span className="text-xs font-mono font-medium text-muted-foreground flex items-center gap-1">
                         <span>{delta == null ? 'Unknown' : `${delta > 0 ? '+' : ''}${num.format(delta)}%`}</span>
-                        <span className="text-[10px] text-muted-foreground/75">
+                        <span className="text-xs text-muted-foreground/75">
                           ({filters.compare === 'previous_year' ? 'vs prior yr' : 'vs prior per'})
                         </span>
                       </span>
@@ -369,7 +369,7 @@ export function Overview() {
                     className="page-panel overview-card rounded-lg border bg-card/60 p-3 shadow-2xs flex flex-col justify-between gap-1 select-text"
                     key={key}
                   >
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="truncate font-medium">{label}</span>
                       <details className="kpi-formula group relative">
                         <summary
@@ -385,12 +385,12 @@ export function Overview() {
                       </details>
                     </div>
 
-                    <strong className="text-base font-bold font-mono tracking-tight text-foreground block">
+                    <strong className="text-base font-bold font-mono tabular-nums tracking-tight text-foreground block">
                       {formatMetricValue(value, format)}
                     </strong>
 
                     {data.comparison && (
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground font-mono">
                         {delta == null ? 'Unknown' : `${delta > 0 ? '+' : ''}${num.format(delta)}%`}
                       </span>
                     )}
@@ -400,11 +400,11 @@ export function Overview() {
 
               {/* Habit Stats: Orders per week & Longest streak */}
               <div className="page-panel overview-card rounded-lg border bg-card/60 p-3 shadow-2xs flex flex-col justify-between gap-1 select-text">
-                <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                   <CalendarDays className="h-3 w-3 text-muted-foreground shrink-0" />
                   Orders / week
                 </span>
-                <strong className="text-base font-bold font-mono tracking-tight text-foreground block">
+                <strong className="text-base font-bold font-mono tabular-nums tracking-tight text-foreground block">
                   {data.charts.behavior.orders_per_week == null
                     ? 'Unknown'
                     : num.format(data.charts.behavior.orders_per_week)}
@@ -412,11 +412,11 @@ export function Overview() {
               </div>
 
               <div className="page-panel overview-card rounded-lg border bg-card/60 p-3 shadow-2xs flex flex-col justify-between gap-1 select-text">
-                <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                   <Flame className="h-3 w-3 text-orange-500 shrink-0" />
                   Longest streak
                 </span>
-                <strong className="text-base font-bold font-mono tracking-tight text-foreground block">
+                <strong className="text-base font-bold font-mono tabular-nums tracking-tight text-foreground block">
                   {data.charts.behavior.longest_streak == null
                     ? 'Unknown'
                     : `${num.format(data.charts.behavior.longest_streak)} days`}
@@ -456,7 +456,7 @@ export function Overview() {
             <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg border bg-muted/20">
               <div>
                 <span className="text-xs text-muted-foreground block font-medium">Recorded Provider-Paid Total</span>
-                <span className="text-2xl font-bold font-mono text-foreground">
+                <span className="text-2xl font-bold font-mono tabular-nums tracking-tight text-foreground">
                   {money.format(data.charts.cost_waterfall.provider_paid)}
                 </span>
               </div>
