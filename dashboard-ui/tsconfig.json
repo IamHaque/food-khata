@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
@@ -9,8 +13,19 @@
     "noEmit": true,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
   },
-  "include": ["src/entry.tsx", "src/legacy.d.ts", "src/app", "src/lib/api.ts", "src/lib/filters.ts", "src/hooks/api.ts"]
+  "include": [
+    "src/entry.tsx",
+    "src/legacy.d.ts",
+    "src/app",
+    "src/lib/api.ts",
+    "src/lib/filters.ts",
+    "src/hooks/api.ts",
+    "src/lib/chart-theme.ts"
+  ]
 }
-

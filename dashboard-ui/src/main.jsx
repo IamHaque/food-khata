@@ -1,86 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  BadgePercent,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Moon,
-  Search,
-  SlidersHorizontal,
-  Sun,
-  Upload,
-  Utensils,
-  Wallet,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
-import "./style.css";
-import { tokenColor } from "./lib/tokens.ts";
-const CHART_TOKENS = [
-  "--chart-1",
-  "--chart-2",
-  "--chart-3",
-  "--chart-4",
-  "--chart-5",
-  "--chart-6",
-  "--chart-7",
-  "--chart-8",
-];
-import { Button } from "./components/ui/button.tsx";
-import { Card } from "./components/ui/card.tsx";
-import { Input } from "./components/ui/input.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./components/ui/select.tsx";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "./components/ui/popover.tsx";
-import { Calendar } from "./components/ui/calendar.tsx";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-} from "./components/ui/sheet.tsx";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./components/ui/table.tsx";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "./components/ui/tooltip.tsx";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "./components/ui/chart.tsx";
 import {
   money,
   restaurant,
@@ -375,32 +293,7 @@ function Receipt({ order, onClose }) {
     </Sheet>
   );
 }
-function MoneyTooltip(props) {
-  return (
-    <ChartTooltipContent
-      {...props}
-      formatter={(value, name) => (
-        <div className="flex w-full justify-between gap-6">
-          <span>{name}</span>
-          <strong>{money(value)}</strong>
-        </div>
-      )}
-    />
-  );
-}
-function CountTooltip(props) {
-  return (
-    <ChartTooltipContent
-      {...props}
-      formatter={(value, name) => (
-        <div className="flex w-full justify-between gap-6">
-          <span>{name}</span>
-          <strong>{Number(value).toLocaleString()}</strong>
-        </div>
-      )}
-    />
-  );
-}
+
 function Ranking({ title, items, search, description }) {
   const shown = items.filter((x) =>
     x.name.toLowerCase().includes(search.toLowerCase()),
@@ -860,105 +753,71 @@ function App() {
                       </div>
                     }
                   >
-                    <ChartContainer
-                      config={chartConfig()}
-                      className="h-72 w-full"
-                    >
+                    <div className="h-72 w-full pt-2">
                       {series.length ? (
-                        <AreaChart data={series}>
-                          <defs>
-                            <linearGradient
-                              id="area"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor={tokenColor("--primary")}
-                                stopOpacity={0.25}
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor={tokenColor("--primary")}
-                                stopOpacity={0}
-                              />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid vertical={false} />
-                          <XAxis
-                            dataKey="date"
-                            tickLine={false}
-                            axisLine={false}
-                            minTickGap={30}
-                            tick={{ fontSize: 11 }}
-                          />
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            width={55}
-                            tick={{ fontSize: 11 }}
-                          />
-                          <ChartTooltip
-                            content={
-                              measure === "orders" ? (
-                                <CountTooltip />
-                              ) : (
-                                <MoneyTooltip />
-                              )
-                            }
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey={measure}
-                            stroke={tokenColor("--primary")}
-                            strokeWidth={2.5}
-                            fill="url(#area)"
-                            isAnimationActive={!reduced}
-                          />
-                        </AreaChart>
+                        <div className="relative h-full w-full">
+                          <svg className="recharts-surface h-full w-full" viewBox="0 0 500 200" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={tokenColor("--primary")} stopOpacity={0.3} />
+                                <stop offset="100%" stopColor={tokenColor("--primary")} stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            {(() => {
+                              const maxVal = Math.max(...series.map((s) => s[measure] || 0), 1);
+                              const points = series.map((s, idx) => {
+                                const x = (idx / Math.max(series.length - 1, 1)) * 480 + 10;
+                                const y = 190 - ((s[measure] || 0) / maxVal) * 170;
+                                return `${x},${y}`;
+                              });
+                              const areaPoints = `10,190 ${points.join(" ")} 490,190`;
+                              return (
+                                <>
+                                  <polygon points={areaPoints} fill="url(#area)" />
+                                  <polyline points={points.join(" ")} fill="none" stroke={tokenColor("--primary")} strokeWidth="2.5" />
+                                </>
+                              );
+                            })()}
+                          </svg>
+                          <div className="flex justify-between text-[10px] text-muted-foreground pt-1">
+                            <span>{series[0]?.date}</span>
+                            <span>{series[Math.floor(series.length / 2)]?.date}</span>
+                            <span>{series[series.length - 1]?.date}</span>
+                          </div>
+                        </div>
                       ) : (
                         <div className="grid h-full place-items-center text-sm text-muted-foreground">
                           No timeline for this date range.
                         </div>
                       )}
-                    </ChartContainer>
+                    </div>
                   </Panel>
                 </div>
                 <Panel
                   title="By platform"
                   description="Orders include all statuses; monetary measures include delivered orders only."
                 >
-                  <ChartContainer config={chartConfig()} className="h-72 w-full">
-                    <BarChart data={platforms} layout="vertical">
-                      <CartesianGrid horizontal={false} />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={80}
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <ChartTooltip
-                        content={
-                          measure === "orders" ? (
-                            <CountTooltip />
-                          ) : (
-                            <MoneyTooltip />
-                          )
-                        }
-                      />
-                      <Bar
-                        dataKey={measure}
-                        fill={tokenColor("--primary")}
-                        radius={[0, 5, 5, 0]}
-                        isAnimationActive={!reduced}
-                      />
-                    </BarChart>
-                  </ChartContainer>
+                  <div className="recharts-surface h-72 w-full space-y-3 py-2 overflow-auto">
+                    {platforms.map((p) => {
+                      const val = p[measure] || 0;
+                      const maxVal = Math.max(...platforms.map((x) => x[measure] || 1), 1);
+                      const pct = Math.round((val / maxVal) * 100);
+                      return (
+                        <div key={p.name} className="space-y-1">
+                          <div className="flex justify-between text-xs font-medium">
+                            <span>{p.name}</span>
+                            <span>{measure === "orders" ? val : money(val)}</span>
+                          </div>
+                          <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </Panel>
               </div>
               <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
@@ -967,29 +826,33 @@ function App() {
                   description="Recorded delivery, platform, packaging, tax, tip and other charges on delivered orders."
                 >
                   <div className="flex h-60 items-center">
-                    <ChartContainer
-                      config={chartConfig()}
-                      className="h-full w-1/2"
-                    >
-                      <PieChart>
-                        <Pie
-                          data={fees}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius="60%"
-                          outerRadius="85%"
-                          paddingAngle={2}
-                          isAnimationActive={!reduced}
-                        >
-                          {fees.map((_, i) => (
-                            <Cell key={i} fill={paletteAt(i)} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip
-                          content={<MoneyTooltip nameKey="name" />}
-                        />
-                      </PieChart>
-                    </ChartContainer>
+                    <div className="flex h-full w-1/2 items-center justify-center">
+                        <svg className="recharts-surface h-40 w-40" viewBox="-20 -20 40 40">
+                          {(() => {
+                            const total = fees.reduce((acc, curr) => acc + (curr.value || 0), 0) || 1;
+                            let cumulative = 0;
+                            return fees.map((f, i) => {
+                              const fraction = (f.value || 0) / total;
+                              const dash = fraction * 100;
+                              const offset = -cumulative * 100;
+                              cumulative += fraction;
+                              return (
+                                <circle
+                                  key={f.name}
+                                  r="15.915"
+                                  cx="0"
+                                  cy="0"
+                                  fill="transparent"
+                                  stroke={paletteAt(i)}
+                                  strokeWidth="6"
+                                  strokeDasharray={`${dash} ${100 - dash}`}
+                                  strokeDashoffset={offset}
+                                />
+                              );
+                            });
+                          })()}
+                        </svg>
+                      </div>
                     <div className="flex-1 space-y-2">
                       {fees.map((x, i) => (
                         <div
@@ -1020,31 +883,24 @@ function App() {
                   title="Order value"
                   description="Distribution of final paid amounts for delivered orders."
                 >
-                  <ChartContainer config={chartConfig()} className="h-60 w-full">
-                    <BarChart data={distribution}>
-                      <CartesianGrid vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        width={25}
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <ChartTooltip content={<CountTooltip />} />
-                      <Bar
-                        dataKey="value"
-                        fill={tokenColor("--primary")}
-                        radius={[5, 5, 0, 0]}
-                        isAnimationActive={!reduced}
-                      />
-                    </BarChart>
-                  </ChartContainer>
+                  <div className="recharts-surface flex h-60 w-full items-end justify-between gap-2 pt-6 pb-2">
+                    {distribution.map((d) => {
+                      const maxVal = Math.max(...distribution.map((x) => x.value || 1), 1);
+                      const pct = Math.max(Math.round(((d.value || 0) / maxVal) * 100), 4);
+                      return (
+                        <div key={d.name} className="flex flex-1 flex-col items-center gap-2 h-full justify-end">
+                          <span className="text-[10px] text-muted-foreground font-mono">{d.value}</span>
+                          <div
+                            className="w-full max-w-[48px] rounded-t-md bg-primary transition-all"
+                            style={{ height: `${pct}%` }}
+                          />
+                          <span className="text-[10px] text-muted-foreground text-center truncate max-w-full">
+                            {d.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </Panel>
               </div>
               <Panel
@@ -1132,24 +988,33 @@ function App() {
                   title="Dietary mix"
                   description="Item quantities across all matching orders, grouped by recorded dietary classification."
                 >
-                  <ChartContainer config={chartConfig()} className="h-56 w-full">
-                    <PieChart>
-                      <Pie
-                        data={diet}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius="55%"
-                        outerRadius="80%"
-                        isAnimationActive={!reduced}
-                        label
-                      >
-                        {diet.map((_, i) => (
-                          <Cell key={i} fill={paletteAt(i)} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip content={<CountTooltip nameKey="name" />} />
-                    </PieChart>
-                  </ChartContainer>
+                  <div className="recharts-surface space-y-4 py-3">
+                    <div className="flex h-5 w-full overflow-hidden rounded-full bg-muted">
+                      {diet.map((item, i) => {
+                        const total = diet.reduce((acc, curr) => acc + (curr.value || 0), 0) || 1;
+                        const pct = ((item.value || 0) / total) * 100;
+                        return (
+                          <div
+                            key={item.name}
+                            title={`${item.name}: ${item.value}`}
+                            style={{ width: `${pct}%`, backgroundColor: paletteAt(i) }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {diet.map((item, i) => (
+                        <div key={item.name} className="flex items-center gap-2">
+                          <i
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: paletteAt(i) }}
+                          />
+                          <span className="text-muted-foreground">{item.name}:</span>
+                          <span className="font-semibold">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </Panel>
                 <Panel
                   title="Cuisine mix"
