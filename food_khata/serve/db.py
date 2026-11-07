@@ -1,0 +1,29 @@
+"""Open analytics databases without creating or modifying them."""
+
+import sqlite3
+from pathlib import Path
+
+
+def connect_readonly(path: Path | str) -> sqlite3.Connection:
+    conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+    try:
+        conn.execute("PRAGMA query_only=ON")
+        conn.execute("PRAGMA busy_timeout=2000")
+        conn.row_factory = sqlite3.Row
+        return conn
+    except Exception:
+        conn.close()
+        raise
+
+
+def database_version(path: Path | str) -> tuple[int | None, int | None]:
+    """Return database and WAL modification times for cache invalidation."""
+    db = Path(path).resolve()
+
+    def mtime(file: Path) -> int | None:
+        try:
+            return file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return None
+
+    return mtime(db), mtime(db.with_name(db.name + "-wal"))

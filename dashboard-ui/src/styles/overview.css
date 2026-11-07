@@ -1,0 +1,17 @@
+/* Overview enhancements */
+.overview-scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.overview-truncate {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-loading {
+  min-height: 280px;
+}

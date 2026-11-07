@@ -1,0 +1,54 @@
+/* Clean modern app styling and subtle scrollbars */
+body:has(.v2) {
+  margin: 0;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.v2 {
+  font-variant-numeric: tabular-nums;
+}
+
+.v2 * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.select-custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+}
+
+.select-custom-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.select-custom-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+}
+
+.v2 select[multiple] option {
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-bottom: 1px;
+}
+
+.v2 select[multiple] option:checked {
+  background-color: hsl(var(--primary) / 0.2) !important;
+  color: hsl(var(--primary)) !important;
+  font-weight: 600;
+}
+
+.v2 :focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2 * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

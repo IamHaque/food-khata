@@ -1,17 +1,16 @@
 # Food Khata
 
-A local CLI for saving and visualizing your Zomato and Swiggy food order history.
-Log in or reuse active sessions, sync new orders incrementally, ingest order history
-into a local SQLite analytics database, and export data for an independent React dashboard.
+A local CLI and analytics web application for saving, normalizing, and visualizing your Zomato and Swiggy food order history.
+Log in or reuse active sessions, sync new orders incrementally, ingest order history into a local SQLite analytics database, and explore rich analytics through a modern 7-route web dashboard.
 
 ## Install and run
 
-Requires Python 3.11 or newer and an existing Indian Zomato or Swiggy account.
+Requires Python 3.11 or newer and an existing Indian Zomato or Swiggy account. Node.js 22+ is required to build the web dashboard.
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -e .
+python -m pip install -e ".[serve]"
 food-khata
 ```
 
@@ -20,21 +19,33 @@ On macOS/Linux activate with `source .venv/bin/activate`. The installed
 
 ### Commands & Subcommands
 
+* **`food-khata serve`**:
+  Starts the local read-only FastAPI web server and serves the built dashboard UI at `http://127.0.0.1:8765`.
+  Flags:
+  * `--host`: Host to bind to (loopback only, default: `127.0.0.1`). Non-loopback bindings are rejected.
+  * `--port`: Port to listen on (default: `8765`).
+  * `--db-path PATH`: Path to SQLite database (default: `.food-khata/food_analytics.db`).
+  * `--data-dir PATH`: Private data root (default: `.food-khata/`).
+  * `--dev`: Development mode with automatic reload.
+
 * **`food-khata`** or **`food-khata sync`** *(Default)*:
   Interactive account selection, login/refresh, smart order sync, automatic local
-  database update, and interactive prompt to export dashboard data.
+  database update, and interactive prompt to export or view dashboard data.
+
 * **`food-khata ingest`**:
   Migrates all saved order JSONs across all accounts into the local SQLite database
   (`food_analytics.db`) without performing any network or login requests.
-* **`food-khata export`** (or **`food-khata dashboard`**, its alias):
-  Exports complete dashboard data from SQLite into `.food-khata/dashboard.json`.
-  Use `--output PATH` to choose a different data file.
 
-Flags:
+* **`food-khata export`** (or **`food-khata dashboard`**, its alias):
+  Exports complete dashboard data from SQLite into `.food-khata/dashboard.json` for
+  offline file loading in the `/legacy` view.
+  Use `--output PATH` to choose a different export path.
+
+General Flags:
 * `--data-dir PATH`: Override the private data directory (default: `.food-khata/`).
 * `--db-path PATH`: Override the SQLite database location (default: `.food-khata/food_analytics.db`).
 * `--no-dashboard`: Skip the post-sync dashboard prompt.
-* `--output PATH`: Write the React dashboard JSON export to this path.
+* `--output PATH`: Write the dashboard JSON export to this path.
 * `--no-open`: Compatibility flag; export does not open a browser.
 
 ### Multi-Account & Session Management
@@ -64,35 +75,39 @@ When pre-existing history is found for an account, choose your sync mode:
 3. **Full history scan**:
    Paginate to the very end for deep manual recovery.
 
-### Local Analytics Database & Dashboard
+## Web Dashboard
 
-Python owns syncing, normalization and financial parsing in SQLite. The React app
-loads a versioned JSON export; Python does not generate HTML or serve the UI.
+The web dashboard is an interactive, accessible React application built with Tailwind CSS, Lucide icons, and shadcn/ui components.
 
 ```powershell
-food-khata ingest
-food-khata export --output dashboard-ui/public/data/dashboard.json
-cd dashboard-ui
-npm ci
-npm run dev
+python -m pip install -e ".[serve]"
+npm --prefix dashboard-ui ci
+npm --prefix dashboard-ui run build
+food-khata serve
 ```
 
-Open the local URL printed by Vite. The app automatically loads that JSON file.
-You can also export to the default `.food-khata/dashboard.json` and choose **Load data**
-in the app. Run the export again after syncing, then refresh or reload the file.
+Open `http://127.0.0.1:8765`. The server opens SQLite with `mode=ro` and `PRAGMA query_only=ON`; it never mutates source data.
 
-The dashboard is one continuous page: no routes or section tabs. It provides
-shared customer/date/platform/restaurant/payment filters, chart tooltips, a
-weekday/hour heatmap, searchable complete order history and receipt-style order
-details. Light/dark themes persist locally. shadcn/ui components provide the controls,
-tables, charts, calendars, cards, tooltips and receipt sheet.
+### Dashboard Pages
+
+All pages share account selection, global date range, platform, status, city, locality, cuisine, dietary, and payment filters synchronized in the URL:
+
+1. **Overview**: Total spend, order count, AOV, separate explicit discounts and advertised savings, fee totals, interactive cost waterfall, and top restaurant/dish leaders.
+2. **Spending**: Cumulative daily spend curves, rolling 30-day pace, annual month-by-month spend, fee breakdown scatter, and discount distributions.
+3. **Food**: Dietary split (Veg / Non-Veg / Unknown), cuisine preferences, restaurant loyalty, monthly new vs repeat orders, and dish price trends.
+4. **Behavior**: Weekday x hour ordering heatmap, meal slots (Breakfast, Lunch, Snack, Dinner, Late night), order size histograms, and ordering streaks / gaps.
+5. **Places**: Spending distribution by delivery address and city, with order distance analysis.
+6. **Ledger**: Server-sorted, server-paginated full order history table with instant search, filter presets, CSV export, and accessible centered order receipt modal.
+7. **Data Health**: API-visible coverage tracking, data completeness checks, verified financial reconciliation ratios, and snapshot caveats.
+
+The original static export flow is retained at `/legacy` for offline JSON file viewing via `food-khata export`.
 
 ## Your data
 
 ```text
 food-khata/.food-khata/
   food_analytics.db     <-- Normalized SQLite relational analytics database
-  dashboard.json       <-- Versioned data input for the separate React app
+  dashboard.json       <-- Optional versioned export for legacy offline viewing
   accounts/
     <local-account-id>/
       account.json
@@ -115,11 +130,6 @@ directory private and out of Git, cloud sharing, and public bug reports. Files
 are stored locally in plain JSON; this application does not encrypt them. On
 Windows they inherit your directory's ACLs; keep the checkout private or use
 `--data-dir` to select another private location.
-
-Earlier builds used `~/.food-khata/`. If upgrading on another machine, stop running
-syncs and copy that directory into the checkout as `.food-khata/` before starting.
-Do not overwrite existing account folders. The CLI does not automatically move
-or delete the old home-directory copy.
 
 ## Sync and recovery
 
@@ -160,43 +170,31 @@ Exit codes: `0` complete, `1` failure/incomplete sync, `130` cancellation.
 
 ## Development
 
-```sh
-python -m pip install -e ".[dev]"
+Install development dependencies:
+
+```powershell
+python -m pip install -e ".[dev,serve]" httpx
 python -m pytest -q
 python -m ruff check .
 python -m ruff format --check .
 ```
 
+Frontend development (`dashboard-ui/`):
+
+```powershell
+cd dashboard-ui
+npm ci
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run test:browser
+```
+
+See [architecture and storage](docs/architecture.md) for module responsibilities and schema, and [metrics definitions](docs/METRICS.md) for calculation and reconciliation formulas.
 Tests use synthetic responses and temporary directories without live API calls.
-CI runs on Windows and Linux with Python 3.11 and 3.14. See
-[architecture and storage](docs/architecture.md) for module responsibilities and schema.
-Authenticated end-to-end verification requires a real account and OTP and is a
-separate manual check; offline tests do not prove current provider availability.
+CI runs on Windows and Linux with Python 3.11 and 3.14.
 
 The integrations were adapted from Jomato (MIT, copyright 2026 jatin-dot-py).
 See [LICENSE](LICENSE). This repository is independent and imports no parent project
 modules, configuration, sessions, or exports. Use only for accounts you control.
-
-## Dashboard development
-
-The React app lives in `dashboard-ui/` and uses Vite, Tailwind, shadcn/ui and Recharts.
-Node.js 22 or newer is recommended. In that directory:
-
-```sh
-npm ci
-npm test
-npm run build
-npm run preview
-```
-
-`npm run build` creates a normal static web app in `dashboard-ui/dist`.
-`npm run test:browser` tests the built app; install Chromium with
-`npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
-Vite binds to loopback by default. Exported JSON contains private account/address
-information: keep it private and do not publish `public/data` or a build containing it.
-
-Ingestion migrates SQLite additively and rolls back a failed account import.
-Source archives remain untouched. Advertised savings remain distinct from explicit
-bill discounts. Reconciliation means the known components balance within INR 1;
-it does not independently verify bank transactions. Unreconciled bills retain
-provider totals and show a concise notice in the receipt.

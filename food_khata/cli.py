@@ -232,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "action",
         nargs="?",
-        choices=["sync", "ingest", "export", "dashboard"],
+        choices=["sync", "ingest", "export", "dashboard", "serve"],
         default="sync",
         help="Action: sync, ingest (update local DB), or export (React dashboard JSON; dashboard is an alias)",
     )
@@ -259,7 +259,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Compatibility flag; JSON export never launches a browser",
     )
     parser.add_argument("--output", type=Path, default=None, help="Dashboard JSON export path")
+    parser.add_argument("--host", default="127.0.0.1", help="Loopback address for serve")
+    parser.add_argument("--port", type=int, default=8765, help="Port for serve")
+    parser.add_argument("--dev", action="store_true", help="Log slow serve requests")
     args = parser.parse_args(argv)
+    if args.action == "serve":
+        if not 1 <= args.port <= 65535:
+            print("Port must be between 1 and 65535.")
+            return 1
+        from .serve.cli import serve
+
+        return serve(
+            args.host,
+            args.port,
+            args.db_path or (args.data_dir.expanduser().resolve() / "food_analytics.db"),
+            args.dev,
+        )
     storage = Storage(args.data_dir.expanduser().resolve())
     db_file = args.db_path or (storage.root / "food_analytics.db")
 

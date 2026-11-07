@@ -1,0 +1,5074 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Food Khata API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/meta/data-health": {
+      "get": {
+        "summary": "Data Health",
+        "operationId": "data_health_api_meta_data_health_get",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meta/filters": {
+      "get": {
+        "summary": "Options",
+        "operationId": "options_api_meta_filters_get",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterOptions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "post": {
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_dashboard_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Filters"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/slim": {
+      "get": {
+        "summary": "Slim",
+        "operationId": "slim_api_orders_slim_get",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Slim"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "summary": "Orders",
+        "operationId": "orders_api_orders_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "date",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "title": "Direction"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Orders"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}/bill": {
+      "get": {
+        "summary": "Bill",
+        "operationId": "bill_api_orders__order_id__bill_get",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bill"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants": {
+      "get": {
+        "summary": "Restaurants",
+        "operationId": "restaurants_api_restaurants_get",
+        "parameters": [
+          {
+            "name": "min_orders",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Min Orders"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "amount",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "title": "Direction"
+            }
+          },
+          {
+            "name": "grouping",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "merged",
+                "listing"
+              ],
+              "type": "string",
+              "description": "merged key is normalized name|locality; listing key is restaurant id.",
+              "default": "merged",
+              "title": "Grouping"
+            },
+            "description": "merged key is normalized name|locality; listing key is restaurant id."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaders"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items": {
+      "get": {
+        "summary": "Items",
+        "operationId": "items_api_items_get",
+        "parameters": [
+          {
+            "name": "min_qty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Min Qty"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "amount",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "title": "Direction"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Account Ids"
+            }
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Platforms"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Repeat values; statuses= selects all statuses.",
+              "title": "Statuses"
+            },
+            "description": "Repeat values; statuses= selects all statuses."
+          },
+          {
+            "name": "cities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cities"
+            }
+          },
+          {
+            "name": "localities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Localities"
+            }
+          },
+          {
+            "name": "restaurant_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Restaurant Ids"
+            }
+          },
+          {
+            "name": "cuisines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Cuisines"
+            }
+          },
+          {
+            "name": "veg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "veg",
+                "nonveg",
+                "unknown"
+              ],
+              "type": "string",
+              "title": "Veg"
+            }
+          },
+          {
+            "name": "payment_methods",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Payment Methods"
+            }
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min"
+            }
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max"
+            }
+          },
+          {
+            "name": "meal_slots",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "snack",
+                  "dinner",
+                  "late_night"
+                ],
+                "type": "string"
+              },
+              "title": "Meal Slots"
+            }
+          },
+          {
+            "name": "day_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "weekday",
+                "weekend"
+              ],
+              "type": "string",
+              "title": "Day Type"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "anomaly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "review"
+              ],
+              "type": "string",
+              "title": "Anomaly"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "none",
+                "previous_period",
+                "previous_year"
+              ],
+              "type": "string",
+              "title": "Compare"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaders"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Platforms"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "platforms",
+          "order_count",
+          "date_from",
+          "date_to"
+        ],
+        "title": "AccountOption"
+      },
+      "Behavior": {
+        "properties": {
+          "timing_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Unavailable Reason"
+          },
+          "date_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Unavailable Reason"
+          },
+          "hour_weekday": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Hour Weekday"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Meals"
+          },
+          "day_type": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorRow"
+            },
+            "type": "array",
+            "title": "Day Type"
+          },
+          "aov_histogram": {
+            "items": {
+              "$ref": "#/components/schemas/HistogramRow"
+            },
+            "type": "array",
+            "title": "Aov Histogram"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapRow"
+            },
+            "type": "array",
+            "title": "Gaps"
+          },
+          "longest_streak": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Streak"
+          },
+          "longest_gap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Gap"
+          },
+          "orders_per_week": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders Per Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timing_unavailable_reason",
+          "date_unavailable_reason",
+          "hour_weekday",
+          "meals",
+          "day_type",
+          "aov_histogram",
+          "gaps",
+          "longest_streak",
+          "longest_gap",
+          "orders_per_week"
+        ],
+        "title": "Behavior"
+      },
+      "BehaviorRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "orders",
+          "spend"
+        ],
+        "title": "BehaviorRow"
+      },
+      "Bill": {
+        "properties": {
+          "discount_items": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountItem"
+            },
+            "type": "array",
+            "title": "Discount Items"
+          },
+          "reconciliation_label": {
+            "type": "string",
+            "title": "Reconciliation Label"
+          },
+          "reconciliation_status": {
+            "type": "string",
+            "enum": [
+              "matches",
+              "off",
+              "unknown"
+            ],
+            "title": "Reconciliation Status"
+          },
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "reconciliation_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Difference"
+          },
+          "full_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Address"
+          },
+          "source_bill": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "discount_breakdown": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "discount_items",
+          "reconciliation_label",
+          "reconciliation_status",
+          "order",
+          "items",
+          "reconciliation_difference",
+          "full_address"
+        ],
+        "title": "Bill"
+      },
+      "CalendarDay": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "orders",
+          "spend"
+        ],
+        "title": "CalendarDay"
+      },
+      "ChartLeader": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "quantity",
+          "amount"
+        ],
+        "title": "ChartLeader"
+      },
+      "Charts": {
+        "properties": {
+          "kpi_history": {
+            "items": {
+              "$ref": "#/components/schemas/MonthKPIs"
+            },
+            "type": "array",
+            "title": "Kpi History"
+          },
+          "waterfall_steps": {
+            "items": {
+              "$ref": "#/components/schemas/WaterfallStep"
+            },
+            "type": "array",
+            "title": "Waterfall Steps"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodCharts"
+          },
+          "spending": {
+            "$ref": "#/components/schemas/SpendingCharts"
+          },
+          "places": {
+            "$ref": "#/components/schemas/Places"
+          },
+          "behavior": {
+            "$ref": "#/components/schemas/Behavior"
+          },
+          "monthly": {
+            "items": {
+              "$ref": "#/components/schemas/Month"
+            },
+            "type": "array",
+            "title": "Monthly"
+          },
+          "calendar": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarDay"
+            },
+            "type": "array",
+            "title": "Calendar"
+          },
+          "cost_waterfall": {
+            "$ref": "#/components/schemas/Waterfall"
+          },
+          "top_restaurants": {
+            "items": {
+              "$ref": "#/components/schemas/ChartLeader"
+            },
+            "type": "array",
+            "title": "Top Restaurants"
+          },
+          "top_dishes": {
+            "items": {
+              "$ref": "#/components/schemas/ChartLeader"
+            },
+            "type": "array",
+            "title": "Top Dishes"
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformChart"
+            },
+            "type": "array",
+            "title": "Platforms"
+          },
+          "monthly_fee_components": {
+            "items": {
+              "$ref": "#/components/schemas/FeeMonth"
+            },
+            "type": "array",
+            "title": "Monthly Fee Components"
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/Insight"
+            },
+            "type": "array",
+            "title": "Insights"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kpi_history",
+          "waterfall_steps",
+          "food",
+          "spending",
+          "places",
+          "behavior",
+          "monthly",
+          "calendar",
+          "cost_waterfall",
+          "top_restaurants",
+          "top_dishes",
+          "platforms",
+          "monthly_fee_components",
+          "insights"
+        ],
+        "title": "Charts"
+      },
+      "Comparison": {
+        "properties": {
+          "date_from": {
+            "type": "string",
+            "format": "date",
+            "title": "Date From"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date",
+            "title": "Date To"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KPIs"
+          },
+          "percent_change": {
+            "$ref": "#/components/schemas/KPIDeltas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date_from",
+          "date_to",
+          "kpis",
+          "percent_change"
+        ],
+        "title": "Comparison"
+      },
+      "CuisineRow": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "orders",
+          "spend"
+        ],
+        "title": "CuisineRow"
+      },
+      "DailySpend": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "cumulative": {
+            "type": "number",
+            "title": "Cumulative"
+          },
+          "rolling_30": {
+            "type": "number",
+            "title": "Rolling 30"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "spend",
+          "cumulative",
+          "rolling_30"
+        ],
+        "title": "DailySpend"
+      },
+      "Dashboard": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KPIs"
+          },
+          "charts": {
+            "$ref": "#/components/schemas/Charts"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Comparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_complete": {
+            "type": "boolean",
+            "title": "Data Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "kpis",
+          "charts",
+          "comparison",
+          "data_complete"
+        ],
+        "title": "Dashboard"
+      },
+      "DietMonth": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "veg": {
+            "type": "integer",
+            "title": "Veg"
+          },
+          "non_veg": {
+            "type": "integer",
+            "title": "Non Veg"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "veg",
+          "non_veg",
+          "unknown"
+        ],
+        "title": "DietMonth"
+      },
+      "DietRow": {
+        "properties": {
+          "diet": {
+            "type": "string",
+            "title": "Diet"
+          },
+          "item_lines": {
+            "type": "integer",
+            "title": "Item Lines"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "line_total": {
+            "type": "number",
+            "title": "Line Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "diet",
+          "item_lines",
+          "quantity",
+          "line_total"
+        ],
+        "title": "DietRow"
+      },
+      "DiscountItem": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "amount"
+        ],
+        "title": "DiscountItem"
+      },
+      "FeeMonth": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          },
+          "net_delivery": {
+            "type": "number",
+            "title": "Net Delivery"
+          },
+          "packaging": {
+            "type": "number",
+            "title": "Packaging"
+          },
+          "platform": {
+            "type": "number",
+            "title": "Platform"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "total_fees": {
+            "type": "number",
+            "title": "Total Fees"
+          },
+          "rounding_adjustment": {
+            "type": "number",
+            "title": "Rounding Adjustment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "order_count",
+          "net_delivery",
+          "packaging",
+          "platform",
+          "tax",
+          "total_fees",
+          "rounding_adjustment"
+        ],
+        "title": "FeeMonth"
+      },
+      "FeeScatter": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "fee_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "fees",
+          "fee_percent"
+        ],
+        "title": "FeeScatter"
+      },
+      "FilterOptions": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOption"
+            },
+            "type": "array",
+            "title": "Accounts"
+          },
+          "all_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOption"
+            },
+            "type": "array",
+            "title": "All Accounts"
+          },
+          "restaurants": {
+            "items": {
+              "$ref": "#/components/schemas/RestaurantOption"
+            },
+            "type": "array",
+            "title": "Restaurants"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Platforms"
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses"
+          },
+          "cities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cities"
+          },
+          "localities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Localities"
+          },
+          "cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cuisines"
+          },
+          "payment_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payment Methods"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "accounts",
+          "all_accounts",
+          "restaurants",
+          "platforms",
+          "statuses",
+          "cities",
+          "localities",
+          "cuisines",
+          "payment_methods",
+          "date_from",
+          "date_to",
+          "amount_min",
+          "amount_max"
+        ],
+        "title": "FilterOptions"
+      },
+      "Filters": {
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "account_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Account Ids"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Platforms"
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses",
+            "description": "Repeat for multiple statuses; statuses= selects all statuses."
+          },
+          "cities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cities"
+          },
+          "localities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Localities"
+          },
+          "restaurant_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Restaurant Ids"
+          },
+          "cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cuisines"
+          },
+          "veg": {
+            "type": "string",
+            "enum": [
+              "all",
+              "veg",
+              "nonveg",
+              "unknown"
+            ],
+            "title": "Veg",
+            "default": "all"
+          },
+          "payment_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payment Methods"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "meal_slots": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "breakfast",
+                "lunch",
+                "snack",
+                "dinner",
+                "late_night"
+              ]
+            },
+            "type": "array",
+            "title": "Meal Slots"
+          },
+          "day_type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "default": "all"
+          },
+          "verified_only": {
+            "type": "boolean",
+            "title": "Verified Only",
+            "default": false
+          },
+          "anomaly": {
+            "type": "string",
+            "enum": [
+              "all",
+              "review"
+            ],
+            "title": "Anomaly",
+            "default": "all"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search"
+          },
+          "compare": {
+            "type": "string",
+            "enum": [
+              "none",
+              "previous_period",
+              "previous_year"
+            ],
+            "title": "Compare",
+            "default": "none"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Filters"
+      },
+      "FoodCharts": {
+        "properties": {
+          "diet_monthly": {
+            "items": {
+              "$ref": "#/components/schemas/DietMonth"
+            },
+            "type": "array",
+            "title": "Diet Monthly",
+            "default": []
+          },
+          "cuisines": {
+            "items": {
+              "$ref": "#/components/schemas/CuisineRow"
+            },
+            "type": "array",
+            "title": "Cuisines"
+          },
+          "diet": {
+            "items": {
+              "$ref": "#/components/schemas/DietRow"
+            },
+            "type": "array",
+            "title": "Diet"
+          },
+          "loyalty": {
+            "items": {
+              "$ref": "#/components/schemas/LoyaltyRow"
+            },
+            "type": "array",
+            "title": "Loyalty"
+          },
+          "new_repeat": {
+            "items": {
+              "$ref": "#/components/schemas/VisitMonth"
+            },
+            "type": "array",
+            "title": "New Repeat"
+          },
+          "cuisine_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine Unavailable Reason"
+          },
+          "diet_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diet Unavailable Reason"
+          },
+          "orders_without_dates": {
+            "type": "integer",
+            "title": "Orders Without Dates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cuisines",
+          "diet",
+          "loyalty",
+          "new_repeat",
+          "cuisine_unavailable_reason",
+          "diet_unavailable_reason",
+          "orders_without_dates"
+        ],
+        "title": "FoodCharts"
+      },
+      "GapRow": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "orders"
+        ],
+        "title": "GapRow"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportHealth"
+            },
+            "type": "array",
+            "title": "Imports"
+          },
+          "history_complete": {
+            "type": "boolean",
+            "title": "History Complete"
+          },
+          "details_complete": {
+            "type": "boolean",
+            "title": "Details Complete"
+          },
+          "verified_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Percent"
+          },
+          "null_rates": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Null Rates"
+          },
+          "duplicate_orders": {
+            "type": "integer",
+            "title": "Duplicate Orders"
+          },
+          "reconciliation_anomalies": {
+            "type": "integer",
+            "title": "Reconciliation Anomalies"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "imports",
+          "history_complete",
+          "details_complete",
+          "verified_percent",
+          "null_rates",
+          "duplicate_orders",
+          "reconciliation_anomalies",
+          "note"
+        ],
+        "title": "Health"
+      },
+      "HistogramRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "orders"
+        ],
+        "title": "HistogramRow"
+      },
+      "ImportHealth": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "history_complete": {
+            "type": "boolean",
+            "title": "History Complete"
+          },
+          "details_complete": {
+            "type": "boolean",
+            "title": "Details Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "platform",
+          "history_complete",
+          "details_complete"
+        ],
+        "title": "ImportHealth"
+      },
+      "Insight": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "most_frequent_platform",
+              "top_restaurant",
+              "fee_percentage"
+            ],
+            "title": "Key"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "filter_patch": {
+            "$ref": "#/components/schemas/InsightPatch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "text",
+          "value",
+          "filter_patch"
+        ],
+        "title": "Insight"
+      },
+      "InsightPatch": {
+        "properties": {
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Platforms",
+            "default": []
+          },
+          "restaurant_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Restaurant Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "InsightPatch"
+      },
+      "Item": {
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "title": "Item Name"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "total_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Price"
+          },
+          "is_veg": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Veg"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_name",
+          "quantity",
+          "unit_price",
+          "total_price",
+          "is_veg",
+          "category"
+        ],
+        "title": "Item"
+      },
+      "JsonValue": {},
+      "KPIDeltas": {
+        "properties": {
+          "orders": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders"
+          },
+          "valid_order_count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Order Count"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "aov": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aov"
+          },
+          "total_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discount"
+          },
+          "reported_savings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings"
+          },
+          "discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Rate"
+          },
+          "reported_savings_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings Rate"
+          },
+          "fees": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fees"
+          },
+          "fee_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percentage"
+          },
+          "tax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax"
+          },
+          "tips": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tips"
+          },
+          "refunds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunds"
+          },
+          "unique_restaurants": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Restaurants"
+          },
+          "unique_dishes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Dishes"
+          },
+          "average_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders",
+          "valid_order_count",
+          "spend",
+          "aov",
+          "total_discount",
+          "reported_savings",
+          "discount_rate",
+          "reported_savings_rate",
+          "fees",
+          "fee_percentage",
+          "tax",
+          "tips",
+          "refunds",
+          "unique_restaurants",
+          "unique_dishes",
+          "average_rating"
+        ],
+        "title": "KPIDeltas"
+      },
+      "KPIs": {
+        "properties": {
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "valid_order_count": {
+            "type": "integer",
+            "title": "Valid Order Count"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "aov": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aov"
+          },
+          "total_discount": {
+            "type": "number",
+            "title": "Total Discount"
+          },
+          "reported_savings": {
+            "type": "number",
+            "title": "Reported Savings"
+          },
+          "discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Rate"
+          },
+          "reported_savings_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings Rate"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "fee_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percentage"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "tips": {
+            "type": "number",
+            "title": "Tips"
+          },
+          "refunds": {
+            "type": "number",
+            "title": "Refunds"
+          },
+          "unique_restaurants": {
+            "type": "integer",
+            "title": "Unique Restaurants"
+          },
+          "unique_dishes": {
+            "type": "integer",
+            "title": "Unique Dishes"
+          },
+          "average_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders",
+          "valid_order_count",
+          "spend",
+          "aov",
+          "total_discount",
+          "reported_savings",
+          "discount_rate",
+          "reported_savings_rate",
+          "fees",
+          "fee_percentage",
+          "tax",
+          "tips",
+          "refunds",
+          "unique_restaurants",
+          "unique_dishes",
+          "average_rating"
+        ],
+        "title": "KPIs"
+      },
+      "Leader": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "price_trend": {
+            "items": {
+              "$ref": "#/components/schemas/PriceMonth"
+            },
+            "type": "array",
+            "title": "Price Trend",
+            "default": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "quantity",
+          "amount"
+        ],
+        "title": "Leader"
+      },
+      "Leaders": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Leader"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "rows",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Leaders"
+      },
+      "LoyaltyRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "aov": {
+            "type": "number",
+            "title": "Aov"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "orders",
+          "spend",
+          "aov"
+        ],
+        "title": "LoyaltyRow"
+      },
+      "Month": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "orders",
+          "spend"
+        ],
+        "title": "Month"
+      },
+      "MonthKPIs": {
+        "properties": {
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "valid_order_count": {
+            "type": "integer",
+            "title": "Valid Order Count"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "aov": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aov"
+          },
+          "total_discount": {
+            "type": "number",
+            "title": "Total Discount"
+          },
+          "reported_savings": {
+            "type": "number",
+            "title": "Reported Savings"
+          },
+          "discount_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Rate"
+          },
+          "reported_savings_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings Rate"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "fee_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percentage"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "tips": {
+            "type": "number",
+            "title": "Tips"
+          },
+          "refunds": {
+            "type": "number",
+            "title": "Refunds"
+          },
+          "unique_restaurants": {
+            "type": "integer",
+            "title": "Unique Restaurants"
+          },
+          "unique_dishes": {
+            "type": "integer",
+            "title": "Unique Dishes"
+          },
+          "average_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Rating"
+          },
+          "month": {
+            "type": "string",
+            "title": "Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders",
+          "valid_order_count",
+          "spend",
+          "aov",
+          "total_discount",
+          "reported_savings",
+          "discount_rate",
+          "reported_savings_rate",
+          "fees",
+          "fee_percentage",
+          "tax",
+          "tips",
+          "refunds",
+          "unique_restaurants",
+          "unique_dishes",
+          "average_rating",
+          "month"
+        ],
+        "title": "MonthKPIs"
+      },
+      "Order": {
+        "properties": {
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "account_label": {
+            "type": "string",
+            "title": "Account Label"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "platform_order_id": {
+            "type": "string",
+            "title": "Platform Order Id"
+          },
+          "order_timestamp": {
+            "type": "string",
+            "title": "Order Timestamp"
+          },
+          "order_time": {
+            "type": "string",
+            "title": "Order Time"
+          },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
+          "user_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Rating"
+          },
+          "food_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Discount"
+          },
+          "delivery_fee_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Fee Discount"
+          },
+          "other_charges": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Charges"
+          },
+          "source_complete": {
+            "type": "boolean",
+            "title": "Source Complete"
+          },
+          "reconciliation_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Difference"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "order_date": {
+            "type": "string",
+            "title": "Order Date"
+          },
+          "order_status": {
+            "type": "string",
+            "title": "Order Status"
+          },
+          "restaurant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restaurant Name"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "items_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items Summary"
+          },
+          "final_amount_paid": {
+            "type": "number",
+            "title": "Final Amount Paid"
+          },
+          "item_subtotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Subtotal"
+          },
+          "total_discount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discount"
+          },
+          "reported_savings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Savings"
+          },
+          "delivery_fee": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Fee"
+          },
+          "packaging_fee": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packaging Fee"
+          },
+          "platform_fee": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Fee"
+          },
+          "total_tax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tax"
+          },
+          "tip": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tip"
+          },
+          "refund_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount"
+          },
+          "financial_verified": {
+            "type": "boolean",
+            "title": "Financial Verified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fees",
+          "id",
+          "account_label",
+          "account_id",
+          "platform_order_id",
+          "order_timestamp",
+          "order_time",
+          "payment_method",
+          "user_rating",
+          "food_discount",
+          "delivery_fee_discount",
+          "other_charges",
+          "source_complete",
+          "reconciliation_difference",
+          "platform",
+          "order_date",
+          "order_status",
+          "restaurant_name",
+          "address_label",
+          "city",
+          "items_summary",
+          "final_amount_paid",
+          "item_subtotal",
+          "total_discount",
+          "reported_savings",
+          "delivery_fee",
+          "packaging_fee",
+          "platform_fee",
+          "total_tax",
+          "tip",
+          "refund_amount",
+          "financial_verified"
+        ],
+        "title": "Order"
+      },
+      "Orders": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "filtered_total_amount": {
+            "type": "number",
+            "title": "Filtered Total Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "rows",
+          "total",
+          "page",
+          "page_size",
+          "filtered_total_amount"
+        ],
+        "title": "Orders"
+      },
+      "PlaceDistance": {
+        "properties": {
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          }
+        },
+        "type": "object",
+        "required": [
+          "distance_km",
+          "fee"
+        ],
+        "title": "PlaceDistance"
+      },
+      "PlaceLabel": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "city",
+          "orders",
+          "spend",
+          "fee"
+        ],
+        "title": "PlaceLabel"
+      },
+      "Places": {
+        "properties": {
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceLabel"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "distances": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceDistance"
+            },
+            "type": "array",
+            "title": "Distances"
+          },
+          "distance_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Unavailable Reason"
+          },
+          "unsupported_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unsupported Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labels",
+          "distances",
+          "distance_unavailable_reason",
+          "unsupported_reason"
+        ],
+        "title": "Places"
+      },
+      "PlatformChart": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "discounts": {
+            "type": "number",
+            "title": "Discounts"
+          },
+          "advertised_savings": {
+            "type": "number",
+            "title": "Advertised Savings"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees"
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform",
+          "orders",
+          "spend",
+          "discounts",
+          "advertised_savings",
+          "fees"
+        ],
+        "title": "PlatformChart"
+      },
+      "PriceMonth": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "unit_price",
+          "quantity"
+        ],
+        "title": "PriceMonth"
+      },
+      "RestaurantOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "RestaurantOption"
+      },
+      "Slim": {
+        "properties": {
+          "filters_applied": {
+            "$ref": "#/components/schemas/Filters"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SlimOrder"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filters_applied",
+          "generated_at",
+          "rows"
+        ],
+        "title": "Slim"
+      },
+      "SlimOrder": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "order_date": {
+            "type": "string",
+            "title": "Order Date"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "order_status": {
+            "type": "string",
+            "title": "Order Status"
+          },
+          "final_amount_paid": {
+            "type": "number",
+            "title": "Final Amount Paid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "order_date",
+          "platform",
+          "order_status",
+          "final_amount_paid"
+        ],
+        "title": "SlimOrder"
+      },
+      "SpendingCharts": {
+        "properties": {
+          "discount_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountItem"
+            },
+            "type": "array",
+            "title": "Discount Breakdown",
+            "default": []
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DailySpend"
+            },
+            "type": "array",
+            "title": "Daily"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/YearSpend"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "fee_scatter": {
+            "items": {
+              "$ref": "#/components/schemas/FeeScatter"
+            },
+            "type": "array",
+            "title": "Fee Scatter"
+          },
+          "unallocated_spend": {
+            "type": "number",
+            "title": "Unallocated Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily",
+          "years",
+          "fee_scatter",
+          "unallocated_spend"
+        ],
+        "title": "SpendingCharts"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VisitMonth": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "new_orders": {
+            "type": "integer",
+            "title": "New Orders"
+          },
+          "repeat_orders": {
+            "type": "integer",
+            "title": "Repeat Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "new_orders",
+          "repeat_orders"
+        ],
+        "title": "VisitMonth"
+      },
+      "Waterfall": {
+        "properties": {
+          "subtotal": {
+            "type": "number",
+            "title": "Subtotal"
+          },
+          "food_discount": {
+            "type": "number",
+            "title": "Food Discount"
+          },
+          "net_delivery": {
+            "type": "number",
+            "title": "Net Delivery"
+          },
+          "packaging": {
+            "type": "number",
+            "title": "Packaging"
+          },
+          "platform": {
+            "type": "number",
+            "title": "Platform"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "tip": {
+            "type": "number",
+            "title": "Tip"
+          },
+          "other": {
+            "type": "number",
+            "title": "Other"
+          },
+          "residual": {
+            "type": "number",
+            "title": "Residual"
+          },
+          "provider_paid": {
+            "type": "number",
+            "title": "Provider Paid"
+          },
+          "refunds": {
+            "type": "number",
+            "title": "Refunds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subtotal",
+          "food_discount",
+          "net_delivery",
+          "packaging",
+          "platform",
+          "tax",
+          "tip",
+          "other",
+          "residual",
+          "provider_paid",
+          "refunds"
+        ],
+        "title": "Waterfall"
+      },
+      "WaterfallStep": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "baseline": {
+            "type": "number",
+            "title": "Baseline"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "total"
+            ],
+            "title": "Direction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "amount",
+          "baseline",
+          "height",
+          "direction"
+        ],
+        "title": "WaterfallStep"
+      },
+      "YearSpend": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "spend"
+        ],
+        "title": "YearSpend"
+      }
+    }
+  }
+}

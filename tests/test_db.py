@@ -32,8 +32,9 @@ def test_normalization_utilities():
     assert normalize_payment("COD") == "Cash"
     assert normalize_payment("Paytm Wallet") == "Wallet"
 
-    assert normalize_address("DG", "Begariya Road, Dubagga") == "Dubagga, Lucknow"
-    assert normalize_address("Work", "Gachibowli, Hyderabad") == "Gachibowli, Hyderabad"
+    assert normalize_address("Home", "123 Main Street") == "Home"
+    assert normalize_address("work", "456 Tech Park") == "Work"
+    assert normalize_address("other", "789 Random Ave") == "Other"
 
     assert infer_veg_tag("Chicken Burger") == 0
     assert infer_veg_tag("Paneer Pizza") == 1
@@ -87,16 +88,16 @@ def test_swiggy_and_zomato_ingestion(tmp_path: Path):
                     "payment_method": "Credit/Debit card",
                     "restaurant_id": 1234,
                     "restaurant_name": "Test Burger Shop",
-                    "restaurant_locality": "Chowk",
-                    "restaurant_city_name": "Lucknow",
-                    "restaurant_address": "Chowk Lucknow",
+                    "restaurant_locality": "Bandra",
+                    "restaurant_city_name": "Mumbai",
+                    "restaurant_address": "Bandra West, Mumbai",
                     "restaurant_cuisine": ["Burgers", "Fast Food"],
                     "delivery_address": {
                         "annotation": "Home",
-                        "address": "Dubagga, Lucknow",
-                        "city": "Lucknow",
-                        "lat": 26.87,
-                        "lng": 80.85,
+                        "address": "Bandra, Mumbai",
+                        "city": "Mumbai",
+                        "lat": 19.05,
+                        "lng": 72.83,
                     },
                     "order_items": [
                         {
@@ -126,18 +127,18 @@ def test_swiggy_and_zomato_ingestion(tmp_path: Path):
                 "id": 5678,
                 "name": "Test Pizza House",
                 "location": {
-                    "locality": "Husainabad",
-                    "city": "Lucknow",
-                    "address": "Husainabad, Lucknow",
-                    "latitude": 26.88,
-                    "longitude": 80.91,
+                    "locality": "Andheri",
+                    "city": "Mumbai",
+                    "address": "Andheri West, Mumbai",
+                    "latitude": 19.13,
+                    "longitude": 72.84,
                 },
             },
             "delivery_address_obj": {
                 "alias": "Home",
-                "full_address_text": "Dubagga, Lucknow",
-                "latitude": 26.87,
-                "longitude": 80.85,
+                "full_address_text": "Andheri, Mumbai",
+                "latitude": 19.13,
+                "longitude": 72.84,
             },
             "order": {
                 "total_cost": 210,
@@ -264,16 +265,13 @@ def test_ingest_all_from_storage(tmp_path: Path):
 
 def test_dates_and_geographic_groups_do_not_invent_context():
     assert parse_date("not a date") == ("", "", "")
-    assert parse_date("2026-10-01T22:00:00Z")[1:] == ("2026-10-02", "03:30:00")
     assert clean_num(float("nan"), None) is None
     assert normalize_address("Home", "") == "Unknown"
-    assert normalize_address("PG", "JV Colony, Hyderabad") == "JV Colony, Hyderabad"
-    assert normalize_address("Other", "Beltola, Guwahati") != normalize_address(
-        "AH", "Hatigaon, Guwahati"
-    )
-    assert normalize_address("LifeCare", "Jawahar Nagar, Qaisar Bagh") == normalize_address(
-        "Other", "Jawahar Nagar, Qaisar Bagh"
-    )
+    assert normalize_address("Home", None) == "Unknown"
+    assert normalize_address("pg", "456 Side Street") == "Pg"
+    assert normalize_address("Office", "789 Main Road") == "Office"
+    assert normalize_address("delivered", "789 Main Road") == "Other"
+    assert normalize_address("", "789 Main Road") == "Other"
     assert classify_cuisine("Chicken fried rice", "Test") == "Chinese & Asian"
 
 

@@ -1,0 +1,21 @@
+/* Order modal styling enhancements */
+.order-modal {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 639px) {
+  .order-modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-modal {
+    animation: none !important;
+    transition: opacity 0.1s !important;
+  }
+}

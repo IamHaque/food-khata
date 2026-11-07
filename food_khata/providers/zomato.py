@@ -14,9 +14,9 @@ from curl_cffi import requests as curl_requests
 
 from ..contracts import AuthenticationError, KhataError
 from .http import redact, request_json
-from .zomato_headers import AUTH_HEADERS
+from .zomato_headers import AUTH_HEADERS, ZOMATO_CLIENT_ID
 
-CLIENT_ID = "5276d7f1-910b-4243-92ea-d27e758ad02b"
+CLIENT_ID = ZOMATO_CLIENT_ID
 ACCOUNTS = "https://accounts.zomato.com"
 CALLBACK = ACCOUNTS + "/zoauth/callback"
 API = "https://api.zomato.com/"
