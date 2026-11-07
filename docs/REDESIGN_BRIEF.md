@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 11 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P1 · Last updated: 2026-11-07
+**Overall progress:** 12 / 62 stories DONE · 1 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P1 · Last updated: 2026-11-07
 
 ---
 
@@ -1173,8 +1173,8 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-009 | Orchestration harness | P0 | DONE | 2026-11-07 | merge 6ac38d3; verify PASS guardrails/typecheck/lint/unit; verify.mjs created, .gitignore updated |
 | S-010 | App shell | P0 | DONE | 2026-11-07 | merge d060a7e; verify.mjs PASS (typecheck/lint/unit 50 passed); App shell, collapsible rail, 1440px max width, mobile drawer |
 | S-011 | Five-page routing | P0 | DONE | 2026-11-07 | merge 1bb9ad1; verify.mjs PASS (typecheck/lint/unit 53 passed); 5 routes, search-preserving redirects, dev-only links, 404 page |
-| S-012 | Account switcher | P0 | TODO | | |
-| S-013 | Sync status chip and panel | P0 | TODO | | |
+| S-012 | Account switcher | P0 | DONE | 2026-11-07 | merge b282ac9; verify.mjs PASS (typecheck/lint/unit 54 passed); initials, platform badges, order counts, multi-select, search, keyboard |
+| S-013 | Sync status chip and panel | P0 | IN_PROGRESS | 2026-11-07 |  |
 | S-014 | Filter summary row and advanced panel | P0 | TODO | | |
 | S-015 | URL state | P0 | TODO | | |
 | S-016 | Command palette and shortcuts | P1 | TODO | | |
@@ -1237,6 +1237,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-007 | 2026-11-07 | 2026-11-08 | S-004 | Appearance Popover and live preview | Replace native select with Radix Popover | Mode segmented control, 5 accent swatches, live preview on hover/focus with ref revert |
 | DEC-008 | 2026-11-07 | 2026-11-08 | S-010 | App shell architecture | Need collapsible rail and responsive navigation | Desktop collapsible rail with tooltips, single mobile drawer, 1440px centered content grid |
 | DEC-009 | 2026-11-07 | 2026-11-08 | S-011 | Five-page routing architecture | Align with D-05 pages | Primary routes /, /spending, /food, /habits, /orders with query-preserving redirects and 404 page |
+| DEC-010 | 2026-11-07 | 2026-11-08 | S-012 | Account switcher popover UX | Modern account picker with search | Initials avatar, Zomato/Swiggy badges, order count, search field, multi-select, keyboard trap |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
@@ -1270,6 +1271,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | P0-GATE-PASS | pass (109 passed) | pass | pass | pass | pass (72 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-d060a7e | n/a | n/a | pass | pass | pass (50 passed) | not_run | pass |
 | 2026-11-07 | 2026-11-08 | merge-1bb9ad1 | n/a | n/a | pass | pass | pass (53 passed) | not_run | pass |
+| 2026-11-07 | 2026-11-08 | merge-b282ac9 | n/a | n/a | pass | pass | pass (54 passed) | not_run | pass |
 
 ### 8.7 Changelog
 | Date | Commit | Story | Summary |
@@ -1286,6 +1288,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | P0-GATE-PASS | GATE-P0 |
 | 2026-11-07 | 2026-11-08 | merge-d060a7e | S-010 |
 | 2026-11-07 | 2026-11-08 | merge-1bb9ad1 | S-011 |
+| 2026-11-07 | 2026-11-08 | merge-b282ac9 | S-012 |
 
 ### 8.9 Delegation ledger
 | Date | Dispatch | Story | Class | Model | Attempt | Outcome | Minutes | Note |
@@ -1314,6 +1317,9 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | 2026-11-07 | 2026-11-08 | D-012-S010-app-shell | S-010 | T2 | beam | 1 | pass | 2 |
 | 2026-11-07 | 2026-11-08 | D-013-S011-five-pages | S-011 | T2 | beam | 1 | running | 0 |
 | 2026-11-07 | 2026-11-08 | D-013-S011-five-pages | S-011 | T2 | beam | 1 | pass | 3 |
+| 2026-11-07 | 2026-11-08 | D-014-S012-account-switcher | S-012 | T2 | beam | 1 | running | 0 |
+| 2026-11-07 | 2026-11-08 | D-015-S013-sync-status | S-013 | T2 | deepseek | 1 | running | 0 |
+| 2026-11-07 | 2026-11-08 | D-014-S012-account-switcher | S-012 | T2 | beam | 1 | pass | 4 |
 
 ---
 
