@@ -402,7 +402,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | FX-01 | Tracker and hygiene | A | P0 | IN_PROGRESS | — | — | A1 |
 | FX-02 | Fast verify harness | A | P0 | IN_PROGRESS | — | — | A1 |
-| FX-04 | Read-only database safety | A | P1 | IN_PROGRESS | — | — | A1 |
+| FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | TODO | — | — | A2 |
 | FX-05 | BaseChart primitive | A | P1 | TODO | — | — | A2 |
 | FX-06 | Browser QA suite | A | P0 | TODO | — | — | A3 |
@@ -448,6 +448,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-P5 | 2026-11-09 | FX-06 | First route under 1.5 s (from brief S-082) and cross-filter click under 300 ms. | The 300 ms figure is my proposal, not from the brief. | Performance gate | Accepted (2026-11-09) |
 | DEC-010 | 2026-11-09 | AC-01, AC-06, AC-07, AC-09, AC-13, AC-15, AC-16 | Registration is blocked until the no-recovery box is ticked. The login screen does not show the owner's name. Reset password asks for confirmation. New orders is the default sync on later visits. Session idle timeout is 8 hours. Limits: 8 users, 5 linked logins per user, 1 running and 2 queued sync jobs per user. Tests and visual checks run in the executing agent's integrated preview browser, so BLK-01 is resolved. DEC-P1 to DEC-P5 are accepted. | You answered the open questions; the limits are my suggestion, sized for a household. | Wireframes, registration, job limits, browser QA | Accepted |
 | DEC-011 | 2026-11-09 | Plan | The orchestrator chooses models; the plan only gives weight, risk and needs per story (2.4). Phase B waves reordered: AC-05 to B1, AC-12 starts from the auth contract (B3), AC-07 off the critical path (B4). max\_parallel raised to 4, L stories get larger packets and timeouts. | Your instruction; shortens the longest dependency chain from 9 stories to 7 | Waves, tags, models.json settings | Accepted |
+| DEC-012 | 2026-11-09 | FX-04 | Kept check_same_thread=False for readonly connections because FastAPI dependency cleanup may execute in another worker thread; missing DB returns HTTP 503 database_not_found. | Concurrency & clear error contract | DB connection handling | Accepted |
 
 ### 5.3 Deviation log
 
@@ -505,6 +506,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | Baseline | `npm run lint` (eslint, colours, contrast) | pass | not recorded | 2fcacf4 |
 | 2026-11-09 | Baseline | `npm run build` | pass, one 1.77 MB chunk | about 12 s | 2fcacf4 |
 | 2026-11-09 | Baseline | `npm run test:browser` | not run (BLK-01) | — | 2fcacf4 |
+| 2026-11-09 | FX-04 | `node scripts/verify.mjs . --backend` | all pass (pytest 114 passed, ruff clean, typecheck, lint, vitest 967 passed) | 50 s | e2012b9 |
 
 ### 5.9 Changelog
 
@@ -513,6 +515,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | Plan | Plan v1 created | — |
 | 2026-11-09 | Plan | Plan v1.1: DEC-P1 to DEC-P5 accepted, OQ-1 to OQ-7 closed (DEC-010), BLK-01 and BL-106 resolved | — |
 | 2026-11-09 | Plan | Added 2.4 orchestrator guidance (story weights, risk, parallelism settings); Phase B waves reordered (DEC-011) | — |
+| 2026-11-09 | FX-04 | Per-request readonly connection safety verified under 20-thread concurrency; missing database returns HTTP 503 JSON | e2012b9 |
 
 ### 5.10 Delegation ledger
 
@@ -520,4 +523,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-09 | FX-01 | T1 | glm | 1 | in_progress | — |
 | 2026-11-09 | FX-02 | T3 | gemini-high | 1 | in_progress | — |
-| 2026-11-09 | FX-04 | T8 | deepseek | 1 | in_progress | — |
+| 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
