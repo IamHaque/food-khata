@@ -7,6 +7,7 @@ import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownCh
 import { YearOverYearChart } from '../components/charts/YearOverYearChart';
 import { FeeComponentsChart } from '../components/charts/FeeComponentsChart';
 import { FeeScatterChart } from '../components/charts/FeeScatterChart';
+import { CumulativeSpendChart } from '../components/charts/CumulativeSpendChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -130,8 +131,10 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
       {/* 5. Fee burden vs order value: Scatter plot (S-044) */}
       <FeeScatterChart data={charts.spending.fee_scatter} />
 
+      {/* 6. Cumulative spend: Running total line with milestone markers (S-045) */}
+      <CumulativeSpendChart data={charts.monthly} />
 
-      {/* 6. Platform comparison table */}
+      {/* 7. Platform comparison table */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
         <div className="border-b pb-2">
           <h2 className="text-base font-semibold text-foreground">Platform comparison</h2>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
  computeBillWaterfallTakeaway,
+ computeCumulativeSpendTakeaway,
  computeDayTypeTakeaway,
  computeFeeComponentsTakeaway,
  computeFeeScatterTakeaway,
@@ -681,6 +682,79 @@ describe('computeFeeScatterTakeaway', () => {
     expect(
       computeFeeScatterTakeaway([
         { amount: 500, fees: 0, fee_percent: null },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe('computeCumulativeSpendTakeaway (CC-8, S-045)', () => {
+  it('states total spend, active months, and milestones crossed', () => {
+    // 18 months totaling 145000: 14 milestones at 10000 step
+    const data = Array.from({ length: 18 }, (_, i) => ({
+      month: `2024-${String(i + 1).padStart(2, '0')}`,
+      spend: i === 17 ? 9000 : 8000, // 17 * 8000 + 9000 = 145000
+    }));
+    expect(computeCumulativeSpendTakeaway(data)).toBe(
+      'Total spend reached ₹1,45,000 across 18 months, crossing 14 milestones',
+    );
+  });
+
+  it('handles singular month and singular milestone', () => {
+    expect(
+      computeCumulativeSpendTakeaway([
+        { month: '2024-01', spend: 10000 },
+      ]),
+    ).toBe('Total spend reached ₹10,000 across 1 month, crossing 1 milestone');
+  });
+
+  it('handles zero milestones when spend is under threshold', () => {
+    expect(
+      computeCumulativeSpendTakeaway([
+        { month: '2024-01', spend: 5000 },
+      ]),
+    ).toBe('Total spend reached ₹5,000 across 1 month, crossing 0 milestones');
+  });
+
+  it('supports custom milestone step', () => {
+    expect(
+      computeCumulativeSpendTakeaway(
+        [
+          { month: '2024-01', spend: 25000 },
+          { month: '2024-02', spend: 25000 },
+        ],
+        20000,
+      ),
+    ).toBe('Total spend reached ₹50,000 across 2 months, crossing 2 milestones');
+  });
+
+  it('supports amount property as fallback for spend', () => {
+    expect(
+      computeCumulativeSpendTakeaway([
+        { month: '2024-01', amount: 12000 },
+        { month: '2024-02', amount: 8000 },
+      ]),
+    ).toBe('Total spend reached ₹20,000 across 2 months, crossing 2 milestones');
+  });
+
+  it('aggregates duplicate month entries', () => {
+    expect(
+      computeCumulativeSpendTakeaway([
+        { month: '2024-01', spend: 5000 },
+        { month: '2024-01', spend: 5000 },
+      ]),
+    ).toBe('Total spend reached ₹10,000 across 1 month, crossing 1 milestone');
+  });
+
+  it('returns null on empty, null, undefined, all-zero or non-positive data', () => {
+    expect(computeCumulativeSpendTakeaway(null)).toBeNull();
+    expect(computeCumulativeSpendTakeaway(undefined)).toBeNull();
+    expect(computeCumulativeSpendTakeaway([])).toBeNull();
+    expect(computeCumulativeSpendTakeaway([{ spend: 0 }])).toBeNull();
+    expect(computeCumulativeSpendTakeaway([{ spend: -500 }])).toBeNull();
+    expect(
+      computeCumulativeSpendTakeaway([
+        { month: '2024-01', spend: 0 },
+        { month: '2024-02', spend: 0 },
       ]),
     ).toBeNull();
   });
