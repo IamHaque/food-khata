@@ -16,3 +16,4 @@ export * from "./DishRankingChart";
 export * from "./HourWeekdayHeatmapChart";
 export * from "./MealSlotsChart";
 export * from "./WeekdayBarsChart";
+export * from "./OrderGapsHistogramChart";

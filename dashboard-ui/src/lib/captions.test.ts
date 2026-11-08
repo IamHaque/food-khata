@@ -14,6 +14,8 @@ import {
  computeSpendTrendTakeaway,
  computeTopRestaurantTakeaway,
  computeWeekdayTakeaway,
+ computeOrderGapsTakeaway,
+ computeWeightedMedianGap,
  formatRupees,
 } from './captions';
 
@@ -1388,6 +1390,102 @@ describe('computeWeekdayTakeaway', () => {
         { day: 'Tue', orders: 10, spend: 1000 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe('computeWeightedMedianGap', () => {
+  it('computes weighted median for single gap entry', () => {
+    expect(computeWeightedMedianGap([{ days: 2, orders: 10 }])).toBe(2);
+  });
+
+  it('computes weighted median for odd total intervals', () => {
+    expect(
+      computeWeightedMedianGap([
+        { days: 1, orders: 2 },
+        { days: 3, orders: 1 },
+        { days: 7, orders: 2 },
+      ]),
+    ).toBe(3);
+  });
+
+  it('computes average of two middle values for even total intervals', () => {
+    expect(
+      computeWeightedMedianGap([
+        { days: 1, orders: 1 },
+        { days: 2, orders: 1 },
+      ]),
+    ).toBe(1.5);
+  });
+
+  it('correctly weighs large buckets', () => {
+    expect(
+      computeWeightedMedianGap([
+        { days: 0, orders: 15 },
+        { days: 10, orders: 2 },
+      ]),
+    ).toBe(0);
+  });
+
+  it('supports count alias and ignores non-finite/negative values', () => {
+    expect(
+      computeWeightedMedianGap([
+        { days: -1, orders: 5 },
+        { days: 2, count: 4 },
+        { days: 4, orders: 0 },
+        null,
+      ]),
+    ).toBe(2);
+  });
+
+  it('returns null for missing, empty, or invalid data', () => {
+    expect(computeWeightedMedianGap(null)).toBeNull();
+    expect(computeWeightedMedianGap(undefined)).toBeNull();
+    expect(computeWeightedMedianGap([])).toBeNull();
+    expect(computeWeightedMedianGap([{ days: 1, orders: 0 }])).toBeNull();
+  });
+});
+
+describe('computeOrderGapsTakeaway', () => {
+  it('formats median gap, longest gap, and percentage of orders placed within 3 days', () => {
+    const gaps = [
+      { days: 0, orders: 2 },
+      { days: 1, orders: 6 },
+      { days: 2, orders: 10 },
+      { days: 5, orders: 4 },
+      { days: 14, orders: 2 },
+    ];
+    // Total intervals = 24.
+    // Within 3 days (days <= 3) = 2 + 6 + 10 = 18 -> 18/24 = 75%.
+    // Median: 12th and 13th items -> both in days 2 -> median = 2.
+    expect(computeOrderGapsTakeaway(gaps, 14)).toBe(
+      'Median gap between orders is 2 days (longest gap: 14 days; 75% of orders placed within 3 days)',
+    );
+  });
+
+  it('uses singular "1 day" when median or longest gap is 1', () => {
+    const gaps = [
+      { days: 1, orders: 5 },
+    ];
+    expect(computeOrderGapsTakeaway(gaps, 1)).toBe(
+      'Median gap between orders is 1 day (longest gap: 1 day; 100% of orders placed within 3 days)',
+    );
+  });
+
+  it('automatically derives longest gap from data if longest_gap is null or undefined', () => {
+    const gaps = [
+      { days: 1, orders: 3 },
+      { days: 8, orders: 1 },
+    ];
+    expect(computeOrderGapsTakeaway(gaps, null)).toBe(
+      'Median gap between orders is 1 day (longest gap: 8 days; 75% of orders placed within 3 days)',
+    );
+  });
+
+  it('returns null for empty, null, or zero intervals', () => {
+    expect(computeOrderGapsTakeaway(null)).toBeNull();
+    expect(computeOrderGapsTakeaway(undefined)).toBeNull();
+    expect(computeOrderGapsTakeaway([])).toBeNull();
+    expect(computeOrderGapsTakeaway([{ days: 2, orders: 0 }])).toBeNull();
   });
 });
 

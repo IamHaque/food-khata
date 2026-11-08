@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -145,6 +145,11 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               timing_unavailable_reason={data.charts.behavior.timing_unavailable_reason}
             />
           </div>
+          <OrderGapsHistogramChart
+            gaps={data.charts.behavior.gaps}
+            longest_gap={data.charts.behavior.longest_gap}
+            date_unavailable_reason={data.charts.behavior.date_unavailable_reason}
+          />
         </div>
       ) : (
         /* Spending page view */

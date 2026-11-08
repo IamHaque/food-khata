@@ -1302,3 +1302,113 @@ export function computeWeekdayTakeaway(
   return `${dayName} is your busiest day with ${orderText}${spendText}; weekends account for ${weekendPct}% of total orders`;
 }
 
+export interface OrderGapItemLike {
+  days?: number | null;
+  orders?: number | null;
+  count?: number | null;
+}
+
+/**
+ * Calculates the weighted median of elapsed days across all order intervals.
+ * Returns null if no valid gaps or total intervals is 0.
+ */
+export function computeWeightedMedianGap(
+  gaps?: readonly (OrderGapItemLike | null | undefined)[] | null,
+): number | null {
+  if (!gaps || gaps.length === 0) return null;
+
+  const valid: Array<{ days: number; count: number }> = [];
+  let totalCount = 0;
+
+  for (const item of gaps) {
+    if (!item) continue;
+    const days = item.days;
+    const count = item.orders ?? item.count;
+    if (
+      isFiniteNumber(days) &&
+      days >= 0 &&
+      isFiniteNumber(count) &&
+      count > 0
+    ) {
+      valid.push({ days: Math.round(days), count });
+      totalCount += count;
+    }
+  }
+
+  if (totalCount === 0 || valid.length === 0) return null;
+
+  valid.sort((a, b) => a.days - b.days);
+
+  const target1 = Math.floor((totalCount - 1) / 2);
+  const target2 = Math.floor(totalCount / 2);
+
+  let cumulative = 0;
+  let val1: number | null = null;
+  let val2: number | null = null;
+
+  for (const item of valid) {
+    const prev = cumulative;
+    cumulative += item.count;
+    if (val1 === null && prev <= target1 && target1 < cumulative) {
+      val1 = item.days;
+    }
+    if (val2 === null && prev <= target2 && target2 < cumulative) {
+      val2 = item.days;
+    }
+    if (val1 !== null && val2 !== null) break;
+  }
+
+  if (val1 === null || val2 === null) return null;
+  const median = (val1 + val2) / 2;
+  return Math.round(median * 10) / 10;
+}
+
+/**
+ * S-063: Computes takeaway caption for gap between orders histogram.
+ * e.g. "Median gap between orders is 2 days (longest gap: 14 days; 62% of orders placed within 3 days)"
+ */
+export function computeOrderGapsTakeaway(
+  gaps?: readonly (OrderGapItemLike | null | undefined)[] | null,
+  longest_gap?: number | null,
+): string | null {
+  if (!gaps || gaps.length === 0) return null;
+
+  const median = computeWeightedMedianGap(gaps);
+  if (median === null) return null;
+
+  let totalCount = 0;
+  let within3Count = 0;
+  let maxDays = 0;
+
+  for (const item of gaps) {
+    if (!item) continue;
+    const days = item.days;
+    const count = item.orders ?? item.count;
+    if (
+      isFiniteNumber(days) &&
+      days >= 0 &&
+      isFiniteNumber(count) &&
+      count > 0
+    ) {
+      totalCount += count;
+      if (days <= 3) {
+        within3Count += count;
+      }
+      if (days > maxDays) {
+        maxDays = days;
+      }
+    }
+  }
+
+  if (totalCount === 0) return null;
+
+  const effectiveLongest =
+    isFiniteNumber(longest_gap) && longest_gap >= 0 ? longest_gap : maxDays;
+
+  const medianStr = median === 1 ? "1 day" : `${median} days`;
+  const longestStr = effectiveLongest === 1 ? "1 day" : `${effectiveLongest} days`;
+  const within3Pct = Math.round((within3Count / totalCount) * 100);
+
+  return `Median gap between orders is ${medianStr} (longest gap: ${longestStr}; ${within3Pct}% of orders placed within 3 days)`;
+}
+
