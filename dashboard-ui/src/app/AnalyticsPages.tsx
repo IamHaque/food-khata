@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart, StreakTimelineChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart, StreakTimelineChart, OrdersPerWeekChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -145,6 +145,10 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               timing_unavailable_reason={data.charts.behavior.timing_unavailable_reason}
             />
           </div>
+          <OrdersPerWeekChart
+            calendar={data.charts.calendar}
+            orders_per_week={data.charts.behavior.orders_per_week}
+          />
           <OrderGapsHistogramChart
             gaps={data.charts.behavior.gaps}
             longest_gap={data.charts.behavior.longest_gap}

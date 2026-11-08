@@ -19,6 +19,7 @@ import {
  computeDestinationsTakeaway,
  computeDistanceVsFeeTakeaway,
  computeStreakTimelineTakeaway,
+ computeOrdersPerWeekTakeaway,
  findLongestStreakRange,
  formatRupees,
 } from './captions';
@@ -1792,6 +1793,57 @@ describe('computeStreakTimelineTakeaway', () => {
     expect(computeStreakTimelineTakeaway(undefined)).toBeNull();
     expect(computeStreakTimelineTakeaway([])).toBeNull();
     expect(computeStreakTimelineTakeaway([{ date: '2025-03-10', orders: 0 }])).toBeNull();
+  });
+});
+
+describe('computeOrdersPerWeekTakeaway', () => {
+  it('formats takeaway with explicit orders_per_week benchmark and peak week', () => {
+    const weeklyData = [
+      { week: '2025-W10', label: 'Mar 3', orders: 3, movingAverage: 3, startDate: '2025-03-03' },
+      { week: '2025-W11', label: 'Mar 10', orders: 4, movingAverage: 3.5, startDate: '2025-03-10' },
+      { week: '2025-W12', label: 'Mar 17', orders: 5, movingAverage: 4, startDate: '2025-03-17' },
+      { week: '2025-W13', label: 'Mar 24', orders: 8, movingAverage: 5, startDate: '2025-03-24' },
+    ];
+    expect(computeOrdersPerWeekTakeaway(weeklyData, 4.2)).toBe(
+      'Averaging 4.2 orders per week with a peak of 8 orders in late March'
+    );
+  });
+
+  it('derives weekly average from data when orders_per_week is null or not provided', () => {
+    const weeklyData = [
+      { week: '2025-W02', label: 'Jan 6', orders: 2, startDate: '2025-01-06' },
+      { week: '2025-W03', label: 'Jan 13', orders: 6, startDate: '2025-01-13' },
+    ];
+    expect(computeOrdersPerWeekTakeaway(weeklyData, null)).toBe(
+      'Averaging 4 orders per week with a peak of 6 orders in mid January'
+    );
+  });
+
+  it('handles singular order correctly for both average and peak', () => {
+    const weeklyData = [
+      { week: '2025-W01', label: 'Jan 1', orders: 1, startDate: '2025-01-01' },
+    ];
+    expect(computeOrdersPerWeekTakeaway(weeklyData, 1)).toBe(
+      'Averaging 1 order per week with a peak of 1 order in early January'
+    );
+  });
+
+  it('breaks ties in peak order counts by preferring the later week', () => {
+    const weeklyData = [
+      { week: '2025-W05', label: 'Feb 3', orders: 5, startDate: '2025-02-03' },
+      { week: '2025-W07', label: 'Feb 17', orders: 5, startDate: '2025-02-17' },
+    ];
+    expect(computeOrdersPerWeekTakeaway(weeklyData, 5)).toBe(
+      'Averaging 5 orders per week with a peak of 5 orders in mid February'
+    );
+  });
+
+  it('returns null for missing, empty, or all-zero weekly data', () => {
+    expect(computeOrdersPerWeekTakeaway(null)).toBeNull();
+    expect(computeOrdersPerWeekTakeaway(undefined)).toBeNull();
+    expect(computeOrdersPerWeekTakeaway([])).toBeNull();
+    expect(computeOrdersPerWeekTakeaway([{ orders: 0 }])).toBeNull();
+    expect(computeOrdersPerWeekTakeaway([{ orders: -1 }])).toBeNull();
   });
 });
 

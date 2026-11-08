@@ -20,3 +20,4 @@ export * from "./OrderGapsHistogramChart";
 export * from "./DeliveryDestinationsChart";
 export * from "./DistanceVsFeeChart";
 export * from "./StreakTimelineChart";
+export * from "./OrdersPerWeekChart";

@@ -1697,3 +1697,95 @@ export function computeStreakTimelineTakeaway(
   return `Longest ordering streak was ${range.length} consecutive days (${range.startDate} to ${range.endDate}) with ${ordersText}`;
 }
 
+export interface WeeklyOrderTakeawayDatumLike {
+  week?: string | null;
+  label?: string | null;
+  orders?: number | null;
+  movingAverage?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+/**
+ * Pure caption generator for Orders Per Week chart (S-067).
+ * Example: "Averaging 4.2 orders per week with a peak of 8 orders in late March"
+ */
+export function computeOrdersPerWeekTakeaway(
+  weeklyData?: readonly WeeklyOrderTakeawayDatumLike[] | null,
+  orders_per_week?: number | null,
+): string | null {
+  if (!weeklyData || weeklyData.length === 0) return null;
+
+  let totalOrders = 0;
+  let peakItem: WeeklyOrderTakeawayDatumLike | null = null;
+  let peakOrders = 0;
+
+  for (const item of weeklyData) {
+    if (!item) continue;
+    const count = Number(item.orders ?? 0);
+    if (!Number.isFinite(count) || count < 0) continue;
+    totalOrders += count;
+
+    if (count > peakOrders) {
+      peakOrders = count;
+      peakItem = item;
+    } else if (count === peakOrders && count > 0 && peakItem) {
+      // Tie breaker: prefer more recent week
+      const currentStart = item.startDate ?? item.label ?? item.week ?? "";
+      const prevStart = peakItem.startDate ?? peakItem.label ?? peakItem.week ?? "";
+      if (currentStart >= prevStart) {
+        peakItem = item;
+      }
+    }
+  }
+
+  if (totalOrders <= 0 || !peakItem || peakOrders <= 0) return null;
+
+  // Determine average orders per week
+  let avg: number;
+  if (typeof orders_per_week === "number" && Number.isFinite(orders_per_week) && orders_per_week > 0) {
+    avg = orders_per_week;
+  } else {
+    avg = totalOrders / weeklyData.length;
+  }
+
+  const avgFormatted = (Math.round(avg * 10) / 10).toFixed(1).replace(/\.0$/, "");
+  const avgOrdersWord = avgFormatted === "1" ? "order" : "orders";
+
+  // Determine timing phrasing for peak (e.g. "late March")
+  let timing = "";
+  const dateStr = peakItem.startDate || peakItem.week || "";
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const monthIdx = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const monthName = MONTH_NAMES[monthIdx] ?? "";
+    const period = day <= 10 ? "early" : day <= 20 ? "mid" : "late";
+    timing = monthName ? `${period} ${monthName}` : "";
+  }
+
+  if (!timing && peakItem.label) {
+    // Check if label contains month name e.g. "Mar 24"
+    const labelMatch = peakItem.label.match(/([A-Za-z]+)\s*(\d{1,2})/);
+    if (labelMatch) {
+      const mStr = labelMatch[1].slice(0, 3).toLowerCase();
+      const day = Number(labelMatch[2]);
+      const monthNamesShort = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      const mIdx = monthNamesShort.indexOf(mStr);
+      if (mIdx >= 0) {
+        const monthName = MONTH_NAMES[mIdx];
+        const period = day <= 10 ? "early" : day <= 20 ? "mid" : "late";
+        timing = `${period} ${monthName}`;
+      }
+    }
+  }
+
+  if (!timing) {
+    timing = peakItem.label || peakItem.week || "the period";
+  }
+
+  const peakOrdersWord = peakOrders === 1 ? "order" : "orders";
+
+  return `Averaging ${avgFormatted} ${avgOrdersWord} per week with a peak of ${peakOrders} ${peakOrdersWord} in ${timing}`;
+}
+
