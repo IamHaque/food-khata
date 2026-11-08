@@ -3,6 +3,7 @@ import {
  computeBillWaterfallTakeaway,
  computeDayTypeTakeaway,
  computeFeeComponentsTakeaway,
+ computeFeeScatterTakeaway,
  computeMealSlotTakeaway,
  computePlatformTakeaway,
  computeSpendTrendTakeaway,
@@ -610,6 +611,76 @@ describe('computeFeeComponentsTakeaway', () => {
     expect(
       computeFeeComponentsTakeaway([
         { platform: -50, net_delivery: Number.NaN },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe('computeFeeScatterTakeaway', () => {
+  it('computes average fee burden percentage across valid orders (CC-8, S-044)', () => {
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 500, fees: 70, fee_percent: 14 },
+      ]),
+    ).toBe('Average fee burden is 14% of order value');
+
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 1000, fees: 140, fee_percent: 14 },
+        { amount: 500, fees: 70, fee_percent: 14 },
+      ]),
+    ).toBe('Average fee burden is 14% of order value');
+  });
+
+  it('calculates weighted fee burden when items have varying amounts and fees', () => {
+    // Total fees: 150 + 60 = 210, Total amount: 1000 + 500 = 1500 => 210 / 1500 = 14%
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 1000, fees: 150, fee_percent: 15 },
+        { amount: 500, fees: 60, fee_percent: 12 },
+      ]),
+    ).toBe('Average fee burden is 14% of order value');
+  });
+
+  it('supports items without explicit fees by falling back to average fee_percent', () => {
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 400, fee_percent: 10 },
+        { amount: 600, fee_percent: 20 },
+      ]),
+    ).toBe('Average fee burden is 15% of order value');
+  });
+
+  it('filters out orders with null or non-finite fee_percent or non-positive amount', () => {
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 500, fees: 70, fee_percent: 14 },
+        { amount: 200, fees: 0, fee_percent: null },
+        { amount: -50, fees: 10, fee_percent: 20 },
+        { amount: 0, fees: 0, fee_percent: 0 },
+        { amount: 300, fees: 30, fee_percent: Number.NaN },
+      ]),
+    ).toBe('Average fee burden is 14% of order value');
+  });
+
+  it('returns null on empty, null, undefined, or all-zero data', () => {
+    expect(computeFeeScatterTakeaway(null)).toBeNull();
+    expect(computeFeeScatterTakeaway(undefined)).toBeNull();
+    expect(computeFeeScatterTakeaway([])).toBeNull();
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 500, fees: 0, fee_percent: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 100, fees: 0, fee_percent: 0 },
+        { amount: 200, fees: 0, fee_percent: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeFeeScatterTakeaway([
+        { amount: 500, fees: 0, fee_percent: null },
       ]),
     ).toBeNull();
   });

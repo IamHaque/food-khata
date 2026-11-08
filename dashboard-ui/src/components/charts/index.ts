@@ -4,3 +4,4 @@ export * from "./BillWaterfallChart";
 export * from "./DiscountBreakdownChart";
 export * from "./YearOverYearChart";
 export * from "./FeeComponentsChart";
+export * from "./FeeScatterChart";
