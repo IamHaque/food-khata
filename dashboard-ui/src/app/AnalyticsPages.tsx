@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -135,6 +135,11 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
             timing_unavailable_reason={data.charts.behavior.timing_unavailable_reason}
           />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <WeekdayBarsChart
+              data={data.charts.behavior.hour_weekday}
+              day_type={data.charts.behavior.day_type}
+              date_unavailable_reason={data.charts.behavior.date_unavailable_reason}
+            />
             <MealSlotsChart
               data={data.charts.behavior.meals}
               timing_unavailable_reason={data.charts.behavior.timing_unavailable_reason}

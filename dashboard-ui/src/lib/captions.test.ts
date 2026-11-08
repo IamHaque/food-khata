@@ -13,6 +13,7 @@ import {
  computePlatformTakeaway,
  computeSpendTrendTakeaway,
  computeTopRestaurantTakeaway,
+ computeWeekdayTakeaway,
  formatRupees,
 } from './captions';
 
@@ -1314,6 +1315,79 @@ describe('computeHourWeekdayTakeaway', () => {
     expect(computeHourWeekdayTakeaway([{ key: '0', orders: -3, spend: 0 }])).toBeNull();
     expect(computeHourWeekdayTakeaway([{ key: 'invalid', orders: 5 }])).toBeNull();
     expect(computeHourWeekdayTakeaway([{ key: '200', orders: 5 }])).toBeNull();
+  });
+});
+
+describe('computeWeekdayTakeaway', () => {
+  it('states busiest day with order count, formatted spend, and weekend share', () => {
+    // 24 on Sunday, total 63 orders across week (weekend = 24 / 63 = 38%)
+    const data = [
+      { day: 'Mon', orders: 5, spend: 1500 },
+      { day: 'Tue', orders: 7, spend: 2100 },
+      { day: 'Wed', orders: 8, spend: 2400 },
+      { day: 'Thu', orders: 9, spend: 2800 },
+      { day: 'Fri', orders: 10, spend: 3500 },
+      { day: 'Sat', orders: 0, spend: 0 },
+      { day: 'Sun', orders: 24, spend: 9200 },
+    ];
+    expect(computeWeekdayTakeaway(data)).toBe(
+      'Sunday is your busiest day with 24 orders (₹9,200); weekends account for 38% of total orders',
+    );
+  });
+
+  it('handles hour_weekday raw data with keys 0..167', () => {
+    // Sun is weekday 6: keys 6*24 + 12 = 156
+    const data = [
+      { key: '0', orders: 5, spend: 1500 }, // Mon
+      { key: '156', orders: 20, spend: 8000 }, // Sun
+    ];
+    expect(computeWeekdayTakeaway(data)).toBe(
+      'Sunday is your busiest day with 20 orders (₹8,000); weekends account for 80% of total orders',
+    );
+  });
+
+  it('uses singular "1 order" when the busiest day has 1 order', () => {
+    const data = [{ weekday: 0, orders: 1, spend: 350 }];
+    expect(computeWeekdayTakeaway(data)).toBe(
+      'Monday is your busiest day with 1 order (₹350); weekends account for 0% of total orders',
+    );
+  });
+
+  it('formats caption without spend parenthesis when spend is zero or not provided', () => {
+    const data = [
+      { weekday: 2, orders: 10, spend: 0 },
+      { weekday: 5, orders: 4 },
+    ];
+    expect(computeWeekdayTakeaway(data)).toBe(
+      'Wednesday is your busiest day with 10 orders; weekends account for 29% of total orders',
+    );
+  });
+
+  it('aggregates multiple entries for the same weekday', () => {
+    const data = [
+      { day: 'Saturday', orders: 6, spend: 2000 },
+      { day: 'Sat', orders: 8, spend: 2500 },
+      { day: 'Sunday', orders: 4, spend: 1000 },
+    ];
+    // Sat has 14 orders (₹4,500), Sun has 4 orders, total = 18 orders (100% weekend)
+    expect(computeWeekdayTakeaway(data)).toBe(
+      'Saturday is your busiest day with 14 orders (₹4,500); weekends account for 100% of total orders',
+    );
+  });
+
+  it('returns null on ties, missing, empty, or all-zero orders', () => {
+    expect(computeWeekdayTakeaway(null)).toBeNull();
+    expect(computeWeekdayTakeaway(undefined)).toBeNull();
+    expect(computeWeekdayTakeaway([])).toBeNull();
+    expect(computeWeekdayTakeaway([{ weekday: 0, orders: 0, spend: 0 }])).toBeNull();
+    expect(computeWeekdayTakeaway([{ weekday: 0, orders: -2, spend: 0 }])).toBeNull();
+    // Tied top days
+    expect(
+      computeWeekdayTakeaway([
+        { day: 'Mon', orders: 10, spend: 1000 },
+        { day: 'Tue', orders: 10, spend: 1000 },
+      ]),
+    ).toBeNull();
   });
 });
 

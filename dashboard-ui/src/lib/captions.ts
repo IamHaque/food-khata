@@ -1170,3 +1170,135 @@ export function computeMealSlotsTakeaway(
   return `${label} is your most frequent meal slot with ${orderText}`;
 }
 
+export interface WeekdayItemLike {
+  key?: string | number | null;
+  day?: string | number | null;
+  weekday?: string | number | null;
+  orders?: number | null;
+  count?: number | null;
+  spend?: number | null;
+  amount?: number | null;
+  isWeekend?: boolean | null;
+}
+
+const WEEKDAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
+const WEEKDAY_LOOKUP: Record<string, number> = {
+  mon: 0,
+  monday: 0,
+  tue: 1,
+  tues: 1,
+  tuesday: 1,
+  wed: 2,
+  wednesday: 2,
+  thu: 3,
+  thur: 3,
+  thurs: 3,
+  thursday: 3,
+  fri: 4,
+  friday: 4,
+  sat: 5,
+  saturday: 5,
+  sun: 6,
+  sunday: 6,
+};
+
+/**
+ * "Sunday is your busiest day with 24 orders (₹9,200); weekends account for 38% of total orders"
+ * Captions the day with the most orders along with spend and weekend share.
+ * Returns null for missing, empty, all-zero, or tied data.
+ */
+export function computeWeekdayTakeaway(
+  data?: readonly (WeekdayItemLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const days = Array.from({ length: 7 }, (_, i) => ({
+    weekday: i,
+    orders: 0,
+    spend: 0,
+  }));
+
+  let hasValidRow = false;
+
+  for (const row of data) {
+    if (!row) continue;
+    let w: number | undefined;
+
+    if (typeof row.weekday === "number" && row.weekday >= 0 && row.weekday <= 6) {
+      w = Math.floor(row.weekday);
+    } else if (typeof row.weekday === "string") {
+      const lower = row.weekday.trim().toLowerCase();
+      if (lower in WEEKDAY_LOOKUP) {
+        w = WEEKDAY_LOOKUP[lower];
+      } else {
+        const n = parseInt(lower, 10);
+        if (Number.isFinite(n) && n >= 0 && n <= 6) w = n;
+      }
+    } else if (typeof row.day === "string") {
+      const lower = row.day.trim().toLowerCase();
+      if (lower in WEEKDAY_LOOKUP) {
+        w = WEEKDAY_LOOKUP[lower];
+      } else {
+        const n = parseInt(lower, 10);
+        if (Number.isFinite(n) && n >= 0 && n <= 6) w = n;
+      }
+    } else if (typeof row.day === "number" && row.day >= 0 && row.day <= 6) {
+      w = Math.floor(row.day);
+    } else if (row.key != null && row.key !== "") {
+      const keyStr = String(row.key).trim().toLowerCase();
+      if (keyStr in WEEKDAY_LOOKUP) {
+        w = WEEKDAY_LOOKUP[keyStr];
+      } else {
+        const keyNum = typeof row.key === "number" ? row.key : parseInt(keyStr, 10);
+        if (Number.isFinite(keyNum)) {
+          if (keyNum >= 0 && keyNum < 7) {
+            w = keyNum;
+          } else if (keyNum >= 7 && keyNum < 168) {
+            w = Math.floor(keyNum / 24);
+          }
+        }
+      }
+    }
+
+    if (w === undefined || w < 0 || w > 6) continue;
+
+    const orders = Number(row.orders ?? row.count ?? 0);
+    const spend = Number(row.spend ?? row.amount ?? 0);
+
+    if (isFiniteNumber(orders) && orders > 0) {
+      days[w].orders += orders;
+      hasValidRow = true;
+    }
+    if (isFiniteNumber(spend) && spend > 0) {
+      days[w].spend += spend;
+    }
+  }
+
+  if (!hasValidRow) return null;
+
+  const totalOrders = sumValues(days.map((d) => d.orders));
+  if (totalOrders <= 0) return null;
+
+  const winner = uniqueMax(days, (d) => d.orders);
+  if (!winner) return null;
+
+  const dayName = WEEKDAY_NAMES[winner.weekday] ?? "Unknown";
+  const orderText = `${winner.orders.toLocaleString("en-IN")} ${
+    winner.orders === 1 ? "order" : "orders"
+  }`;
+  const spendText = winner.spend > 0 ? ` (${formatRupees(winner.spend)})` : "";
+  const weekendOrders = days[5].orders + days[6].orders;
+  const weekendPct = roundPercent(weekendOrders, totalOrders);
+
+  return `${dayName} is your busiest day with ${orderText}${spendText}; weekends account for ${weekendPct}% of total orders`;
+}
+

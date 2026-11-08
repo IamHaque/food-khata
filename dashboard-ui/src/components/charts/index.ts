@@ -15,3 +15,4 @@ export * from "./DietSplitTrendChart";
 export * from "./DishRankingChart";
 export * from "./HourWeekdayHeatmapChart";
 export * from "./MealSlotsChart";
+export * from "./WeekdayBarsChart";
