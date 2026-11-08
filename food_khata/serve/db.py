@@ -5,7 +5,10 @@ from pathlib import Path
 
 
 def connect_readonly(path: Path | str) -> sqlite3.Connection:
-    conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+    # FastAPI may use different workers for request setup, queries, and cleanup.
+    conn = sqlite3.connect(
+        Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=2, check_same_thread=False
+    )
     try:
         conn.execute("PRAGMA query_only=ON")
         conn.execute("PRAGMA busy_timeout=2000")

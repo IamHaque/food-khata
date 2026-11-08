@@ -394,16 +394,44 @@ export function CalendarHeatmapChart({
   const idRef = React.useRef(`calendar-heatmap-${Math.random().toString(36).slice(2, 9)}`);
   const chartId = idRef.current;
 
+  const callbacksRef = React.useRef({ filters, onDayClick });
+  React.useEffect(() => {
+    callbacksRef.current = { filters, onDayClick };
+  });
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    registerOnce();
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const option = buildCalendarHeatmapOption(data ?? [], {
+      year: selectedYear,
+      theme,
+      reducedMotion: prefersReducedMotion,
+    });
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, [data, selectedYear]);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
     registerOnce();
-    if (!chartRef.current) chartRef.current = echarts.init(node);
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
     const chart = chartRef.current;
     const unregister = registerChart(chartId, chart, () => undefined);
 
     const handleClick = (params: unknown) => {
-      handleDayClick(params, filters, onDayClick);
+      handleDayClick(params, callbacksRef.current.filters, callbacksRef.current.onDayClick);
     };
 
     const handleOver = (params: any) => {
@@ -426,6 +454,8 @@ export function CalendarHeatmapChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -437,23 +467,11 @@ export function CalendarHeatmapChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, onDayClick]);
+  }, [chartId, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed()) return;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildCalendarHeatmapOption(data ?? [], {
-      year: selectedYear,
-      theme,
-      reducedMotion: prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [data, selectedYear]);
+    applyUpdate();
+  }, [applyUpdate]);
 
   return (
     <ChartCard

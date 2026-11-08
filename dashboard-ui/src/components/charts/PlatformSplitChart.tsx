@@ -332,13 +332,43 @@ export function PlatformSplitChart({
     [onPlatformClick, filterContext]
   );
 
+  const handleSliceClickRef = React.useRef(handleSliceClick);
+  React.useEffect(() => {
+    handleSliceClickRef.current = handleSliceClick;
+  });
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node || isEmpty || isLoading || error) return;
+    registerPlatformChartModules();
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const opt = buildPlatformSplitOption({
+      data: data ?? [],
+      theme,
+      prefersReducedMotion,
+      selectedPlatforms: activeSelectedPlatforms,
+      totalSpend,
+    });
+
+    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
+  }, [data, activeSelectedPlatforms, totalSpend, isEmpty, isLoading, error]);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || isEmpty || isLoading || error) return;
 
     registerPlatformChartModules();
 
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
@@ -397,7 +427,7 @@ export function PlatformSplitChart({
       const p = params as { name?: string; event?: { event?: MouseEvent } };
       if (p && p.name) {
         const isMulti = Boolean(p.event?.event?.shiftKey);
-        handleSliceClick(p.name, isMulti);
+        handleSliceClickRef.current(p.name, isMulti);
       }
     };
 
@@ -413,6 +443,8 @@ export function PlatformSplitChart({
     });
     resizeObserver.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("mouseover", handleMouseOver);
       chart.off("mouseout", handleMouseOut);
@@ -425,29 +457,9 @@ export function PlatformSplitChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, isEmpty, isLoading, error, handleSliceClick]);
+  }, [chartId, isEmpty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    function applyUpdate() {
-      const chart = chartRef.current;
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const opt = buildPlatformSplitOption({
-        data: data ?? [],
-        theme,
-        prefersReducedMotion,
-        selectedPlatforms: activeSelectedPlatforms,
-        totalSpend,
-      });
-
-      chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-    }
-
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -468,7 +480,7 @@ export function PlatformSplitChart({
       unsubscribe();
       observer.disconnect();
     };
-  }, [data, activeSelectedPlatforms, totalSpend]);
+  }, [applyUpdate]);
 
   return (
     <ChartCard

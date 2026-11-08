@@ -467,16 +467,49 @@ export function DailySpendCalendarChart({
   const idRef = React.useRef(`daily-spend-calendar-${Math.random().toString(36).slice(2, 9)}`);
   const chartId = idRef.current;
 
+  const callbacksRef = React.useRef({ filters, onDayClick });
+  callbacksRef.current = { filters, onDayClick };
+
+  const dataRef = React.useRef({ data, calendar, selectedYear });
+  dataRef.current = { data, calendar, selectedYear };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const current = dataRef.current;
+    const option = buildDailySpendCalendarOption({
+      data: current.data,
+      calendar: current.calendar,
+      year: current.selectedYear,
+      theme,
+      reducedMotion: prefersReducedMotion,
+    });
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || empty || isLoading || error) return;
     registerOnce();
-    if (!chartRef.current) chartRef.current = echarts.init(node);
+    if (!chartRef.current || chartRef.current.isDisposed()) chartRef.current = echarts.init(node);
     const chart = chartRef.current;
     const unregister = registerChart(chartId, chart, () => undefined);
 
     const handleClick = (params: unknown) => {
-      handleDailySpendDayClick(params, filters, onDayClick);
+      handleDailySpendDayClick(
+        params,
+        callbacksRef.current.filters,
+        callbacksRef.current.onDayClick,
+      );
     };
 
     const handleOver = (params: any) => {
@@ -499,6 +532,8 @@ export function DailySpendCalendarChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -510,29 +545,10 @@ export function DailySpendCalendarChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, onDayClick, empty, isLoading, error]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed() || empty || isLoading || error) return;
-
-    function applyUpdate() {
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const option = buildDailySpendCalendarOption({
-        data,
-        calendar,
-        year: selectedYear,
-        theme,
-        reducedMotion: prefersReducedMotion,
-      });
-      chart.setOption(option, { notMerge: true, lazyUpdate: true });
-    }
-
+    if (empty || isLoading || error) return;
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -553,7 +569,7 @@ export function DailySpendCalendarChart({
       unsubscribe();
       observer.disconnect();
     };
-  }, [data, calendar, selectedYear, empty, isLoading, error]);
+  }, [data, calendar, selectedYear, empty, isLoading, error, applyUpdate]);
 
   const infoPopover = (
     <Popover>

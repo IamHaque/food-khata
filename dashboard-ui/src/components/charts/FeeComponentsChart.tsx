@@ -405,23 +405,52 @@ export function FeeComponentsChart({
     return `Monthly fee components stacked area chart showing breakdown of delivery, packaging, platform, and tax charges across ${data.length} months with total fees of ${formatRupees(totalFeeSum)}.`;
   }, [data, totalFeeSum]);
 
+  const callbacksRef = React.useRef({ onMonthClick, filterContext, data });
+  callbacksRef.current = { onMonthClick, filterContext, data };
+
+  const dataRef = React.useRef({ data, selectedSeries });
+  dataRef.current = { data, selectedSeries };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const opt = buildFeeComponentsOption({
+      data: dataRef.current.data,
+      theme,
+      prefersReducedMotion,
+      selectedSeries: dataRef.current.selectedSeries,
+    });
+
+    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || isEmpty || isLoading || error) return;
 
     registerFeeComponentsModules();
 
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
-
-    const months = (data ?? []).map((d) => d.month ?? "Unknown");
 
     const unregister = registerChart(chartId, chart, {
       dimension: "month",
       matcher: (dim, val) => {
         if (dim !== "month") return false;
+        const currentData = callbacksRef.current.data ?? [];
+        const months = currentData.map((d) => d.month ?? "Unknown");
         const matchIdx = months.findIndex((m) => isDimensionMatch("month", m, val));
         if (matchIdx >= 0) {
           return { type: "highlight", dataIndex: matchIdx };
@@ -431,6 +460,8 @@ export function FeeComponentsChart({
     });
 
     const handleOver = (params: any) => {
+      const currentData = callbacksRef.current.data ?? [];
+      const months = currentData.map((d) => d.month ?? "Unknown");
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
         month = months[params.dataIndex];
@@ -448,15 +479,17 @@ export function FeeComponentsChart({
     node.addEventListener("mouseleave", handleMouseLeave);
 
     const handleClick = (params: any) => {
+      const currentData = callbacksRef.current.data ?? [];
+      const months = currentData.map((d) => d.month ?? "Unknown");
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
         month = months[params.dataIndex];
       }
       if (month) {
-        if (onMonthClick) {
-          onMonthClick(String(month));
-        } else if (filterContext?.applyCrossFilter) {
-          filterContext.applyCrossFilter("month", String(month));
+        if (callbacksRef.current.onMonthClick) {
+          callbacksRef.current.onMonthClick(String(month));
+        } else if (callbacksRef.current.filterContext?.applyCrossFilter) {
+          callbacksRef.current.filterContext.applyCrossFilter("month", String(month));
         }
       }
     };
@@ -468,6 +501,8 @@ export function FeeComponentsChart({
       }
     });
     resizeObserver.observe(node);
+
+    applyUpdate();
 
     return () => {
       chart.off("click", handleClick);
@@ -481,28 +516,10 @@ export function FeeComponentsChart({
         chartRef.current = null;
       }
     };
-  }, [isEmpty, isLoading, error, chartId, data, onMonthClick, filterContext]);
+  }, [isEmpty, isLoading, error, chartId, applyUpdate]);
 
   React.useEffect(() => {
-    function applyUpdate() {
-      const chart = chartRef.current;
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const opt = buildFeeComponentsOption({
-        data,
-        theme,
-        prefersReducedMotion,
-        selectedSeries,
-      });
-
-      chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-    }
-
+    if (isEmpty || isLoading || error) return;
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -512,7 +529,7 @@ export function FeeComponentsChart({
     return () => {
       unsubscribe();
     };
-  }, [data, selectedSeries]);
+  }, [isEmpty, isLoading, error, data, selectedSeries, applyUpdate]);
 
   const infoPopover = (
     <Popover>

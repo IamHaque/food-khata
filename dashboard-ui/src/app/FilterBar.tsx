@@ -13,7 +13,7 @@ import { Badge } from '../components/ui/badge';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Chip } from '../components/ui/chip';
 
-function Amount({
+export function Amount({
   field,
   label,
   value,
@@ -46,7 +46,7 @@ function Amount({
     <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
       <span className="text-xs text-muted-foreground">{label}</span>
       <div className="relative">
-        <span className="absolute left-2.5 top-2 text-xs text-muted-foreground pointer-events-none">$</span>
+        <span className="absolute left-2.5 top-2 text-xs text-muted-foreground pointer-events-none">₹</span>
         <input
           type="number"
           name={field}

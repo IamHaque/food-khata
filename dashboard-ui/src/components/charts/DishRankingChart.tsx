@@ -517,20 +517,55 @@ export function DishRankingChart({
     return `Horizontal bar chart showing top ${displayedItems.length} dishes ranked by ${activeMetric === "amount" ? "expenditure" : "order volume"}. Top dish is ${top.name} with ${topMetricDesc}.`;
   }, [displayedItems, activeMetric]);
 
+  const callbacksRef = React.useRef({ onDishClick, filters, displayedItems });
+  callbacksRef.current = { onDishClick, filters, displayedItems };
+
+  const dataRef = React.useRef({ displayedItems, activeMetric, maxItems });
+  dataRef.current = { displayedItems, activeMetric, maxItems };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
+      chartInstanceRef.current = echarts.init(node);
+    }
+    const chart = chartInstanceRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const option = buildDishRankingOption({
+      data: dataRef.current.displayedItems,
+      metric: dataRef.current.activeMetric,
+      theme,
+      prefersReducedMotion,
+      maxItems: dataRef.current.maxItems,
+    });
+
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   // Chart initialization & resize handling
   React.useEffect(() => {
     const node = containerRef.current;
-    if (!node) return;
+    if (!node || empty || isLoading || error) return;
     registerDishRankingModules();
 
-    if (!chartInstanceRef.current) {
+    if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
       chartInstanceRef.current = echarts.init(node);
     }
     const chart = chartInstanceRef.current;
     const unregister = registerChart(chartIdRef.current, chart, () => undefined);
 
     const onChartClick = (params: unknown) => {
-      handleDishClick(params, displayedItems, filters, onDishClick);
+      handleDishClick(
+        params,
+        callbacksRef.current.displayedItems,
+        callbacksRef.current.filters,
+        callbacksRef.current.onDishClick,
+      );
     };
 
     chart.on("click", onChartClick);
@@ -542,6 +577,8 @@ export function DishRankingChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", onChartClick);
       unregister();
@@ -551,41 +588,21 @@ export function DishRankingChart({
         chartInstanceRef.current = null;
       }
     };
-  }, [displayedItems, filters, onDishClick]);
+  }, [empty, isLoading, error, applyUpdate]);
 
   // Option application & theme updates
   React.useEffect(() => {
-    const chart = chartInstanceRef.current;
-    if (!chart || chart.isDisposed() || empty || isLoading || error) return;
-
-    const applyOption = () => {
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const option = buildDishRankingOption({
-        data: displayedItems,
-        metric: activeMetric,
-        theme,
-        prefersReducedMotion,
-        maxItems,
-      });
-
-      chart.setOption(option, { notMerge: true, lazyUpdate: true });
-    };
-
-    applyOption();
+    if (empty || isLoading || error) return;
+    applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
-      applyOption();
+      applyUpdate();
     });
 
     return () => {
       unsubscribe();
     };
-  }, [displayedItems, activeMetric, empty, isLoading, error, maxItems]);
+  }, [displayedItems, activeMetric, empty, isLoading, error, maxItems, applyUpdate]);
 
   const infoPopover = (
     <Popover>

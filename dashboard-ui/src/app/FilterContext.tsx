@@ -1,4 +1,4 @@
-import {createContext,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useSearchParams,useLocation} from 'react-router-dom';
 import {useMetadata} from '../hooks/api';
 import {defaultFilters,parseFilters,serializeFilters,sanitizeAccountFilters,hasActiveFilters,type FilterState} from '../lib/filters';
@@ -51,13 +51,13 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     }
   }, [location.pathname, location.search, setParams]);
 
-  function update(patch: Partial<FilterState>, options?: { replace?: boolean }) {
+  const update = useCallback((patch: Partial<FilterState>, options?: { replace?: boolean }) => {
     const prior = new URLSearchParams(params);
     if (Object.hasOwn(patch, 'statuses')) prior.set('statuses', '');
     setParams(serializeFilters({ ...filters, ...patch }, prior, true), {
       replace: options?.replace ?? false,
     });
-  }
+  }, [params, filters, setParams]);
 
   useEffect(() => {
     if (previousAccount.current === account || !metadata.data || metadata.isPlaceholderData) return;
@@ -72,20 +72,20 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     }
   }, [account, metadata.data, metadata.isPlaceholderData, filters, encoded, setParams]);
 
-  function applyCrossFilter(dimension: CrossFilterDimension, value: string, isMulti = false) {
+  const applyCrossFilter = useCallback((dimension: CrossFilterDimension, value: string, isMulti = false) => {
     pushCrossFilterHistory(filters);
     const next = crossFilter(filters, dimension, value, isMulti);
     update(next);
-  }
+  }, [filters, update]);
 
-  function undoCrossFilter(): boolean {
+  const undoCrossFilter = useCallback((): boolean => {
     const previous = popCrossFilterHistory();
     if (previous) {
       update(previous);
       return true;
     }
     return false;
-  }
+  }, [update]);
 
   const latestUndo = useRef(undoCrossFilter);
   useEffect(() => {
@@ -103,26 +103,30 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const clear = useCallback(() => {
+    clearCrossFilterHistory();
+    update({
+      ...defaultFilters(),
+      statuses: location.pathname === '/orders' || location.pathname === '/ledger' ? [] : ['DELIVERED'],
+      account_ids: filters.account_ids,
+    });
+  }, [location.pathname, filters.account_ids, update]);
+
+  const clearNotice = useCallback(() => setNotice(''), []);
+
+  const contextValue = useMemo(() => ({
+    filters,
+    update,
+    clear,
+    notice,
+    clearNotice,
+    metadata,
+    applyCrossFilter,
+    undoCrossFilter,
+  }), [filters, update, clear, notice, clearNotice, metadata, applyCrossFilter, undoCrossFilter]);
+
   return (
-    <Context.Provider
-      value={{
-        filters,
-        update,
-        clear: () => {
-          clearCrossFilterHistory();
-          update({
-            ...defaultFilters(),
-            statuses: location.pathname === '/orders' || location.pathname === '/ledger' ? [] : ['DELIVERED'],
-            account_ids: filters.account_ids,
-          });
-        },
-        notice,
-        clearNotice: () => setNotice(''),
-        metadata,
-        applyCrossFilter,
-        undoCrossFilter,
-      }}
-    >
+    <Context.Provider value={contextValue}>
       {children}
     </Context.Provider>
   );

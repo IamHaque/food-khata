@@ -547,13 +547,42 @@ export function LoyaltyParetoChart({
     return `Restaurant loyalty Pareto chart ranking ${topCount} restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: ${totalOrders}.`;
   }, [displayed, totalOrders]);
 
+  const callbacksRef = React.useRef({ onRestaurantClick, filterContext, displayed });
+  callbacksRef.current = { onRestaurantClick, filterContext, displayed };
+
+  const dataRef = React.useRef({ data, maxItems });
+  dataRef.current = { data, maxItems };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const opt = buildLoyaltyParetoOption({
+      data: dataRef.current.data,
+      theme,
+      prefersReducedMotion,
+      maxItems: dataRef.current.maxItems,
+    });
+
+    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || isEmpty || isLoading || error) return;
 
     registerLoyaltyParetoModules();
 
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
@@ -562,7 +591,8 @@ export function LoyaltyParetoChart({
       dimension: "restaurant",
       matcher: (dim, val) => {
         if (dim !== "restaurant") return false;
-        const matchIdx = displayed.findIndex(
+        const currentDisplayed = callbacksRef.current.displayed;
+        const matchIdx = currentDisplayed.findIndex(
           (d) =>
             isDimensionMatch("restaurant", d.name, val) ||
             isDimensionMatch("restaurant", d.key, val),
@@ -576,7 +606,8 @@ export function LoyaltyParetoChart({
 
     const handleOver = (params: any) => {
       const idx = params?.dataIndex;
-      const row = typeof idx === "number" && idx >= 0 && idx < displayed.length ? displayed[idx] : undefined;
+      const currentDisplayed = callbacksRef.current.displayed;
+      const row = typeof idx === "number" && idx >= 0 && idx < currentDisplayed.length ? currentDisplayed[idx] : undefined;
       const restaurant = row?.name ?? row?.key ?? params?.name ?? params?.axisValue;
       if (restaurant) {
         emitHighlight(chartId, "restaurant", String(restaurant));
@@ -591,7 +622,12 @@ export function LoyaltyParetoChart({
     node.addEventListener("mouseleave", handleMouseLeave);
 
     const handleClick = (params: any) => {
-      handleLoyaltyParetoClick(params, displayed, filterContext, onRestaurantClick);
+      handleLoyaltyParetoClick(
+        params,
+        callbacksRef.current.displayed,
+        callbacksRef.current.filterContext,
+        callbacksRef.current.onRestaurantClick,
+      );
     };
     chart.on("click", handleClick);
 
@@ -601,6 +637,8 @@ export function LoyaltyParetoChart({
       }
     });
     resizeObserver.observe(node);
+
+    applyUpdate();
 
     return () => {
       chart.off("click", handleClick);
@@ -614,28 +652,10 @@ export function LoyaltyParetoChart({
         chartRef.current = null;
       }
     };
-  }, [isEmpty, isLoading, error, chartId, displayed, onRestaurantClick, filterContext]);
+  }, [isEmpty, isLoading, error, chartId, applyUpdate]);
 
   React.useEffect(() => {
-    function applyUpdate() {
-      const chart = chartRef.current;
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const opt = buildLoyaltyParetoOption({
-        data,
-        theme,
-        prefersReducedMotion,
-        maxItems,
-      });
-
-      chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-    }
-
+    if (isEmpty || isLoading || error) return;
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -645,7 +665,7 @@ export function LoyaltyParetoChart({
     return () => {
       unsubscribe();
     };
-  }, [data, maxItems]);
+  }, [isEmpty, isLoading, error, data, maxItems, applyUpdate]);
 
   const infoPopover = (
     <Popover>

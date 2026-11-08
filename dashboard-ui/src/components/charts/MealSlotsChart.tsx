@@ -25,6 +25,7 @@ import {
   type ChartTheme,
 } from "@/lib/chart-theme";
 import { useFilters } from "@/app/FilterContext";
+import { subscribeTheme } from "@/app/theme";
 import {
   registerChart,
   emitHighlight,
@@ -547,11 +548,39 @@ export function MealSlotsChart({
   );
   const chartId = idRef.current;
 
-  React.useEffect(() => {
+  const callbacksRef = React.useRef({ filtersContext, onSlotClick });
+  callbacksRef.current = { filtersContext, onSlotClick };
+
+  const dataRef = React.useRef({ data, activeSelectedSlots });
+  dataRef.current = { data, activeSelectedSlots };
+
+  const applyUpdate = React.useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const current = dataRef.current;
+    const option = buildMealSlotsOption({
+      data: current.data ?? [],
+      theme,
+      selectedSlots: current.activeSelectedSlots,
+      prefersReducedMotion,
+    });
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node || empty || isLoading || error) return;
     registerOnce();
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
@@ -580,7 +609,11 @@ export function MealSlotsChart({
     });
 
     const handleClick = (params: unknown) => {
-      handleMealSlotClick(params, filtersContext, onSlotClick);
+      handleMealSlotClick(
+        params,
+        callbacksRef.current.filtersContext,
+        callbacksRef.current.onSlotClick,
+      );
     };
 
     const handleMouseOver = (params: any) => {
@@ -610,6 +643,8 @@ export function MealSlotsChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleMouseOver);
@@ -622,24 +657,20 @@ export function MealSlotsChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filtersContext, onSlotClick]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed()) return;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildMealSlotsOption({
-      data: data ?? [],
-      theme,
-      selectedSlots: activeSelectedSlots,
-      prefersReducedMotion,
+    if (empty || isLoading || error) return;
+    applyUpdate();
+
+    const unsubscribe = subscribeTheme(() => {
+      applyUpdate();
     });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [data, activeSelectedSlots]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [empty, isLoading, error, data, activeSelectedSlots, applyUpdate]);
 
   const infoPopover = (
     <Popover>

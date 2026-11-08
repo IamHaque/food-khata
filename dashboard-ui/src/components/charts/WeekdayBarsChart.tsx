@@ -25,6 +25,7 @@ import {
   type ChartTheme,
 } from "@/lib/chart-theme";
 import { useFilters } from "@/app/FilterContext";
+import { subscribeTheme } from "@/app/theme";
 import {
   registerChart,
   emitHighlight,
@@ -618,18 +619,52 @@ export function WeekdayBarsChart({
   );
   const chartId = idRef.current;
 
-  React.useEffect(() => {
+  const callbacksRef = React.useRef({ filters, onBarClick, normalized });
+  callbacksRef.current = { filters, onBarClick, normalized };
+
+  const dataRef = React.useRef({ normalized, activeDayType, metricMode });
+  dataRef.current = { normalized, activeDayType, metricMode };
+
+  const applyUpdate = React.useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const current = dataRef.current;
+    const option = buildWeekdayBarsOption(current.normalized, {
+      theme,
+      activeDayType: current.activeDayType,
+      metricMode: current.metricMode,
+      reducedMotion: prefersReducedMotion,
+    });
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node || empty || isLoading || error) return;
     registerOnce();
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
     const unregister = registerChart(chartId, chart, { dimension: "weekday" });
 
     const handleClick = (params: unknown) => {
-      handleWeekdayBarClick(params, filters, onBarClick, normalized);
+      handleWeekdayBarClick(
+        params,
+        callbacksRef.current.filters,
+        callbacksRef.current.onBarClick,
+        callbacksRef.current.normalized,
+      );
     };
 
     const handleOver = (params: any) => {
@@ -652,6 +687,8 @@ export function WeekdayBarsChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -663,25 +700,20 @@ export function WeekdayBarsChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, normalized, onBarClick]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed()) return;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (empty || isLoading || error) return;
+    applyUpdate();
 
-    const option = buildWeekdayBarsOption(normalized, {
-      theme,
-      activeDayType,
-      metricMode,
-      reducedMotion: prefersReducedMotion,
+    const unsubscribe = subscribeTheme(() => {
+      applyUpdate();
     });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [normalized, activeDayType, metricMode]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [empty, isLoading, error, normalized, activeDayType, metricMode, applyUpdate]);
 
   const infoPopover = (
     <Popover>

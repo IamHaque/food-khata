@@ -24,6 +24,7 @@ import {
   type ChartTheme,
 } from "@/lib/chart-theme";
 import { useFilters } from "@/app/FilterContext";
+import { subscribeTheme } from "@/app/theme";
 import {
   registerChart,
   emitHighlight,
@@ -480,18 +481,47 @@ export function HourWeekdayHeatmapChart({
   );
   const chartId = idRef.current;
 
-  React.useEffect(() => {
+  const callbacksRef = React.useRef({ filters, onCellClick });
+  callbacksRef.current = { filters, onCellClick };
+
+  const dataRef = React.useRef({ data });
+  dataRef.current = { data };
+
+  const applyUpdate = React.useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const option = buildHourWeekdayHeatmapOption(dataRef.current.data ?? [], {
+      theme,
+      reducedMotion: prefersReducedMotion,
+    });
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node || empty || isLoading || error) return;
     registerOnce();
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
     const unregister = registerChart(chartId, chart, () => undefined);
 
     const handleClick = (params: unknown) => {
-      handleHourWeekdayCellClick(params, filters, onCellClick);
+      handleHourWeekdayCellClick(
+        params,
+        callbacksRef.current.filters,
+        callbacksRef.current.onCellClick,
+      );
     };
 
     const handleOver = (params: any) => {
@@ -524,6 +554,8 @@ export function HourWeekdayHeatmapChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -535,22 +567,20 @@ export function HourWeekdayHeatmapChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, onCellClick]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed()) return;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildHourWeekdayHeatmapOption(data ?? [], {
-      theme,
-      reducedMotion: prefersReducedMotion,
+    if (empty || isLoading || error) return;
+    applyUpdate();
+
+    const unsubscribe = subscribeTheme(() => {
+      applyUpdate();
     });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [data]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [empty, isLoading, error, data, applyUpdate]);
 
   const infoPopover = (
     <Popover>

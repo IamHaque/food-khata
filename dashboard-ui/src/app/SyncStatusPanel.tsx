@@ -231,13 +231,13 @@ export function SyncStatusPanelBody({
               <div className="rounded-lg border bg-card p-3">
                 <dt className="text-muted-foreground">Missing restaurant names</dt>
                 <dd className="mt-0.5 font-mono font-semibold text-foreground">
-                  {formatRate(nullRates.restaurant_name)}
+                  {formatRate(nullRates.restaurant_name ?? nullRates.restaurant_cuisine ?? nullRates.restaurant_locality ?? 0)}
                 </dd>
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <dt className="text-muted-foreground">Missing items</dt>
                 <dd className="mt-0.5 font-mono font-semibold text-foreground">
-                  {formatRate(nullRates.items_summary)}
+                  {formatRate(nullRates.items_summary ?? nullRates.category ?? nullRates.is_veg ?? 0)}
                 </dd>
               </div>
               <div className="rounded-lg border bg-card p-3">

@@ -1,6 +1,6 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 
-import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Maximize2, Table2, BarChart3, Download, FileDown, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Maximize2, Minimize2, Table2, BarChart3, Download, FileDown, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { getCurrentChartTheme } from "@/lib/chart-theme";
 
 export interface ChartCardProps {
@@ -115,6 +115,10 @@ function ChartCard({
   );
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  // Keep chart DOM and external ECharts refs intact when entering the dialog.
+  const [cardHost] = React.useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
 
   const tableData = React.useMemo(() => {
     if (tableDataProp) return tableDataProp;
@@ -170,7 +174,7 @@ function ChartCard({
       return;
     }
     if (typeof document === "undefined") return;
-    const root = containerRef.current;
+    const root = cardHost ?? containerRef.current;
     const canvas = root?.querySelector("canvas") as HTMLCanvasElement | null;
     if (!canvas) return;
     try {
@@ -188,8 +192,6 @@ function ChartCard({
         ctx.drawImage(canvas, 0, 0);
       }
       const url = (ctx ? tmp : canvas).toDataURL("image/png");
-      triggerDownload(new Blob([], { type: "image/png" }), `${slugify(title)}.png`, "image/png");
-      // Fallback download via data URL link
       const link = document.createElement("a");
       link.href = url;
       link.download = `${slugify(title)}.png`;
@@ -199,7 +201,17 @@ function ChartCard({
     } catch {
       // ignore
     }
-  }, [onExportPng, title]);
+  }, [onExportPng, cardHost, title]);
+
+  React.useEffect(() => {
+    if (cardHost) {
+      cardHost.className = fullscreen ? "w-full h-full flex flex-col" : "w-full";
+    }
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [cardHost, fullscreen]);
 
   const renderTable = () => (
     <Table>
@@ -242,10 +254,9 @@ function ChartCard({
     </Table>
   );
 
-  return (
-    <div ref={containerRef} className={cn(fullscreen ? "contents" : "")}>
-      <Card className={cn(fullscreen ? "fixed inset-4 z-50 overflow-auto" : "", className)}>
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+  const card = (
+      <Card className={fullscreen ? "border-0 shadow-none bg-transparent p-0 flex flex-col flex-1 min-h-0 w-full" : className}>
+        <CardHeader className={fullscreen ? "flex flex-row items-start justify-between space-y-0 pb-3 px-0 pt-0 border-b mb-3" : "flex flex-row items-start justify-between space-y-0 pb-2"}>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
               <CardTitle className="text-base text-foreground">{title}</CardTitle>
@@ -268,9 +279,9 @@ function ChartCard({
               variant="ghost"
               size="icon"
               aria-label="Toggle fullscreen"
-              onClick={() => setFullscreen(true)}
+              onClick={() => setFullscreen(!fullscreen)}
             >
-              <Maximize2 className="h-4 w-4" />
+              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
             {onExportPng || true ? (
               <Button variant="ghost" size="icon" aria-label="Download PNG" onClick={handleExportPng}>
@@ -284,8 +295,8 @@ function ChartCard({
             )}
           </div>
         </CardHeader>
-        {caption && <p className="px-6 text-xs text-muted-foreground">{caption}</p>}
-        <CardContent>
+        {caption && <p className={fullscreen ? "pb-2 text-xs text-muted-foreground" : "px-6 text-xs text-muted-foreground"}>{caption}</p>}
+        <CardContent className={fullscreen ? "flex-1 min-h-0 p-0 flex flex-col overflow-auto [&_[role=img]]:!h-[calc(80vh-210px)]" : undefined}>
           {isLoading ? (
             <Skeleton className="h-48 w-full" />
           ) : error ? (
@@ -302,15 +313,24 @@ function ChartCard({
           )}
         </CardContent>
       </Card>
+  );
 
+  return (
+    <div ref={containerRef}>
+      <div ref={(node) => { if (node && cardHost && !fullscreen) node.appendChild(cardHost); }}>
+        {!cardHost && !fullscreen ? card : null}
+      </div>
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-        <DialogContent className="max-w-5xl w-[90vw] h-[80vh] overflow-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl w-[92vw] h-[82vh] p-6 flex flex-col bg-background shadow-2xl border overflow-hidden" aria-describedby={undefined}>
+          <DialogHeader className="sr-only">
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
-          {showTable && hasTable ? renderTable() : children}
+          <div className="flex-1 min-h-0 w-full flex flex-col overflow-auto" ref={(node) => { if (node && cardHost && fullscreen) node.appendChild(cardHost); }}>
+            {!cardHost ? card : null}
+          </div>
         </DialogContent>
       </Dialog>
+      {cardHost ? createPortal(card, cardHost) : null}
     </div>
   );
 }

@@ -410,13 +410,42 @@ export function NewVsRepeatChart({
     return `New vs repeat restaurants stacked area chart showing monthly order counts for first-time discoveries and repeat visits across ${data.length} months with repeat share of ${overallRepeatPct}%.`;
   }, [data, totalOrdersSum, totalRepeatSum]);
 
+  const callbacksRef = React.useRef({ onMonthClick, filterContext, data });
+  React.useEffect(() => {
+    callbacksRef.current = { onMonthClick, filterContext, data };
+  });
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node || isEmpty || isLoading || error) return;
+    registerNewVsRepeatModules();
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const opt = buildNewVsRepeatOption({
+      data,
+      theme,
+      prefersReducedMotion,
+      selectedSeries,
+    });
+
+    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
+  }, [data, selectedSeries, isEmpty, isLoading, error]);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || isEmpty || isLoading || error) return;
 
     registerNewVsRepeatModules();
 
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
@@ -458,14 +487,15 @@ export function NewVsRepeatChart({
         month = months[params.dataIndex];
       }
       if (month) {
-        if (onMonthClick) {
-          onMonthClick(String(month));
-        } else if (filterContext?.applyCrossFilter) {
-          filterContext.applyCrossFilter("month", String(month));
-        } else if (filterContext?.update) {
+        const { onMonthClick: cbClick, filterContext: fc } = callbacksRef.current;
+        if (cbClick) {
+          cbClick(String(month));
+        } else if (fc?.applyCrossFilter) {
+          fc.applyCrossFilter("month", String(month));
+        } else if (fc?.update) {
           try {
             const range = monthToDateRange(String(month));
-            filterContext.update(range);
+            fc.update(range);
           } catch {
             // ignore invalid format
           }
@@ -481,6 +511,8 @@ export function NewVsRepeatChart({
     });
     resizeObserver.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -493,28 +525,9 @@ export function NewVsRepeatChart({
         chartRef.current = null;
       }
     };
-  }, [isEmpty, isLoading, error, chartId, data, onMonthClick, filterContext]);
+  }, [chartId, isEmpty, isLoading, error, data, applyUpdate]);
 
   React.useEffect(() => {
-    function applyUpdate() {
-      const chart = chartRef.current;
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const opt = buildNewVsRepeatOption({
-        data,
-        theme,
-        prefersReducedMotion,
-        selectedSeries,
-      });
-
-      chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-    }
-
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -524,7 +537,7 @@ export function NewVsRepeatChart({
     return () => {
       unsubscribe();
     };
-  }, [data, selectedSeries]);
+  }, [applyUpdate]);
 
   const infoPopover = (
     <Popover>

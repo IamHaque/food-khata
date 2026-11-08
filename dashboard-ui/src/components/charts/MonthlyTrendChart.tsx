@@ -359,51 +359,19 @@ export function MonthlyTrendChart({
   const idRef = React.useRef(`monthly-trend-${Math.random().toString(36).slice(2, 9)}`);
   const chartId = idRef.current;
 
+  const filtersRef = React.useRef(filters);
   React.useEffect(() => {
+    filtersRef.current = filters;
+  });
+
+  const applyUpdate = React.useCallback(() => {
     const node = containerRef.current;
     if (!node) return;
     registerOnce();
-    if (!chartRef.current) chartRef.current = echarts.init(node);
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
     const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, () => undefined);
-
-    const handleClick = (params: any) => {
-      const month = params?.name ?? params?.value;
-      if (month != null && filters) {
-        filters.applyCrossFilter("month", String(month));
-      }
-    };
-    const handleOver = (params: any) => {
-      const month = params?.name;
-      if (month != null) emitHighlight(chartId, "month", String(month));
-    };
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) chart.resize();
-    });
-    ro.observe(node);
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, filters]);
-
-  React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed()) return;
     const theme = getCurrentChartTheme();
     const prefersReducedMotion =
       typeof window !== "undefined" &&
@@ -421,6 +389,56 @@ export function MonthlyTrendChart({
     const base = buildBaseChartOption(theme, prefersReducedMotion);
     chart.setOption({ ...base, ...option }, { notMerge: true, lazyUpdate: true });
   }, [data, metric, compareData, compareMonthlySpend, compareMode]);
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    registerOnce();
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const unregister = registerChart(chartId, chart, () => undefined);
+
+    const handleClick = (params: any) => {
+      const month = params?.name ?? params?.value;
+      if (month != null && filtersRef.current) {
+        filtersRef.current.applyCrossFilter("month", String(month));
+      }
+    };
+    const handleOver = (params: any) => {
+      const month = params?.name;
+      if (month != null) emitHighlight(chartId, "month", String(month));
+    };
+    const handleOut = () => emitClear(chartId);
+
+    chart.on("click", handleClick);
+    chart.on("mouseover", handleOver);
+    chart.on("mouseout", handleOut);
+
+    const ro = new ResizeObserver(() => {
+      if (chart && !chart.isDisposed()) chart.resize();
+    });
+    ro.observe(node);
+
+    applyUpdate();
+
+    return () => {
+      chart.off("click", handleClick);
+      chart.off("mouseover", handleOver);
+      chart.off("mouseout", handleOut);
+      unregister();
+      ro.disconnect();
+      if (chartRef.current) {
+        chartRef.current.dispose();
+        chartRef.current = null;
+      }
+    };
+  }, [chartId, applyUpdate]);
+
+  React.useEffect(() => {
+    applyUpdate();
+  }, [applyUpdate]);
 
   return (
     <ChartCard

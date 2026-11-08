@@ -610,12 +610,51 @@ export function DietSplitTrendChart({
   // Track active veg filter
   const activeVegFilter = filters?.filters?.veg ?? "all";
 
+  const callbacksRef = React.useRef({ onDietClick, filters, viewMode });
+  callbacksRef.current = { onDietClick, filters, viewMode };
+
+  const dataRef = React.useRef({ viewMode, validDiet, validMonthly, activeVegFilter });
+  dataRef.current = { viewMode, validDiet, validMonthly, activeVegFilter };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const current = dataRef.current;
+    let option: EChartsCoreOption;
+    if (current.viewMode === "split") {
+      option = buildDietDonutOption({
+        data: current.validDiet,
+        theme,
+        prefersReducedMotion,
+        selectedCategory: current.activeVegFilter,
+      });
+    } else {
+      option = buildDietTrendOption({
+        data: current.validMonthly,
+        theme,
+        prefersReducedMotion,
+      });
+    }
+
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || empty || isLoading || error) return;
 
     registerDietChartModules();
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
@@ -629,20 +668,21 @@ export function DietSplitTrendChart({
         params?.name || params?.seriesName || params?.data?.diet || "";
       if (!rawCategory) return;
       const targetFilter = normalizeDietFilterValue(rawCategory);
+      const curFilters = callbacksRef.current.filters;
 
-      if (filters?.update) {
-        if (filters.filters.veg === targetFilter) {
-          filters.update({ veg: "all" });
+      if (curFilters?.update) {
+        if (curFilters.filters.veg === targetFilter) {
+          curFilters.update({ veg: "all" });
         } else {
-          filters.update({ veg: targetFilter });
+          curFilters.update({ veg: targetFilter });
         }
       }
 
-      onDietClick?.(rawCategory, targetFilter);
+      callbacksRef.current.onDietClick?.(rawCategory, targetFilter);
     };
 
     const handleOver = (params: any) => {
-      if (viewMode === "trend") {
+      if (callbacksRef.current.viewMode === "trend") {
         const month =
           params?.axisValueLabel || params?.axisValue || params?.name;
         if (month) emitHighlight(chartId, "month", String(month));
@@ -662,6 +702,8 @@ export function DietSplitTrendChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -673,36 +715,20 @@ export function DietSplitTrendChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, empty, isLoading, error, filters, onDietClick, viewMode]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   // Update chart options on data / mode / theme change
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed() || empty || isLoading || error) return;
+    if (empty || isLoading || error) return;
+    applyUpdate();
 
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const unsubscribe = subscribeTheme(() => {
+      applyUpdate();
+    });
 
-    let option: EChartsCoreOption;
-    if (viewMode === "split") {
-      option = buildDietDonutOption({
-        data: validDiet,
-        theme,
-        prefersReducedMotion,
-        selectedCategory: activeVegFilter,
-      });
-    } else {
-      option = buildDietTrendOption({
-        data: validMonthly,
-        theme,
-        prefersReducedMotion,
-      });
-    }
-
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+    return () => {
+      unsubscribe();
+    };
   }, [
     empty,
     isLoading,
@@ -711,6 +737,7 @@ export function DietSplitTrendChart({
     validDiet,
     validMonthly,
     activeVegFilter,
+    applyUpdate,
   ]);
 
   const infoPopover = (

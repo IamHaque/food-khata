@@ -516,17 +516,48 @@ export function CuisineTreemapChart({
   const idRef = React.useRef(`cuisine-treemap-${Math.random().toString(36).slice(2, 9)}`);
   const chartId = idRef.current;
 
+  const callbacksRef = React.useRef({ filters, onCuisineClick });
+  React.useEffect(() => {
+    callbacksRef.current = { filters, onCuisineClick };
+  });
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node || empty || isLoading || error) return;
+    registerCuisineTreemapModules();
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const option = buildCuisineTreemapOption({
+      cuisines: validCuisines,
+      loyalty: effectiveRestaurants,
+      theme,
+      reducedMotion: prefersReducedMotion,
+    });
+
+    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+  }, [validCuisines, effectiveRestaurants, empty, isLoading, error]);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || empty || isLoading || error) return;
 
     registerCuisineTreemapModules();
-    if (!chartRef.current) chartRef.current = echarts.init(node);
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
     const chart = chartRef.current;
     const unregister = registerChart(chartId, chart, { dimension: "cuisine" });
 
     const handleClick = (params: unknown) => {
-      handleCuisineTreemapClick(params, filters, onCuisineClick);
+      handleCuisineTreemapClick(params, callbacksRef.current.filters, callbacksRef.current.onCuisineClick);
     };
 
     const handleOver = (params: any) => {
@@ -547,6 +578,8 @@ export function CuisineTreemapChart({
     });
     ro.observe(node);
 
+    applyUpdate();
+
     return () => {
       chart.off("click", handleClick);
       chart.off("mouseover", handleOver);
@@ -558,30 +591,9 @@ export function CuisineTreemapChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, onCuisineClick, empty, isLoading, error]);
+  }, [chartId, empty, isLoading, error, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed() || empty || isLoading || error) return;
-
-    function applyUpdate() {
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const option = buildCuisineTreemapOption({
-        cuisines: validCuisines,
-        loyalty: effectiveRestaurants,
-        theme,
-        reducedMotion: prefersReducedMotion,
-      });
-
-      chart.setOption(option, { notMerge: true, lazyUpdate: true });
-    }
-
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -602,7 +614,7 @@ export function CuisineTreemapChart({
       unsubscribe();
       observer.disconnect();
     };
-  }, [validCuisines, effectiveRestaurants, empty, isLoading, error]);
+  }, [applyUpdate]);
 
   const infoPopover = (
     <Popover>

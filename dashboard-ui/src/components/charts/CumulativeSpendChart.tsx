@@ -376,21 +376,51 @@ export function CumulativeSpendChart({
     }));
   }, [data, processed]);
 
+  const callbacksRef = React.useRef({ onMonthClick, filters, processed });
+  callbacksRef.current = { onMonthClick, filters, processed };
+
+  const dataRef = React.useRef({ data, milestoneStep });
+  dataRef.current = { data, milestoneStep };
+
+  const applyUpdate = React.useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (!chartRef.current || chartRef.current.isDisposed()) {
+      chartRef.current = echarts.init(node);
+    }
+    const chart = chartRef.current;
+    const theme = getCurrentChartTheme();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const opt = buildCumulativeSpendOption({
+      data: dataRef.current.data,
+      theme,
+      prefersReducedMotion,
+      milestoneStep: dataRef.current.milestoneStep,
+    });
+
+    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
+  }, []);
+
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node || isEmpty) return;
 
     registerOnce();
-    if (!chartRef.current) {
+    if (!chartRef.current || chartRef.current.isDisposed()) {
       chartRef.current = echarts.init(node);
     }
     const chart = chartRef.current;
-    const months = processed.map((p) => p.label);
 
     const unregister = registerChart(chartId, chart, {
       dimension: "month",
       matcher: (dim, val) => {
         if (dim !== "month") return false;
+        const currentProcessed = callbacksRef.current.processed;
+        const months = currentProcessed.map((p) => p.label);
         const matchIdx = months.findIndex((m) =>
           isDimensionMatch("month", m, val)
         );
@@ -402,6 +432,8 @@ export function CumulativeSpendChart({
     });
 
     const handleOver = (params: any) => {
+      const currentProcessed = callbacksRef.current.processed;
+      const months = currentProcessed.map((p) => p.label);
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (
         !month &&
@@ -424,6 +456,8 @@ export function CumulativeSpendChart({
     node.addEventListener("mouseleave", handleMouseLeave);
 
     const handleClick = (params: any) => {
+      const currentProcessed = callbacksRef.current.processed;
+      const months = currentProcessed.map((p) => p.label);
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (
         !month &&
@@ -433,10 +467,10 @@ export function CumulativeSpendChart({
         month = months[params.dataIndex];
       }
       if (month) {
-        if (onMonthClick) {
-          onMonthClick(String(month));
-        } else if (filters?.applyCrossFilter) {
-          filters.applyCrossFilter("month", String(month));
+        if (callbacksRef.current.onMonthClick) {
+          callbacksRef.current.onMonthClick(String(month));
+        } else if (callbacksRef.current.filters?.applyCrossFilter) {
+          callbacksRef.current.filters.applyCrossFilter("month", String(month));
         }
       }
     };
@@ -448,6 +482,8 @@ export function CumulativeSpendChart({
       }
     });
     resizeObserver.observe(node);
+
+    applyUpdate();
 
     return () => {
       chart.off("mouseover", handleOver);
@@ -461,30 +497,10 @@ export function CumulativeSpendChart({
         chartRef.current = null;
       }
     };
-  }, [chartId, filters, isEmpty, onMonthClick, processed]);
+  }, [chartId, isEmpty, applyUpdate]);
 
   React.useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || chart.isDisposed() || isEmpty) return;
-
-    function applyUpdate() {
-      if (!chart || chart.isDisposed()) return;
-      const theme = getCurrentChartTheme();
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      const opt = buildCumulativeSpendOption({
-        data,
-        theme,
-        prefersReducedMotion,
-        milestoneStep,
-      });
-
-      chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-    }
-
+    if (isEmpty) return;
     applyUpdate();
 
     const unsubscribe = subscribeTheme(() => {
@@ -505,7 +521,7 @@ export function CumulativeSpendChart({
       unsubscribe();
       observer.disconnect();
     };
-  }, [data, isEmpty, milestoneStep]);
+  }, [data, isEmpty, milestoneStep, applyUpdate]);
 
   const infoPopover = (
     <Popover>

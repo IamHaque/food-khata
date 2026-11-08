@@ -3,6 +3,14 @@ import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ChartCard, toCsv } from './ChartCard';
 
+// Render the portal inline so server-rendered assertions can inspect the modal.
+vi.mock('@/components/ui/dialog', () => ({
+  Dialog: ({ open, children }: any) => open ? <>{children}</> : null,
+  DialogContent: ({ children }: any) => <div role="dialog">{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+}));
+
 describe('ChartCard', () => {
   it('renders normal state with children', () => {
     const html = renderToString(
@@ -80,7 +88,24 @@ describe('ChartCard', () => {
       </ChartCard>,
     );
     expect(html).toContain('aria-label="Toggle fullscreen"');
-    expect(html).toContain('chart-here');
+    expect(html.match(/chart-here/g)).toHaveLength(1);
+    expect(html).toMatch(/role="dialog"[\s\S]*chart-here/);
+    expect(html).not.toContain('fixed inset-4');
+  });
+
+  it.each([
+    [{ isLoading: true }, 'animate-pulse'],
+    [{ isEmpty: true, emptyReason: 'Nothing here' }, 'Nothing here'],
+    [{ error: 'Failed to load' }, 'Failed to load'],
+    [{ showTable: true, tableData: [{ day: 'Monday' }] }, 'Monday'],
+  ])('preserves the content state in fullscreen: %j', (props, content) => {
+    const html = renderToString(
+      <ChartCard title="Sales" fullscreen {...props}>
+        <span>chart-here</span>
+      </ChartCard>,
+    );
+    expect(html).toContain(content);
+    expect(html).not.toContain('chart-here');
   });
 
   it('exposes PNG and CSV export buttons', () => {
