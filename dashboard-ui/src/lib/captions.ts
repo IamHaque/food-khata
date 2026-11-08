@@ -1480,3 +1480,69 @@ export function computeDestinationsTakeaway(
   return `Top destination is ${destText} across ${orderText}`;
 }
 
+export interface DistanceItemLike {
+  distance_km?: number | null;
+  fee?: number | null;
+  restaurant?: string | null;
+}
+
+/**
+ * S-065: Dynamic takeaway caption for distance vs delivery fee scatter.
+ * e.g. "Average delivery fee is ₹34 across 4.2 km mean distance (~₹5.20/km trend)"
+ * Returns null when distance_unavailable_reason is present, or data is missing, empty, or all-zero.
+ */
+export function computeDistanceVsFeeTakeaway(
+  distances?: readonly (DistanceItemLike | null | undefined)[] | null,
+  distance_unavailable_reason?: string | null,
+): string | null {
+  if (distance_unavailable_reason) return null;
+  if (!distances?.length) return null;
+
+  const valid = distances.filter(
+    (d): d is DistanceItemLike & { distance_km: number; fee: number } =>
+      d != null &&
+      isFiniteNumber(d.distance_km) &&
+      d.distance_km >= 0 &&
+      isFiniteNumber(d.fee) &&
+      d.fee >= 0,
+  );
+
+  if (valid.length === 0) return null;
+
+  let totalFee = 0;
+  let totalDist = 0;
+  for (const item of valid) {
+    totalFee += item.fee;
+    totalDist += item.distance_km;
+  }
+
+  const meanFee = totalFee / valid.length;
+  const meanDist = totalDist / valid.length;
+
+  if (meanFee === 0 && meanDist === 0) {
+    return null;
+  }
+
+  // Calculate OLS linear regression slope if >= 2 points
+  let slopeStr = '';
+  if (valid.length >= 2) {
+    const n = valid.length;
+    let sumXY = 0;
+    let sumX2 = 0;
+    for (const item of valid) {
+      sumXY += item.distance_km * item.fee;
+      sumX2 += item.distance_km * item.distance_km;
+    }
+    const denominator = n * sumX2 - totalDist * totalDist;
+    if (Math.abs(denominator) > 1e-9) {
+      const slope = (n * sumXY - totalDist * totalFee) / denominator;
+      if (isFiniteNumber(slope)) {
+        const sign = slope < 0 ? '-' : '';
+        slopeStr = ` (~${sign}₹${Math.abs(slope).toFixed(2)}/km trend)`;
+      }
+    }
+  }
+
+  return `Average delivery fee is ${formatRupees(meanFee)} across ${meanDist.toFixed(1)} km mean distance${slopeStr}`;
+}
+

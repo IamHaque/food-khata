@@ -18,3 +18,4 @@ export * from "./MealSlotsChart";
 export * from "./WeekdayBarsChart";
 export * from "./OrderGapsHistogramChart";
 export * from "./DeliveryDestinationsChart";
+export * from "./DistanceVsFeeChart";

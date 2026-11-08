@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -153,6 +153,10 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
           <DeliveryDestinationsChart
             data={data.charts.places}
             unsupported_reason={data.charts.places.unsupported_reason}
+          />
+          <DistanceVsFeeChart
+            distances={data.charts.places.distances}
+            distance_unavailable_reason={data.charts.places.distance_unavailable_reason}
           />
         </div>
       ) : (

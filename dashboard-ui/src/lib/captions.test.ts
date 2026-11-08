@@ -17,6 +17,7 @@ import {
  computeOrderGapsTakeaway,
  computeWeightedMedianGap,
  computeDestinationsTakeaway,
+ computeDistanceVsFeeTakeaway,
  formatRupees,
 } from './captions';
 
@@ -1553,6 +1554,100 @@ describe('computeDestinationsTakeaway', () => {
       { label: 'Office', city: 'Bangalore', orders: 10, spend: 5000, fee: 50 },
     ];
     expect(computeDestinationsTakeaway(tied)).toBeNull();
+  });
+});
+
+describe('computeDistanceVsFeeTakeaway', () => {
+  it('formats mean fee, mean distance, and trend slope per km', () => {
+    // 3 points: (2.0 km, ₹20), (4.0 km, ₹30), (6.0 km, ₹40)
+    // Mean dist = 4.0 km, Mean fee = ₹30
+    // Slope = (40 - 20) / (6 - 2) = 5.00
+    const data = [
+      { distance_km: 2.0, fee: 20 },
+      { distance_km: 4.0, fee: 30 },
+      { distance_km: 6.0, fee: 40 },
+    ];
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹30 across 4.0 km mean distance (~₹5.00/km trend)'
+    );
+  });
+
+  it('correctly matches brief example values (₹34 across 4.2 km with ~₹5.20/km trend)', () => {
+    // We construct points where mean fee ~ ₹34, mean distance ~ 4.2 km, slope ~ 5.20
+    const data = [
+      { distance_km: 2.2, fee: 23.6 },
+      { distance_km: 4.2, fee: 34.0 },
+      { distance_km: 6.2, fee: 44.4 },
+    ];
+    // Mean dist: (2.2 + 4.2 + 6.2)/3 = 4.2 km
+    // Mean fee: (23.6 + 34.0 + 44.4)/3 = 34.0 -> ₹34
+    // Slope: (44.4 - 23.6) / (6.2 - 2.2) = 20.8 / 4 = 5.20
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹34 across 4.2 km mean distance (~₹5.20/km trend)'
+    );
+  });
+
+  it('formats negative slope correctly when longer distance has lower fee', () => {
+    const data = [
+      { distance_km: 2.0, fee: 50 },
+      { distance_km: 6.0, fee: 40 },
+    ];
+    // Mean dist: 4.0 km, Mean fee: ₹45
+    // Slope: -10 / 4 = -2.50
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹45 across 4.0 km mean distance (~-₹2.50/km trend)'
+    );
+  });
+
+  it('omits trendline slope when only 1 valid point exists', () => {
+    const data = [{ distance_km: 3.5, fee: 45 }];
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹45 across 3.5 km mean distance'
+    );
+  });
+
+  it('omits trendline slope when all distances are identical (zero denominator)', () => {
+    const data = [
+      { distance_km: 5.0, fee: 30 },
+      { distance_km: 5.0, fee: 50 },
+    ];
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹40 across 5.0 km mean distance'
+    );
+  });
+
+  it('returns null when distance_unavailable_reason is provided', () => {
+    const data = [
+      { distance_km: 2.0, fee: 20 },
+      { distance_km: 4.0, fee: 30 },
+    ];
+    expect(
+      computeDistanceVsFeeTakeaway(
+        data,
+        'More than 80% of delivered orders lack valid coordinates.'
+      )
+    ).toBeNull();
+  });
+
+  it('returns null for missing, empty, or all-zero data', () => {
+    expect(computeDistanceVsFeeTakeaway(null)).toBeNull();
+    expect(computeDistanceVsFeeTakeaway(undefined)).toBeNull();
+    expect(computeDistanceVsFeeTakeaway([])).toBeNull();
+    expect(computeDistanceVsFeeTakeaway([{ distance_km: 0, fee: 0 }])).toBeNull();
+  });
+
+  it('filters out invalid or negative numbers', () => {
+    const data = [
+      { distance_km: 2.0, fee: 20 },
+      { distance_km: 4.0, fee: 30 },
+      { distance_km: -5, fee: 20 },
+      { distance_km: Number.NaN, fee: 30 },
+      { distance_km: 3.0, fee: -10 },
+      { distance_km: 3.0, fee: Number.NaN },
+    ];
+    expect(computeDistanceVsFeeTakeaway(data)).toBe(
+      'Average delivery fee is ₹25 across 3.0 km mean distance (~₹5.00/km trend)'
+    );
   });
 });
 
