@@ -438,3 +438,80 @@ describe('computeDiscountBreakdownTakeaway', () => {
     ).toBeNull();
   });
 });
+
+import { computeYearOverYearTakeaway } from './captions';
+
+describe('computeYearOverYearTakeaway', () => {
+  it('computes spend increase across comparable months between the latest two years', () => {
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 10000 },
+        { year: 2024, month: 2, spend: 12000 },
+        { year: 2025, month: 1, spend: 14000 },
+        { year: 2025, month: 2, spend: 22200 },
+      ]),
+    ).toBe('2025 spend exceeded 2024 by ₹14,200 across comparable months');
+  });
+
+  it('computes spend reduction across comparable months', () => {
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 15000 },
+        { year: 2025, month: 1, spend: 10000 },
+      ]),
+    ).toBe('2025 spend was ₹5,000 lower than 2024 across comparable months');
+  });
+
+  it('handles exact spend match across comparable months', () => {
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 8000 },
+        { year: 2025, month: 1, spend: 8000 },
+      ]),
+    ).toBe('2025 spend matched 2024 across comparable months');
+  });
+
+  it('compares the most recent two years in multi-year datasets and ignores non-overlapping months', () => {
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2023, month: 1, spend: 5000 },
+        { year: 2024, month: 1, spend: 8000 },
+        { year: 2024, month: 2, spend: 9000 },
+        { year: 2024, month: 3, spend: 11000 }, // No 2025 month 3
+        { year: 2025, month: 1, spend: 10000 },
+        { year: 2025, month: 2, spend: 12000 },
+        { year: 2025, month: 4, spend: 7000 }, // No 2024 month 4
+      ]),
+    ).toBe('2025 spend exceeded 2024 by ₹5,000 across comparable months');
+  });
+
+  it('returns null for missing, empty, invalid, all-zero, or single-year data', () => {
+    expect(computeYearOverYearTakeaway(null)).toBeNull();
+    expect(computeYearOverYearTakeaway(undefined)).toBeNull();
+    expect(computeYearOverYearTakeaway([])).toBeNull();
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 5000 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 0 },
+        { year: 2025, month: 1, spend: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: 5000 },
+        { year: 2025, month: 2, spend: 6000 }, // No overlapping month
+      ]),
+    ).toBeNull();
+    expect(
+      computeYearOverYearTakeaway([
+        { year: 2024, month: 1, spend: Number.NaN },
+        { year: 2025, month: 1, spend: 5000 },
+      ]),
+    ).toBeNull();
+  });
+});
+
