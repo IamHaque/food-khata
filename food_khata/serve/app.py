@@ -91,10 +91,11 @@ def create_app(
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request, exc):
+        codes = {404: "not_found", 503: "database_not_found"}
         return JSONResponse(
             {
                 "error": {
-                    "code": "not_found" if exc.status_code == 404 else "request_error",
+                    "code": codes.get(exc.status_code, "request_error"),
                     "message": str(exc.detail),
                 }
             },
@@ -137,6 +138,9 @@ def create_app(
             return retry(lambda: self.conn.execute(sql, params))
 
     def connection():
+        # Each request gets its own connection; never share one across requests.
+        if not db_path.is_file():
+            raise HTTPException(503, "Database not found.")
         version = database_version(db_path)
 
         def begin():
@@ -148,7 +152,13 @@ def create_app(
                 conn.close()
                 raise
 
-        conn = retry(begin)
+        try:
+            conn = retry(begin)
+        except sqlite3.OperationalError as exc:
+            # The file may disappear between the check above and the connect.
+            if "unable to open database file" in str(exc).lower():
+                raise HTTPException(503, "Database not found.") from None
+            raise
         try:
             wrapped = RetryingConnection(conn)
             wrapped.version = version
