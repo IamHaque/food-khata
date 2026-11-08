@@ -5,6 +5,7 @@ import { tokenAlpha } from '../lib/tokens';
 import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
 import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownChart';
 import { YearOverYearChart } from '../components/charts/YearOverYearChart';
+import { FeeComponentsChart } from '../components/charts/FeeComponentsChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -130,71 +131,9 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
         )}
       </div>
 
-      {/* 4. Monthly fee components: One stacked chart consolidating redundant views (F08) */}
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-        <div className="border-b pb-2">
-          <h2 className="text-base font-semibold text-foreground">Monthly fee components</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Consolidated breakdown of monthly delivery, packaging, and platform fees. Taxes are categorized separately and shown alongside fees for complete billing transparency.
-          </p>
-        </div>
-        <Chart
-          summary="Monthly net delivery, packaging, platform and tax fees"
-          headers={['Month', 'Net delivery', 'Packaging', 'Platform', 'Tax']}
-          rows={charts.monthly_fee_components.map(x => [
-            x.month,
-            money.format(x.net_delivery),
-            money.format(x.packaging),
-            money.format(x.platform),
-            money.format(x.tax),
-          ])}
-          option={{
-            tooltip: {
-              trigger: 'axis' as const,
-              formatter: (params: unknown) => {
-                if (!Array.isArray(params)) return '';
-                const month = (params[0] as { axisValueLabel?: string })?.axisValueLabel ?? '';
-                let total = 0;
-                let res = `<div class="font-bold text-xs mb-1">${month}</div>`;
-                for (const item of params as { seriesName: string; value: number }[]) {
-                  total += item.value;
-                  res += `<div class="flex justify-between gap-3 text-xs"><span>${item.seriesName}:</span> <strong>${money.format(item.value)}</strong></div>`;
-                }
-                res += `<div class="border-t pt-1 mt-1 flex justify-between gap-3 text-xs font-bold"><span>Total Fees + Tax:</span> <strong>${money.format(total)}</strong></div>`;
-                return res;
-              },
-            },
-            legend: { top: 0, textStyle: { fontSize: 11 } },
-            grid: { left: 65, right: 25, bottom: 40, top: 35 },
-            xAxis: {
-              type: 'category' as const,
-              data: charts.monthly_fee_components.map(x => x.month ?? 'Unknown'),
-              axisLabel: { fontSize: 11 },
-            },
-            yAxis: {
-              type: 'value' as const,
-              name: 'Amount (₹)',
-              axisLabel: {
-                formatter: (v: number) => `₹${v}`,
-                fontSize: 10,
-              },
-            },
-            series: (
-              [
-                ['net_delivery', 'Net delivery'],
-                ['packaging', 'Packaging'],
-                ['platform', 'Platform'],
-                ['tax', 'Tax'],
-              ] as const
-            ).map(([key, name]) => ({
-              name,
-              type: 'bar',
-              stack: 'fees',
-              data: charts.monthly_fee_components.map(x => x[key]),
-            })),
-          }}
-        />
-      </div>
+      {/* 4. Monthly fee components: Stacked area chart (S-043) */}
+      <FeeComponentsChart data={charts.monthly_fee_components} />
+
 
       {/* 5. Fee burden vs order value: Scatter plot */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
