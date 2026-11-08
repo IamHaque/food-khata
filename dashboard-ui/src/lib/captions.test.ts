@@ -6,6 +6,7 @@ import {
  computeFeeComponentsTakeaway,
  computeFeeScatterTakeaway,
  computeMealSlotTakeaway,
+ computeOrderValueDistributionTakeaway,
  computePlatformTakeaway,
  computeSpendTrendTakeaway,
  computeTopRestaurantTakeaway,
@@ -757,6 +758,76 @@ describe('computeCumulativeSpendTakeaway (CC-8, S-045)', () => {
         { month: '2024-02', spend: 0 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe('computeOrderValueDistributionTakeaway (CC-8, S-046)', () => {
+  it('states median order value and percentage of orders under ₹500', () => {
+    // 100 orders: 64 orders under 500, median 320
+    // Example: 64 orders of 250 and 36 orders of 750 => sorted: indices 0-63 are 250, 64-99 are 750
+    // Let's create an explicit set with median 320 and 64% under 500
+    // 50 orders: 32 orders under 500 (64%).
+    // Median of 50 items is (numbers[24] + numbers[25]) / 2.
+    // If indices 0-23 are 200, index 24 is 320, index 25 is 320, indices 26-31 are 450 (total 32 under 500),
+    // and indices 32-49 are 800 (18 orders >= 500). Total 50 items.
+    // 32 / 50 = 64% under 500. Median = (320 + 320) / 2 = 320.
+    const orders = [
+      ...Array(24).fill(200),
+      320,
+      320,
+      ...Array(6).fill(450),
+      ...Array(18).fill(800),
+    ];
+    expect(computeOrderValueDistributionTakeaway(orders)).toBe(
+      'Median order value is ₹320; 64% of orders are under ₹500',
+    );
+  });
+
+  it('supports raw numbers and object arrays with final_amount_paid or amount or spend', () => {
+    const fromObjects = [
+      { final_amount_paid: 100 },
+      { final_amount_paid: 200 },
+      { final_amount_paid: 300 },
+    ];
+    expect(computeOrderValueDistributionTakeaway(fromObjects)).toBe(
+      'Median order value is ₹200; 100% of orders are under ₹500',
+    );
+
+    const fromAmount = [
+      { amount: 400 },
+      { amount: 600 },
+    ];
+    expect(computeOrderValueDistributionTakeaway(fromAmount)).toBe(
+      'Median order value is ₹500; 50% of orders are under ₹500',
+    );
+  });
+
+  it('calculates median correctly for odd and even length arrays', () => {
+    // Odd length
+    expect(computeOrderValueDistributionTakeaway([100, 300, 800])).toBe(
+      'Median order value is ₹300; 67% of orders are under ₹500',
+    );
+    // Even length
+    expect(computeOrderValueDistributionTakeaway([200, 300, 400, 500])).toBe(
+      'Median order value is ₹350; 75% of orders are under ₹500',
+    );
+  });
+
+  it('supports custom threshold', () => {
+    expect(computeOrderValueDistributionTakeaway([100, 200, 300, 400, 500], 300)).toBe(
+      'Median order value is ₹300; 40% of orders are under ₹300',
+    );
+  });
+
+  it('returns null on empty, null, undefined, all-zero or non-positive data', () => {
+    expect(computeOrderValueDistributionTakeaway(null)).toBeNull();
+    expect(computeOrderValueDistributionTakeaway(undefined)).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([])).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([0, 0, 0])).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([-100, -200])).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: 0 }])).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: null }])).toBeNull();
+    expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: Number.NaN }])).toBeNull();
   });
 });
 

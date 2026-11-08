@@ -6,3 +6,4 @@ export * from "./YearOverYearChart";
 export * from "./FeeComponentsChart";
 export * from "./FeeScatterChart";
 export * from "./CumulativeSpendChart";
+export * from "./OrderValueDistributionChart";

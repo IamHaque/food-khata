@@ -8,6 +8,7 @@ import { YearOverYearChart } from '../components/charts/YearOverYearChart';
 import { FeeComponentsChart } from '../components/charts/FeeComponentsChart';
 import { FeeScatterChart } from '../components/charts/FeeScatterChart';
 import { CumulativeSpendChart } from '../components/charts/CumulativeSpendChart';
+import { OrderValueDistributionChart } from '../components/charts/OrderValueDistributionChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -134,7 +135,10 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
       {/* 6. Cumulative spend: Running total line with milestone markers (S-045) */}
       <CumulativeSpendChart data={charts.monthly} />
 
-      {/* 7. Platform comparison table */}
+      {/* 7. Order value distribution: Histogram with mean & median mark lines (S-046) */}
+      <OrderValueDistributionChart aov_histogram={charts.behavior?.aov_histogram} />
+
+      {/* 8. Platform comparison table */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
         <div className="border-b pb-2">
           <h2 className="text-base font-semibold text-foreground">Platform comparison</h2>
