@@ -817,3 +817,47 @@ export function computeCuisineTakeaway(
   return `${label} accounts for ${roundPercent(spend, total)}% of food spend`;
 }
 
+export interface NewVsRepeatDatumLike {
+  month?: string | null;
+  new_orders?: number | null;
+  repeat_orders?: number | null;
+  newOrders?: number | null;
+  repeatOrders?: number | null;
+  orders?: number | null;
+}
+
+/**
+ * "Repeat orders account for 68% of orders overall"
+ * Captions overall repeat restaurant orders share versus first-time discoveries.
+ * Returns null for missing, empty, or all-zero order data.
+ */
+export function computeNewVsRepeatTakeaway(
+  data?: readonly (NewVsRepeatDatumLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  let totalNew = 0;
+  let totalRepeat = 0;
+  let hasValid = false;
+
+  for (const row of data) {
+    if (!row) continue;
+    const newCount = row.new_orders ?? row.newOrders ?? 0;
+    const repeatCount = row.repeat_orders ?? row.repeatOrders ?? 0;
+    if (isFiniteNumber(newCount) && newCount >= 0) {
+      totalNew += newCount;
+      hasValid = true;
+    }
+    if (isFiniteNumber(repeatCount) && repeatCount >= 0) {
+      totalRepeat += repeatCount;
+      hasValid = true;
+    }
+  }
+
+  const total = totalNew + totalRepeat;
+  if (!hasValid || total <= 0) return null;
+
+  const repeatPercent = Math.round((totalRepeat / total) * 100);
+  return `Repeat orders account for ${repeatPercent}% of orders overall`;
+}
+

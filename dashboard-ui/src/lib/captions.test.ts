@@ -943,3 +943,64 @@ describe('computeCuisineTakeaway (CC-8, S-050)', () => {
   });
 });
 
+import { computeNewVsRepeatTakeaway } from './captions';
+
+describe('computeNewVsRepeatTakeaway (CC-8, S-051)', () => {
+  it('computes overall repeat orders percentage share across monthly records', () => {
+    // 32 new orders, 68 repeat orders -> total 100 -> 68%
+    const data = [
+      { month: '2024-01', new_orders: 12, repeat_orders: 18 },
+      { month: '2024-02', new_orders: 10, repeat_orders: 20 },
+      { month: '2024-03', new_orders: 10, repeat_orders: 30 },
+    ];
+    // total new = 32, total repeat = 68, total = 100 -> 68%
+    expect(computeNewVsRepeatTakeaway(data)).toBe('Repeat orders account for 68% of orders overall');
+  });
+
+  it('handles 100% repeat orders', () => {
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', new_orders: 0, repeat_orders: 25 },
+        { month: '2024-02', new_orders: 0, repeat_orders: 25 },
+      ]),
+    ).toBe('Repeat orders account for 100% of orders overall');
+  });
+
+  it('handles 0% repeat orders (100% first-time discoveries)', () => {
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', new_orders: 40, repeat_orders: 0 },
+      ]),
+    ).toBe('Repeat orders account for 0% of orders overall');
+  });
+
+  it('supports camelCase fallback field names (newOrders, repeatOrders)', () => {
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', newOrders: 10, repeatOrders: 30 },
+      ]),
+    ).toBe('Repeat orders account for 75% of orders overall');
+  });
+
+  it('returns null on null, undefined, empty array, all-zero or invalid orders', () => {
+    expect(computeNewVsRepeatTakeaway(null)).toBeNull();
+    expect(computeNewVsRepeatTakeaway(undefined)).toBeNull();
+    expect(computeNewVsRepeatTakeaway([])).toBeNull();
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', new_orders: 0, repeat_orders: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', new_orders: -5, repeat_orders: -10 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeNewVsRepeatTakeaway([
+        { month: '2024-01', new_orders: Number.NaN, repeat_orders: Number.NaN },
+      ]),
+    ).toBeNull();
+  });
+});
+

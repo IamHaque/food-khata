@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -98,59 +98,10 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               cuisine_unavailable_reason={food.cuisine_unavailable_reason}
             />
 
-            {/* Consolidated New vs Repeat Restaurants (Stacked monthly column chart) */}
-            <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">New vs repeat restaurant orders</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Monthly order comparison between first-time and repeat restaurant orders
-                </p>
-              </div>
-
-              {!food.new_repeat.length ? (
-                <p className="text-xs text-muted-foreground p-4 text-center">No new vs repeat data available.</p>
-              ) : (
-                <Chart
-                  summary="Monthly comparison of new vs repeat restaurant orders"
-                  headers={['Month', 'New restaurant orders', 'Repeat restaurant orders', 'Total orders']}
-                  rows={food.new_repeat.map(x => [
-                    x.month,
-                    x.new_orders,
-                    x.repeat_orders,
-                    x.new_orders + x.repeat_orders,
-                  ])}
-                  option={{
-                    tooltip: { trigger: 'axis', renderMode: 'richText' },
-                    legend: {
-                      top: 0,
-                      data: ['New restaurant orders', 'Repeat restaurant orders'],
-                    },
-                    grid: { left: 50, right: 25, bottom: 50, top: 35 },
-                    xAxis: {
-                      type: 'category',
-                      data: food.new_repeat.map(x => x.month),
-                      axisLabel: { hideOverlap: true, fontSize: 11 },
-                    },
-                    yAxis: { type: 'value', name: 'Orders' },
-                    series: [
-                      {
-                        name: 'New restaurant orders',
-                        type: 'bar',
-                        stack: 'orders',
-                        data: food.new_repeat.map(x => x.new_orders),
-                      },
-                      {
-                        name: 'Repeat restaurant orders',
-                        type: 'bar',
-                        stack: 'orders',
-                        itemStyle: { borderRadius: [4, 4, 0, 0] },
-                        data: food.new_repeat.map(x => x.repeat_orders),
-                      },
-                    ],
-                  }}
-                />
-              )}
-            </div>
+            {/* S-051 New vs repeat restaurants stacked area chart */}
+            <NewVsRepeatChart
+              data={food.new_repeat}
+            />
           </div>
 
           {/* Row 2: Restaurant Loyalty and Diet item quantities */}
