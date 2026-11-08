@@ -36,8 +36,13 @@ function parseArgs() {
 }
 
 function checkGuardrails(worktree) {
+  for (const forbidden of [".env", ".food-khata"]) {
+    if (existsSync(join(worktree, forbidden))) {
+      return { pass: false, error: `Forbidden path modified: ${forbidden}` };
+    }
+  }
   try {
-    const statusOut = execSync("git status --porcelain", {
+    const statusOut = execSync("git status --porcelain --ignored=matching", {
       cwd: worktree,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
@@ -192,16 +197,34 @@ function main() {
     }
   }
 
+  const isTrunk = (() => {
+    try {
+      const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+        cwd: worktreeDir,
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+      return branch === "master" || branch === "trunk" || branch === "main";
+    } catch {
+      return true;
+    }
+  })();
+
+  const forceFull = process.argv.includes("--full") || process.argv.includes("--all");
+  const unitCmd = (isTrunk || forceFull)
+    ? "npm --prefix dashboard-ui test -- --run"
+    : "npm --prefix dashboard-ui test -- --run --changed";
+
   const checks = [
     { name: "guardrails", run: () => checkGuardrails(worktreeDir) },
     { name: "typecheck", cmd: "npm --prefix dashboard-ui run typecheck" },
     { name: "lint", cmd: "npm --prefix dashboard-ui run lint" },
-    { name: "unit", cmd: "npm --prefix dashboard-ui test -- --run" },
+    { name: "unit", cmd: unitCmd },
   ];
 
   if (backend) {
-    checks.push({ name: "pytest", cmd: "python -m pytest tests -q" });
     checks.push({ name: "ruff", cmd: "python -m ruff check ." });
+    checks.push({ name: "pytest", cmd: "python -m pytest tests -q" });
   }
 
   if (browser) {
@@ -210,18 +233,18 @@ function main() {
 
   let allPassed = true;
   const outputLines = [];
+  const startTime = Date.now();
 
   for (const check of checks) {
+    const stageStart = Date.now();
+    let stagePassed = true;
+    let errorDetails = null;
+
     if (check.run) {
       const res = check.run();
-      if (res.pass) {
-        outputLines.push(`${check.name}: PASS`);
-      } else {
-        allPassed = false;
-        outputLines.push(`${check.name}: FAIL`);
-        if (res.error) {
-          outputLines.push(`  ${res.error}`);
-        }
+      if (!res.pass) {
+        stagePassed = false;
+        errorDetails = res.error ? [res.error] : [];
       }
     } else {
       try {
@@ -231,20 +254,29 @@ function main() {
           encoding: "utf8",
           stdio: ["pipe", "pipe", "pipe"],
         });
-        outputLines.push(`${check.name}: PASS`);
       } catch (err) {
-        allPassed = false;
-        outputLines.push(`${check.name}: FAIL`);
+        stagePassed = false;
         const combined = (err.stdout || "") + "\n" + (err.stderr || "") + "\n" + (err.message || "");
-        const failSnippet = extractFirstFailure(combined);
-        for (const line of failSnippet) {
+        errorDetails = extractFirstFailure(combined);
+      }
+    }
+
+    const stageDuration = ((Date.now() - stageStart) / 1000).toFixed(2);
+    if (stagePassed) {
+      outputLines.push(`${check.name}: PASS (${stageDuration}s)`);
+    } else {
+      allPassed = false;
+      outputLines.push(`${check.name}: FAIL (${stageDuration}s)`);
+      if (errorDetails) {
+        for (const line of errorDetails) {
           outputLines.push(line);
         }
       }
+      break;
     }
   }
 
-  if (reportArg) {
+  if (allPassed && reportArg) {
     const logFile = findLogFile(worktreeDir, reportArg);
     const isValid = logFile ? validateReport(logFile) : false;
     if (isValid) {
@@ -254,6 +286,9 @@ function main() {
       allPassed = false;
     }
   }
+
+  const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+  outputLines.push(`duration: ${durationSec}s`);
 
   const linesToPrint = outputLines.slice(0, 30);
   console.log(linesToPrint.join("\n"));
