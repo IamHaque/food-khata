@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 38 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3c Spending · Last updated: 2026-11-08
+**Overall progress:** 39 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P3c Spending · Last updated: 2026-11-08
 
 ---
 
@@ -1203,7 +1203,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-044 | Fee burden scatter | P1 | DONE | 2026-11-08 | FeeScatterChart with scatter points sized by order amount, linear regression trendline y = mx + b, DEC-044 tight amount filter click navigation to /orders, sortable table view, and takeaway caption |
 | S-045 | Cumulative spend | P2 | DONE | 2026-11-08 | CumulativeSpendChart with running spend total line, markPoint round milestone flags (every ₹10,000), rich tooltip with milestone detection, sortable accessible table, linked hover on month, and takeaway caption |
 | S-046 | Order value distribution | P2 | DONE | 2026-11-08 | OrderValueDistributionChart with pure bucketOrderValues histogram, ECharts vertical markLine reference lines for mean and median, DEC-046 click-to-filter bounds on amount_min and amount_max, sortable accessible table view, and takeaway caption |
-| S-047 | Daily spend calendar | P2 | TODO | | |
+| S-047 | Daily spend calendar | P2 | DONE | 2026-11-08 | DailySpendCalendarChart with ECharts calendar heatmap coordinate system, horizontal visualMap mapped to spend dimension, year navigation, unallocated spend explanatory note, day click cross-filter, accessible sortable table, and takeaway caption |
 | S-050 | Cuisine treemap | P2 | TODO | | |
 | S-051 | New vs repeat | P2 | TODO | | |
 | S-052 | Loyalty Pareto | P2 | TODO | | |
@@ -1273,6 +1273,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-044 | 2026-11-08 | 2026-11-08 | S-044 | Fallback amount filtering on click and linear trendline regression | Fee burden scatter | Items in charts.spending.fee_scatter contain amount, fees, and fee_percent but do not include order_id. When clicking a scatter point, since no direct order_id exists, navigate to /orders with tight amount brackets (amount_min=Math.floor(amount), amount_max=Math.ceil(amount)) while preserving existing global filter scope. Ordinary least squares linear regression trendline y = mx + b is computed client-side over valid points and rendered as a dashed line overlay without symbols. |
 | DEC-045 | 2026-11-08 | 2026-11-08 | S-045 | Cumulative spend running total calculation and milestone threshold detection | Cumulative spend chart | Derived chronological cumulative spend series from charts.monthly with area fill. Milestone flags are identified at each step threshold (defaulting to round ₹10,000 multiples) whenever cumulative spend crosses interval boundaries. Visible ECharts markPoint pins annotate crossed milestones on the line series with formatted values (e.g. ₹10k, ₹20k). Month linked-hover bus broadcast with 120ms debounce, accessible sortable table view, and pure takeaway caption. |
 | DEC-046 | 2026-11-08 | 2026-11-08 | S-046 | Order value histogram bucketing, vertical mean and median markLines, and bucket click range filtering | Order value distribution chart | Grouped raw order amounts into discrete value bins (₹0–₹100, ₹100–₹250, up to ₹2,000+) using pure bucketOrderValues with spend and share computations. Calculated exact mean and median values displayed as vertical ECharts markLine reference lines with distinct token palette colors and contrasting dashed/dotted line styles and callout badges. Clicking any histogram bar sets amount_min and amount_max in the active filter context or navigates to /orders with tight range parameters, with full support for onBucketClick callback, sortable accessible Table view (Bucket, Orders, Share %, Spend), and pure takeaway caption. |
+| DEC-047 | 2026-11-08 | 2026-11-08 | S-047 | Daily spend calendar heatmap, year navigation, unallocated spend callout, and date filter on click | Daily spend calendar chart | Implemented DailySpendCalendarChart wrapping ECharts calendar heatmap (coordinateSystem: 'calendar') mapped to charts.spending.daily merged with charts.calendar. Configured horizontal visualMap legend on spend dimension (min: 0, max: maxSpend) using theme token colors and tokenAlpha('--success', ...). Provides year navigation via dropdown/SegmentedControl, date cross-filtering on day click via FilterContext (date_from and date_to), unallocated spend explanatory note for orders without parseable dates, sortable accessible Table view (Date, Spend, Orders), and pure computeDailySpendTakeaway caption. |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |

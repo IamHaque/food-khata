@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
  computeBillWaterfallTakeaway,
  computeCumulativeSpendTakeaway,
+ computeDailySpendTakeaway,
  computeDayTypeTakeaway,
  computeFeeComponentsTakeaway,
  computeFeeScatterTakeaway,
@@ -828,6 +829,60 @@ describe('computeOrderValueDistributionTakeaway (CC-8, S-046)', () => {
     expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: 0 }])).toBeNull();
     expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: null }])).toBeNull();
     expect(computeOrderValueDistributionTakeaway([{ final_amount_paid: Number.NaN }])).toBeNull();
+  });
+});
+
+describe('computeDailySpendTakeaway', () => {
+  const sampleData = [
+    { date: '2024-12-15', spend: 1200 },
+    { date: '2025-01-10', spend: 850 },
+    { date: '2025-10-24', spend: 3450 },
+    { date: '2025-11-05', spend: 2100 },
+  ];
+
+  it('computes peak daily spend for a specified year', () => {
+    expect(computeDailySpendTakeaway(sampleData, '2025')).toBe(
+      'Highest daily spend in 2025 was ₹3,450 on 2025-10-24',
+    );
+    expect(computeDailySpendTakeaway(sampleData, 2024)).toBe(
+      'Highest daily spend in 2024 was ₹1,200 on 2024-12-15',
+    );
+  });
+
+  it('computes peak daily spend across all dates when year is omitted or null', () => {
+    expect(computeDailySpendTakeaway(sampleData)).toBe(
+      'Highest daily spend was ₹3,450 on 2025-10-24',
+    );
+    expect(computeDailySpendTakeaway(sampleData, null)).toBe(
+      'Highest daily spend was ₹3,450 on 2025-10-24',
+    );
+    expect(computeDailySpendTakeaway(sampleData, '')).toBe(
+      'Highest daily spend was ₹3,450 on 2025-10-24',
+    );
+  });
+
+  it('supports amount field fallback when spend is omitted', () => {
+    const dataWithAmount = [
+      { date: '2025-05-01', amount: 990 },
+      { date: '2025-05-02', amount: 1540 },
+    ];
+    expect(computeDailySpendTakeaway(dataWithAmount, '2025')).toBe(
+      'Highest daily spend in 2025 was ₹1,540 on 2025-05-02',
+    );
+  });
+
+  it('returns null on empty, null, undefined, all-zero, negative or invalid data', () => {
+    expect(computeDailySpendTakeaway(null)).toBeNull();
+    expect(computeDailySpendTakeaway(undefined)).toBeNull();
+    expect(computeDailySpendTakeaway([])).toBeNull();
+    expect(computeDailySpendTakeaway([{ date: '2025-01-01', spend: 0 }])).toBeNull();
+    expect(computeDailySpendTakeaway([{ date: '2025-01-01', spend: -500 }])).toBeNull();
+    expect(computeDailySpendTakeaway([{ date: '2025-01-01', spend: Number.NaN }])).toBeNull();
+    expect(computeDailySpendTakeaway([{ date: '', spend: 1000 }])).toBeNull();
+  });
+
+  it('returns null when no data matches the requested year', () => {
+    expect(computeDailySpendTakeaway(sampleData, '2023')).toBeNull();
   });
 });
 

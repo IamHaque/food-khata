@@ -731,3 +731,51 @@ export function computeOrderValueDistributionTakeaway(
   return `Median order value is ${formatRupees(Math.round(median))}; ${pct}% of orders are under ${formatRupees(effectiveThreshold)}`;
 }
 
+export interface DailySpendDatumLike {
+  date?: string | null;
+  spend?: number | null;
+  amount?: number | null;
+  orders?: number | null;
+  cumulative?: number | null;
+  rolling_30?: number | null;
+}
+
+/**
+ * "Highest daily spend in 2025 was ₹3,450 on 2025-10-24" (or across all dates when year is not specified)
+ * Captions the date with the highest daily spend.
+ * Returns null for missing, empty, all-zero, or non-positive spend data.
+ */
+export function computeDailySpendTakeaway(
+  data?: readonly (DailySpendDatumLike | null | undefined)[] | null,
+  year?: string | number | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const yearStr = year != null && String(year).trim() !== "" ? String(year).trim() : null;
+
+  let peakDay: { date: string; spend: number } | null = null;
+  let totalSpend = 0;
+
+  for (const item of data) {
+    if (!item) continue;
+    const date = item.date ? String(item.date).trim() : "";
+    if (!date) continue;
+    if (yearStr && !date.startsWith(yearStr)) continue;
+
+    const rawSpend = item.spend ?? item.amount;
+    if (!isFiniteNumber(rawSpend) || rawSpend <= 0) continue;
+
+    totalSpend += rawSpend;
+    if (!peakDay || rawSpend > peakDay.spend) {
+      peakDay = { date, spend: rawSpend };
+    }
+  }
+
+  if (!peakDay || totalSpend <= 0) return null;
+
+  if (yearStr) {
+    return `Highest daily spend in ${yearStr} was ${formatRupees(peakDay.spend)} on ${peakDay.date}`;
+  }
+  return `Highest daily spend was ${formatRupees(peakDay.spend)} on ${peakDay.date}`;
+}
+

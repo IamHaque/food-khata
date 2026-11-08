@@ -1,10 +1,8 @@
-import { useState, useMemo } from 'react';
 import type { components } from '../types/api';
-import { Chart } from './Chart';
-import { tokenAlpha } from '../lib/tokens';
 import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
 import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownChart';
 import { YearOverYearChart } from '../components/charts/YearOverYearChart';
+import { DailySpendCalendarChart } from '../components/charts/DailySpendCalendarChart';
 import { FeeComponentsChart } from '../components/charts/FeeComponentsChart';
 import { FeeScatterChart } from '../components/charts/FeeScatterChart';
 import { CumulativeSpendChart } from '../components/charts/CumulativeSpendChart';
@@ -21,16 +19,6 @@ const num = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
 
 export function SpendingDetails({ charts }: { charts: components['schemas']['Charts'] }) {
-  const years = useMemo(
-    () => [...new Set(charts.calendar.flatMap(x => (x.date ? [x.date.slice(0, 4)] : [])))].sort(),
-    [charts.calendar]
-  );
-  const [selectedYear, setSelectedYear] = useState('');
-  const year = years.includes(selectedYear) ? selectedYear : years.at(-1);
-  const calendar = useMemo(
-    () => charts.calendar.filter(x => x.date?.startsWith(year ?? '')),
-    [charts.calendar, year]
-  );
 
 
   return (
@@ -48,82 +36,12 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
       <YearOverYearChart data={charts.spending.years} />
 
 
-      {/* 3. Spend calendar: Calendar heatmap with selected year & local scroll */}
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Daily spend calendar</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Daily expenditure heatmap across active calendar dates
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-            <span className="text-muted-foreground">Year:</span>
-            <select
-              aria-label="Calendar year"
-              value={year ?? ''}
-              onChange={e => setSelectedYear(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground"
-            >
-              {years.map(y => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {year ? (
-          <div className="overflow-x-auto select-custom-scroll pb-2">
-            <div className="min-w-[700px]">
-              <Chart
-                summary={`Daily spend calendar for ${year}`}
-                headers={['Date', 'Spend', 'Orders']}
-                rows={calendar.map(x => [x.date, money.format(x.spend), x.orders])}
-                option={{
-                  tooltip: {
-                    formatter: (params: unknown) => {
-                      const p = params as { value: [string, number] };
-                      if (!p || !Array.isArray(p.value)) return '';
-                      const [d, s] = p.value;
-                      return `<div class="text-xs font-medium"><div>${d}</div><strong>Spend: ${money.format(s)}</strong></div>`;
-                    },
-                  },
-                  calendar: {
-                    range: year,
-                    cellSize: ['auto', 16],
-                    left: 45,
-                    right: 25,
-                    top: 35,
-                    itemStyle: { borderWidth: 0.5 },
-                  },
-                  visualMap: {
-                    min: 0,
-                    max: Math.max(1, ...calendar.map(x => x.spend)),
-                    orient: 'horizontal',
-                    bottom: 0,
-                    left: 'center',
-                    text: ['High', '₹0'],
-                    dimension: 1,
-                    inRange: {
-                      color: [0.25, 0.5, 0.75, 1].map((alpha) => tokenAlpha('--success', alpha)),
-                    },
-                  },
-                  series: [
-                    {
-                      type: 'heatmap',
-                      coordinateSystem: 'calendar',
-                      data: calendar.map(x => [x.date, x.spend]),
-                    },
-                  ],
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground p-3">No dated orders in this selection.</p>
-        )}
-      </div>
+      {/* 3. Daily spend calendar heatmap (S-047) */}
+      <DailySpendCalendarChart
+        data={charts.spending.daily}
+        calendar={charts.calendar}
+        unallocatedSpend={charts.spending.unallocated_spend}
+      />
 
       {/* 4. Monthly fee components: Stacked area chart (S-043) */}
       <FeeComponentsChart data={charts.monthly_fee_components} />
