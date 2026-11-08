@@ -5,7 +5,9 @@ from pathlib import Path
 
 
 def connect_readonly(path: Path | str) -> sqlite3.Connection:
+    """Open a new read-only connection; callers own it and must close it."""
     # FastAPI may use different workers for request setup, queries, and cleanup.
+    # Each call still returns its own connection; nothing is shared across requests.
     conn = sqlite3.connect(
         Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=2, check_same_thread=False
     )
