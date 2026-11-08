@@ -3,6 +3,7 @@ import type { components } from '../types/api';
 import { Chart } from './Chart';
 import { tokenAlpha } from '../lib/tokens';
 import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
+import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -26,15 +27,6 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
     () => charts.calendar.filter(x => x.date?.startsWith(year ?? '')),
     [charts.calendar, year]
   );
-
-  // Ranked horizontal bars for explicit discounts
-  const discountData = useMemo(() => {
-    const sorted = [...charts.spending.discount_breakdown].sort((a, b) => b.amount - a.amount);
-    return {
-      labels: sorted.map(x => x.label),
-      amounts: sorted.map(x => x.amount),
-    };
-  }, [charts.spending.discount_breakdown]);
 
   // Year-over-year line series with gaps for incomplete years and no smoothing
   const yearlyData = useMemo(() => {
@@ -71,52 +63,8 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
         costWaterfall={charts.cost_waterfall}
       />
 
-      {/* 1. Explicit discount breakdown: Ranked horizontal bars */}
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-        <div className="border-b pb-2">
-          <h2 className="text-base font-semibold text-foreground">Explicit discount breakdown</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Explicit bill deductions by component; advertised savings (strikethrough list prices) are excluded
-          </p>
-        </div>
-        <Chart
-          summary="Explicit discount components breakdown"
-          headers={['Discount type', 'Amount']}
-          rows={discountData.labels.map((l, i) => [l, money.format(discountData.amounts[i])])}
-          option={{
-            tooltip: {
-              trigger: 'axis' as const,
-              formatter: (params: unknown) => {
-                if (!Array.isArray(params) || !params[0]) return '';
-                const p = params[0] as { name: string; value: number };
-                return `<div class="text-xs"><strong>${p.name}:</strong> ${money.format(p.value)}</div>`;
-              },
-            },
-            grid: { left: 140, right: 30, bottom: 40, top: 20 },
-            xAxis: {
-              type: 'value' as const,
-              name: 'Explicit discount (₹)',
-              axisLabel: {
-                formatter: (v: number) => `₹${v}`,
-                fontSize: 10,
-              },
-            },
-            yAxis: {
-              type: 'category' as const,
-              data: discountData.labels,
-              axisLabel: { fontSize: 11 },
-            },
-            series: [
-              {
-                name: 'Explicit discount (₹)',
-                type: 'bar',
-                itemStyle: { borderRadius: [0, 4, 4, 0] },
-                data: discountData.amounts,
-              },
-            ],
-          }}
-        />
-      </div>
+      {/* 1. Explicit discount breakdown */}
+      <DiscountBreakdownChart data={charts.spending.discount_breakdown} />
 
       {/* 2. Year-over-year spend: Line series by year, Jan-Dec axis */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">

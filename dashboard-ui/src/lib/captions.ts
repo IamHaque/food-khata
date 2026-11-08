@@ -378,3 +378,40 @@ export function computeBillWaterfallTakeaway(
  return null;
 }
 
+
+export interface DiscountItemLike {
+  label?: string;
+  amount?: number;
+}
+
+/**
+ * "Food discounts represent 68% of total savings (₹4,200)"
+ * Captions the discount type with the largest savings.
+ * Returns null for missing, empty, all-zero or tied data.
+ */
+export function computeDiscountBreakdownTakeaway(
+  data: readonly DiscountItemLike[] | null | undefined,
+): string | null {
+  if (!data?.length) return null;
+  const totals = new Map<string, number>();
+  const displayNames = new Map<string, string>();
+  for (const row of data) {
+    if (!row || !isFiniteNumber(row.amount) || row.amount <= 0) continue;
+    const rawLabel = String(row.label ?? '').trim();
+    if (!rawLabel) continue;
+    const humanized = humanize(rawLabel);
+    const key = humanized.toLowerCase();
+    if (!displayNames.has(key)) {
+      displayNames.set(key, humanized);
+    }
+    addTo(totals, key, row.amount);
+  }
+  const total = sumValues(totals.values());
+  if (total <= 0) return null;
+  const winner = uniqueMax([...totals.entries()], ([, amount]) => amount);
+  if (!winner) return null;
+  const [key, amount] = winner;
+  const label = displayNames.get(key) || key;
+  const pluralLabel = pluralize(label);
+  return `${pluralLabel} represent ${roundPercent(amount, total)}% of total savings (${formatRupees(amount)})`;
+}

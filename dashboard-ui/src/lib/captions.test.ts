@@ -377,3 +377,64 @@ describe('computeBillWaterfallTakeaway', () => {
   ).toBeNull();
  });
 });
+
+import { computeDiscountBreakdownTakeaway } from './captions';
+
+describe('computeDiscountBreakdownTakeaway', () => {
+  it('states the share of total savings for the largest discount type', () => {
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Food discount', amount: 4200 },
+        { label: 'Delivery discount', amount: 1500 },
+        { label: 'Other / unallocated discount', amount: 476 },
+      ]),
+    ).toBe('Food discounts represent 68% of total savings (₹4,200)');
+  });
+
+  it('aggregates duplicate discount types case-insensitively and humanizes snake_case', () => {
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'food_discount', amount: 3000 },
+        { label: 'Food Discount', amount: 1200 },
+        { label: 'delivery_discount', amount: 1976 },
+      ]),
+    ).toBe('Food discounts represent 68% of total savings (₹4,200)');
+  });
+
+  it('handles 100% single discount and preserves already plural labels', () => {
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Coupons', amount: 500 },
+      ]),
+    ).toBe('Coupons represent 100% of total savings (₹500)');
+  });
+
+  it('returns null for missing, empty, zero, invalid and tied data', () => {
+    expect(computeDiscountBreakdownTakeaway(null)).toBeNull();
+    expect(computeDiscountBreakdownTakeaway(undefined)).toBeNull();
+    expect(computeDiscountBreakdownTakeaway([])).toBeNull();
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Food discount', amount: 0 },
+        { label: 'Delivery discount', amount: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Food discount', amount: -50 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Food discount', amount: 500 },
+        { label: 'Delivery discount', amount: 500 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeDiscountBreakdownTakeaway([
+        { label: 'Food discount', amount: Number.NaN },
+        { label: 'Delivery discount', amount: Number.POSITIVE_INFINITY },
+      ]),
+    ).toBeNull();
+  });
+});
