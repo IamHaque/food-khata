@@ -8,6 +8,7 @@ import {
  computeFeeScatterTakeaway,
  computeHourWeekdayTakeaway,
  computeMealSlotTakeaway,
+ computeMealSlotsTakeaway,
  computeOrderValueDistributionTakeaway,
  computePlatformTakeaway,
  computeSpendTrendTakeaway,
@@ -59,6 +60,61 @@ describe('computeMealSlotTakeaway', () => {
    { slot: 'snack', count: Number.POSITIVE_INFINITY },
   ])).toBeNull();
  });
+});
+
+describe('computeMealSlotsTakeaway', () => {
+  it('states most frequent meal slot with order count and formatted rupees spend', () => {
+    expect(computeMealSlotsTakeaway([
+      { key: 'breakfast', orders: 12, spend: 3600 },
+      { key: 'lunch', orders: 25, spend: 8500 },
+      { key: 'snack', orders: 8, spend: 1900 },
+      { key: 'dinner', orders: 45, spend: 18500 },
+      { key: 'late_night', orders: 5, spend: 2200 },
+    ])).toBe('Dinner is your most frequent meal slot with 45 orders (₹18,500)');
+  });
+
+  it('uses singular "1 order" when the top meal slot has 1 order', () => {
+    expect(computeMealSlotsTakeaway([
+      { key: 'lunch', orders: 1, spend: 350 },
+    ])).toBe('Lunch is your most frequent meal slot with 1 order (₹350)');
+  });
+
+  it('formats caption without spend parenthesis when spend is zero or not provided', () => {
+    expect(computeMealSlotsTakeaway([
+      { key: 'breakfast', orders: 10, spend: 0 },
+      { key: 'lunch', orders: 4 },
+    ])).toBe('Breakfast is your most frequent meal slot with 10 orders');
+  });
+
+  it('aggregates duplicate slots and humanizes snake_case keys', () => {
+    expect(computeMealSlotsTakeaway([
+      { key: 'late_night', orders: 10, spend: 3000 },
+      { key: 'Late-Night', orders: 8, spend: 2400 },
+      { key: 'lunch', orders: 12, spend: 4000 },
+    ])).toBe('Late night is your most frequent meal slot with 18 orders (₹5,400)');
+  });
+
+  it('supports alias fields slot, count, and amount', () => {
+    expect(computeMealSlotsTakeaway([
+      { slot: 'dinner', count: 20, amount: 9000 },
+      { slot: 'lunch', count: 15, amount: 6000 },
+    ])).toBe('Dinner is your most frequent meal slot with 20 orders (₹9,000)');
+  });
+
+  it('returns null for missing, empty, zero, invalid, and tied data', () => {
+    expect(computeMealSlotsTakeaway(null)).toBeNull();
+    expect(computeMealSlotsTakeaway(undefined)).toBeNull();
+    expect(computeMealSlotsTakeaway([])).toBeNull();
+    expect(computeMealSlotsTakeaway([{ key: 'dinner', orders: 0 }])).toBeNull();
+    expect(computeMealSlotsTakeaway([
+      { key: 'dinner', orders: 15, spend: 6000 },
+      { key: 'lunch', orders: 15, spend: 5000 },
+    ])).toBeNull();
+    expect(computeMealSlotsTakeaway([
+      { key: 'dinner', orders: Number.NaN },
+      { key: 'lunch', orders: -3 },
+    ])).toBeNull();
+  });
 });
 
 describe('computePlatformTakeaway', () => {

@@ -1105,3 +1105,68 @@ export function computeHourWeekdayTakeaway(
   return `Peak ordering is ${dayName} at ${hourFormatted} with ${orderCountText}`;
 }
 
+export interface MealSlotItemLike {
+  key?: string | null;
+  slot?: string | null;
+  orders?: number | null;
+  count?: number | null;
+  spend?: number | null;
+  amount?: number | null;
+}
+
+const CANONICAL_MEAL_LABELS: Record<string, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  snack: "Snack",
+  dinner: "Dinner",
+  late_night: "Late night",
+};
+
+/**
+ * "Dinner is your most frequent meal slot with 45 orders (₹18,500)"
+ * Captions the meal slot with the most orders along with total spend formatted in rupees.
+ * Returns null for missing, empty, all-zero, or tied data.
+ */
+export function computeMealSlotsTakeaway(
+  data?: readonly (MealSlotItemLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, { orders: number; spend: number }>();
+
+  for (const row of data) {
+    if (!row) continue;
+    const rawKey = row.key ?? row.slot;
+    if (rawKey == null || rawKey === "") continue;
+    const orders = Number(row.orders ?? row.count ?? 0);
+    const spend = Number(row.spend ?? row.amount ?? 0);
+    if (!isFiniteNumber(orders) || orders <= 0) continue;
+
+    const key = String(rawKey).trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const existing = totals.get(key);
+    if (existing) {
+      existing.orders += orders;
+      existing.spend += isFiniteNumber(spend) ? spend : 0;
+    } else {
+      totals.set(key, {
+        orders,
+        spend: isFiniteNumber(spend) ? spend : 0,
+      });
+    }
+  }
+
+  if (totals.size === 0) return null;
+
+  const winner = uniqueMax([...totals.entries()], ([, stat]) => stat.orders);
+  if (!winner) return null;
+
+  const [slotKey, { orders, spend }] = winner;
+  const label = CANONICAL_MEAL_LABELS[slotKey] ?? humanize(slotKey);
+  const orderText = `${orders.toLocaleString("en-IN")} ${orders === 1 ? "order" : "orders"}`;
+
+  if (spend > 0) {
+    return `${label} is your most frequent meal slot with ${orderText} (${formatRupees(spend)})`;
+  }
+  return `${label} is your most frequent meal slot with ${orderText}`;
+}
+
