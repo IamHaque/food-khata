@@ -1546,3 +1546,154 @@ export function computeDistanceVsFeeTakeaway(
   return `Average delivery fee is ${formatRupees(meanFee)} across ${meanDist.toFixed(1)} km mean distance${slopeStr}`;
 }
 
+export interface CalendarStreakItemLike {
+  date?: string | null;
+  orders?: number | null;
+  spend?: number | null;
+}
+
+export interface StreakRange {
+  startDate: string;
+  endDate: string;
+  length: number;
+  orders: number;
+  spend: number;
+}
+
+/**
+ * Converts a YYYY-MM-DD date string into UTC days since epoch.
+ * Used for leap-year-safe, DST-safe consecutive calendar day calculations.
+ */
+export function parseISODateToUtcDays(dateStr: string): number {
+  if (!dateStr) return NaN;
+  const parts = dateStr.slice(0, 10).split("-").map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return NaN;
+  }
+  return Math.floor(Date.UTC(parts[0], parts[1] - 1, parts[2]) / 86400000);
+}
+
+/**
+ * Pure helper function to find the start and end dates of the longest consecutive
+ * calendar days streak where each day has at least one order.
+ *
+ * If longestStreak is provided and > 0, candidate streaks matching that length are prioritized.
+ * When multiple streaks share the maximum length (ties), ties are broken by order count
+ * (higher orders preferred), and then by most recent date (latest startDate).
+ */
+export function findLongestStreakRange(
+  calendar?: readonly CalendarStreakItemLike[] | null,
+  longestStreak?: number | null,
+): StreakRange | null {
+  if (!calendar || calendar.length === 0) return null;
+
+  const dayMap = new Map<string, { orders: number; spend: number }>();
+  for (const item of calendar) {
+    if (!item || !item.date) continue;
+    const rawDate = String(item.date).trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) continue;
+    const orders = Number(item.orders ?? 0);
+    const spend = Number(item.spend ?? 0);
+    if (!Number.isFinite(orders) || orders <= 0) continue;
+
+    const existing = dayMap.get(rawDate) ?? { orders: 0, spend: 0 };
+    dayMap.set(rawDate, {
+      orders: existing.orders + Math.round(orders),
+      spend: existing.spend + (Number.isFinite(spend) && spend > 0 ? spend : 0),
+    });
+  }
+
+  if (dayMap.size === 0) return null;
+
+  const sortedDates = Array.from(dayMap.keys()).sort();
+
+  const streaks: StreakRange[] = [];
+  let current: {
+    startDate: string;
+    endDate: string;
+    length: number;
+    orders: number;
+    spend: number;
+    lastUtcDays: number;
+  } | null = null;
+
+  for (const d of sortedDates) {
+    const data = dayMap.get(d)!;
+    const utcDays = parseISODateToUtcDays(d);
+
+    if (current && utcDays - current.lastUtcDays === 1) {
+      current.endDate = d;
+      current.length += 1;
+      current.orders += data.orders;
+      current.spend += data.spend;
+      current.lastUtcDays = utcDays;
+    } else {
+      if (current) {
+        streaks.push({
+          startDate: current.startDate,
+          endDate: current.endDate,
+          length: current.length,
+          orders: current.orders,
+          spend: current.spend,
+        });
+      }
+      current = {
+        startDate: d,
+        endDate: d,
+        length: 1,
+        orders: data.orders,
+        spend: data.spend,
+        lastUtcDays: utcDays,
+      };
+    }
+  }
+
+  if (current) {
+    streaks.push({
+      startDate: current.startDate,
+      endDate: current.endDate,
+      length: current.length,
+      orders: current.orders,
+      spend: current.spend,
+    });
+  }
+
+  if (streaks.length === 0) return null;
+
+  let candidates: StreakRange[] = [];
+  if (typeof longestStreak === "number" && Number.isFinite(longestStreak) && longestStreak > 0) {
+    candidates = streaks.filter((s) => s.length === longestStreak);
+  }
+
+  if (candidates.length === 0) {
+    const maxLength = Math.max(...streaks.map((s) => s.length));
+    candidates = streaks.filter((s) => s.length === maxLength);
+  }
+
+  candidates.sort((a, b) => {
+    if (b.orders !== a.orders) return b.orders - a.orders;
+    return b.startDate.localeCompare(a.startDate);
+  });
+
+  return candidates[0] ?? null;
+}
+
+/**
+ * Pure caption generator for streak timeline.
+ * Example: "Longest ordering streak was 6 consecutive days (2025-03-10 to 2025-03-15) with 9 orders"
+ */
+export function computeStreakTimelineTakeaway(
+  calendar?: readonly CalendarStreakItemLike[] | null,
+  longestStreak?: number | null,
+): string | null {
+  const range = findLongestStreakRange(calendar, longestStreak);
+  if (!range || range.length <= 0 || range.orders <= 0) return null;
+
+  const ordersText = `${range.orders} ${range.orders === 1 ? "order" : "orders"}`;
+  if (range.length === 1) {
+    return `Longest ordering streak was 1 day (${range.startDate}) with ${ordersText}`;
+  }
+
+  return `Longest ordering streak was ${range.length} consecutive days (${range.startDate} to ${range.endDate}) with ${ordersText}`;
+}
+

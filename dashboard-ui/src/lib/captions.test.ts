@@ -18,6 +18,8 @@ import {
  computeWeightedMedianGap,
  computeDestinationsTakeaway,
  computeDistanceVsFeeTakeaway,
+ computeStreakTimelineTakeaway,
+ findLongestStreakRange,
  formatRupees,
 } from './captions';
 
@@ -1648,6 +1650,148 @@ describe('computeDistanceVsFeeTakeaway', () => {
     expect(computeDistanceVsFeeTakeaway(data)).toBe(
       'Average delivery fee is ₹25 across 3.0 km mean distance (~₹5.00/km trend)'
     );
+  });
+});
+
+describe('findLongestStreakRange', () => {
+  it('identifies a multi-day streak and computes totals accurately', () => {
+    const calendar = [
+      { date: '2025-03-10', orders: 1, spend: 150 },
+      { date: '2025-03-11', orders: 2, spend: 300 },
+      { date: '2025-03-12', orders: 1, spend: 200 },
+      { date: '2025-03-13', orders: 2, spend: 400 },
+      { date: '2025-03-14', orders: 1, spend: 120 },
+      { date: '2025-03-15', orders: 2, spend: 500 },
+    ];
+    const range = findLongestStreakRange(calendar);
+    expect(range).toEqual({
+      startDate: '2025-03-10',
+      endDate: '2025-03-15',
+      length: 6,
+      orders: 9,
+      spend: 1670,
+    });
+  });
+
+  it('handles single-day streak when all orders occur on isolated days', () => {
+    const calendar = [
+      { date: '2025-03-01', orders: 2, spend: 400 },
+      { date: '2025-03-05', orders: 1, spend: 200 },
+      { date: '2025-03-10', orders: 3, spend: 600 },
+    ];
+    const range = findLongestStreakRange(calendar);
+    expect(range).not.toBeNull();
+    expect(range?.length).toBe(1);
+    // Should prefer the one with most orders (2025-03-10 with 3 orders)
+    expect(range?.startDate).toBe('2025-03-10');
+    expect(range?.orders).toBe(3);
+  });
+
+  it('handles gaps and isolates the longest consecutive run', () => {
+    const calendar = [
+      { date: '2025-01-01', orders: 1, spend: 100 },
+      { date: '2025-01-02', orders: 1, spend: 100 }, // streak of 2
+      { date: '2025-01-10', orders: 1, spend: 100 },
+      { date: '2025-01-11', orders: 1, spend: 100 },
+      { date: '2025-01-12', orders: 2, spend: 250 },
+      { date: '2025-01-13', orders: 1, spend: 100 }, // streak of 4
+      { date: '2025-01-20', orders: 1, spend: 100 },
+    ];
+    const range = findLongestStreakRange(calendar);
+    expect(range?.startDate).toBe('2025-01-10');
+    expect(range?.endDate).toBe('2025-01-13');
+    expect(range?.length).toBe(4);
+    expect(range?.orders).toBe(5);
+  });
+
+  it('breaks ties in streak length by order count, then by most recent date', () => {
+    // Two streaks of length 2, but second has more orders
+    const calendar1 = [
+      { date: '2025-01-01', orders: 1, spend: 100 },
+      { date: '2025-01-02', orders: 1, spend: 100 }, // 2 days, 2 orders
+      { date: '2025-01-10', orders: 3, spend: 500 },
+      { date: '2025-01-11', orders: 2, spend: 400 }, // 2 days, 5 orders
+    ];
+    expect(findLongestStreakRange(calendar1)?.startDate).toBe('2025-01-10');
+
+    // Two streaks of length 2 with same orders: prefers most recent
+    const calendar2 = [
+      { date: '2025-01-01', orders: 2, spend: 100 },
+      { date: '2025-01-02', orders: 2, spend: 100 }, // 2 days, 4 orders
+      { date: '2025-02-01', orders: 2, spend: 100 },
+      { date: '2025-02-02', orders: 2, spend: 100 }, // 2 days, 4 orders
+    ];
+    expect(findLongestStreakRange(calendar2)?.startDate).toBe('2025-02-01');
+  });
+
+  it('honors longestStreak parameter when supplied', () => {
+    const calendar = [
+      { date: '2025-01-01', orders: 1, spend: 100 },
+      { date: '2025-01-02', orders: 1, spend: 100 },
+      { date: '2025-01-03', orders: 1, spend: 100 }, // 3 days
+    ];
+    const range = findLongestStreakRange(calendar, 3);
+    expect(range?.length).toBe(3);
+    expect(range?.startDate).toBe('2025-01-01');
+    expect(range?.endDate).toBe('2025-01-03');
+  });
+
+  it('aggregates multiple entries on the same date and sorts unsorted input', () => {
+    const unsorted = [
+      { date: '2025-03-02', orders: 1, spend: 100 },
+      { date: '2025-03-01', orders: 1, spend: 150 },
+      { date: '2025-03-01', orders: 2, spend: 200 }, // same date aggregated: 3 orders, 350 spend
+    ];
+    const range = findLongestStreakRange(unsorted);
+    expect(range?.startDate).toBe('2025-03-01');
+    expect(range?.endDate).toBe('2025-03-02');
+    expect(range?.length).toBe(2);
+    expect(range?.orders).toBe(4);
+    expect(range?.spend).toBe(450);
+  });
+
+  it('returns null for empty, null, or zero-order calendar', () => {
+    expect(findLongestStreakRange(null)).toBeNull();
+    expect(findLongestStreakRange(undefined)).toBeNull();
+    expect(findLongestStreakRange([])).toBeNull();
+    expect(findLongestStreakRange([{ date: '2025-01-01', orders: 0, spend: 0 }])).toBeNull();
+  });
+});
+
+describe('computeStreakTimelineTakeaway', () => {
+  it('formats takeaway for multi-day streak', () => {
+    const calendar = [
+      { date: '2025-03-10', orders: 1, spend: 150 },
+      { date: '2025-03-11', orders: 2, spend: 300 },
+      { date: '2025-03-12', orders: 1, spend: 200 },
+      { date: '2025-03-13', orders: 2, spend: 400 },
+      { date: '2025-03-14', orders: 1, spend: 120 },
+      { date: '2025-03-15', orders: 2, spend: 500 },
+    ];
+    expect(computeStreakTimelineTakeaway(calendar, 6)).toBe(
+      'Longest ordering streak was 6 consecutive days (2025-03-10 to 2025-03-15) with 9 orders'
+    );
+  });
+
+  it('formats takeaway for single-day streak', () => {
+    const calendar = [{ date: '2025-03-10', orders: 2, spend: 500 }];
+    expect(computeStreakTimelineTakeaway(calendar)).toBe(
+      'Longest ordering streak was 1 day (2025-03-10) with 2 orders'
+    );
+  });
+
+  it('formats singular order count correctly for 1 order', () => {
+    const calendar = [{ date: '2025-03-10', orders: 1, spend: 250 }];
+    expect(computeStreakTimelineTakeaway(calendar)).toBe(
+      'Longest ordering streak was 1 day (2025-03-10) with 1 order'
+    );
+  });
+
+  it('returns null for missing, empty, or all-zero data', () => {
+    expect(computeStreakTimelineTakeaway(null)).toBeNull();
+    expect(computeStreakTimelineTakeaway(undefined)).toBeNull();
+    expect(computeStreakTimelineTakeaway([])).toBeNull();
+    expect(computeStreakTimelineTakeaway([{ date: '2025-03-10', orders: 0 }])).toBeNull();
   });
 });
 

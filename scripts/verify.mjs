@@ -172,7 +172,10 @@ function validateReport(logPath) {
 function main() {
   const { worktreeArg, backend, browser, reportArg } = parseArgs();
   const repoRoot = process.cwd();
-  const worktreeDir = resolve(repoRoot, worktreeArg || ".");
+  let worktreeDir = resolve(repoRoot, worktreeArg || ".");
+  if (!existsSync(worktreeDir) && worktreeArg && (repoRoot.endsWith(worktreeArg) || repoRoot.endsWith(`\\${worktreeArg}`) || repoRoot.endsWith(`/${worktreeArg}`))) {
+    worktreeDir = repoRoot;
+  }
 
   const env = { ...process.env };
   const candidateVenvs = [
