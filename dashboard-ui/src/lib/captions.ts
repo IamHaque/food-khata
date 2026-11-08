@@ -690,3 +690,44 @@ export function computeCumulativeSpendTakeaway(
   return `Total spend reached ${formatRupees(totalSpend)} across ${validMonthsCount} ${monthWord}, crossing ${milestoneCount} ${milestoneWord}`;
 }
 
+export interface OrderValueDatumLike {
+  final_amount_paid?: number | null;
+  amount?: number | null;
+  spend?: number | null;
+}
+
+/**
+ * "Median order value is ₹320; 64% of orders are under ₹500"
+ * Captions order value distribution with median value and percentage of orders under a threshold.
+ * Returns null for missing, empty, all-zero, or non-positive order data.
+ */
+export function computeOrderValueDistributionTakeaway(
+  values?: readonly (number | OrderValueDatumLike | null | undefined)[] | null,
+  threshold = 500,
+): string | null {
+  if (!values?.length) return null;
+
+  const numbers: number[] = [];
+  for (const item of values) {
+    if (item === null || item === undefined) continue;
+    const val = typeof item === "number" ? item : (item.final_amount_paid ?? item.amount ?? item.spend);
+    if (isFiniteNumber(val) && val > 0) {
+      numbers.push(val);
+    }
+  }
+
+  if (numbers.length === 0) return null;
+
+  numbers.sort((a, b) => a - b);
+  const count = numbers.length;
+  const median = count % 2 === 1
+    ? numbers[Math.floor(count / 2)]
+    : (numbers[count / 2 - 1] + numbers[count / 2]) / 2;
+
+  const effectiveThreshold = isFiniteNumber(threshold) && threshold > 0 ? threshold : 500;
+  const underCount = numbers.filter((v) => v < effectiveThreshold).length;
+  const pct = Math.round((underCount / count) * 100);
+
+  return `Median order value is ${formatRupees(Math.round(median))}; ${pct}% of orders are under ${formatRupees(effectiveThreshold)}`;
+}
+
