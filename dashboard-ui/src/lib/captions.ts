@@ -644,3 +644,49 @@ export function computeFeeScatterTakeaway(
   return `Average fee burden is ${displayPct}% of order value`;
 }
 
+export interface CumulativeSpendDatumLike {
+  month?: string | null;
+  date?: string | null;
+  spend?: number | null;
+  amount?: number | null;
+  orders?: number | null;
+}
+
+/**
+ * "Total spend reached ₹1,45,000 across 18 months, crossing 14 milestones"
+ * Captions cumulative spend total, active month count, and round milestone thresholds crossed.
+ * Returns null for missing, empty, all-zero, or non-positive spend data.
+ */
+export function computeCumulativeSpendTakeaway(
+  data: readonly CumulativeSpendDatumLike[] | null | undefined,
+  milestoneStep = 10000,
+): string | null {
+  if (!data?.length) return null;
+
+  let totalSpend = 0;
+  const uniqueMonths = new Set<string>();
+  let unlabelledCount = 0;
+
+  for (const row of data) {
+    if (!row) continue;
+    const spend = row.spend ?? row.amount;
+    if (!isFiniteNumber(spend) || spend < 0) continue;
+    totalSpend += spend;
+    const key = String(row.month ?? row.date ?? "").trim();
+    if (key) {
+      uniqueMonths.add(key);
+    } else {
+      unlabelledCount++;
+    }
+  }
+
+  const validMonthsCount = uniqueMonths.size > 0 ? uniqueMonths.size + unlabelledCount : unlabelledCount;
+  if (validMonthsCount === 0 || totalSpend <= 0) return null;
+
+  const milestoneCount = milestoneStep > 0 ? Math.floor(totalSpend / milestoneStep) : 0;
+  const monthWord = validMonthsCount === 1 ? "month" : "months";
+  const milestoneWord = milestoneCount === 1 ? "milestone" : "milestones";
+
+  return `Total spend reached ${formatRupees(totalSpend)} across ${validMonthsCount} ${monthWord}, crossing ${milestoneCount} ${milestoneWord}`;
+}
+

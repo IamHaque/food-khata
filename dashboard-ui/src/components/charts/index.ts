@@ -5,3 +5,4 @@ export * from "./DiscountBreakdownChart";
 export * from "./YearOverYearChart";
 export * from "./FeeComponentsChart";
 export * from "./FeeScatterChart";
+export * from "./CumulativeSpendChart";
