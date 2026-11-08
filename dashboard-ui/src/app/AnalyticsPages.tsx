@@ -3,6 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
+import { CuisineTreemapChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -33,10 +34,6 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
 
   const food = data.charts.food;
   const spending = data.charts.spending;
-
-  // Food data preparation
-  const sortedCuisines = [...food.cuisines].sort((a, b) => b.spend - a.spend);
-  const totalCuisineSpend = sortedCuisines.reduce((sum, c) => sum + c.spend, 0);
 
   const sortedLoyalty = [...food.loyalty].sort((a, b) => b.orders - a.orders);
 
@@ -94,64 +91,12 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
         <div className="space-y-6">
           {/* Row 1: Cuisine spending and New vs Repeat restaurants */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Consolidated Cuisine Spending (Ranked horizontal bars replacing duplicate pie/bar) */}
-            <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Cuisine spending</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Provider-paid spend by cuisine category with category share
-                </p>
-              </div>
-
-              {food.cuisine_unavailable_reason ? (
-                <p className="text-xs text-muted-foreground p-3 rounded-lg border bg-muted/20">
-                  {food.cuisine_unavailable_reason}
-                </p>
-              ) : !sortedCuisines.length ? (
-                <p className="text-xs text-muted-foreground p-4 text-center">No cuisine data available.</p>
-              ) : (
-                <Chart
-                  summary="Provider-paid spend by cuisine"
-                  headers={['Cuisine', 'Orders', 'Spend', 'Share']}
-                  rows={sortedCuisines.map(c => [
-                    c.name,
-                    c.orders,
-                    `₹${Math.round(c.spend).toLocaleString('en-IN')}`,
-                    totalCuisineSpend > 0 ? `${((c.spend / totalCuisineSpend) * 100).toFixed(1)}%` : '—',
-                  ])}
-                  option={{
-                    tooltip: {
-                      trigger: 'axis',
-                      renderMode: 'richText',
-                      axisPointer: { type: 'shadow' },
-                      valueFormatter: (val: unknown) =>
-                        val != null ? `₹${Number(val).toLocaleString('en-IN')}` : 'Unknown',
-                    },
-                    grid: { left: 100, right: 30, bottom: 40, top: 15 },
-                    xAxis: {
-                      type: 'value',
-                      name: 'Spend (₹)',
-                      axisLabel: {
-                        formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
-                      },
-                    },
-                    yAxis: {
-                      type: 'category',
-                      data: sortedCuisines.map(c => c.name).reverse(),
-                      axisLabel: { fontSize: 11 },
-                    },
-                    series: [
-                      {
-                        name: 'Spend',
-                        type: 'bar',
-                        itemStyle: { borderRadius: [0, 4, 4, 0] },
-                        data: sortedCuisines.map(c => c.spend).reverse(),
-                      },
-                    ],
-                  }}
-                />
-              )}
-            </div>
+            {/* S-050 Cuisine treemap with restaurant drilldown */}
+            <CuisineTreemapChart
+              cuisines={food.cuisines}
+              loyalty={food.loyalty}
+              cuisine_unavailable_reason={food.cuisine_unavailable_reason}
+            />
 
             {/* Consolidated New vs Repeat Restaurants (Stacked monthly column chart) */}
             <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
