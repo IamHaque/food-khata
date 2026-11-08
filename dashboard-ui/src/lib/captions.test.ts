@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+ computeBillWaterfallTakeaway,
  computeDayTypeTakeaway,
  computeMealSlotTakeaway,
  computePlatformTakeaway,
@@ -257,5 +258,122 @@ describe('purity', () => {
    { dayType: 'weekend', amount: 5500 },
    { dayType: 'weekday', amount: 4500 },
   ]);
+ });
+});
+
+describe('computeBillWaterfallTakeaway', () => {
+ it('states discounts saved and fees added relative to item subtotal', () => {
+  const costWaterfall = {
+   subtotal: 10000,
+   food_discount: -2000,
+   net_delivery: 400,
+   packaging: 100,
+   platform: 200,
+   tax: 500,
+   tip: 100,
+   other: 0,
+   residual: 0,
+   provider_paid: 9300,
+   refunds: 0,
+  };
+  expect(computeBillWaterfallTakeaway(null, costWaterfall)).toBe(
+   'Discounts saved ₹2,000 (20%) while fees added ₹1,300 (13%) to item subtotal',
+  );
+ });
+
+ it('states only discounts saved when fees are zero', () => {
+  const costWaterfall = {
+   subtotal: 1000,
+   food_discount: -250,
+   net_delivery: 0,
+   packaging: 0,
+   platform: 0,
+   tax: 0,
+   tip: 0,
+   other: 0,
+   residual: 0,
+   provider_paid: 750,
+   refunds: 0,
+  };
+  expect(computeBillWaterfallTakeaway(null, costWaterfall)).toBe(
+   'Discounts saved ₹250 (25%) on item subtotal',
+  );
+ });
+
+ it('states only fees added when discounts are zero', () => {
+  const costWaterfall = {
+   subtotal: 1000,
+   food_discount: 0,
+   net_delivery: 100,
+   packaging: 50,
+   platform: 0,
+   tax: 0,
+   tip: 0,
+   other: 0,
+   residual: 0,
+   provider_paid: 1150,
+   refunds: 0,
+  };
+  expect(computeBillWaterfallTakeaway(null, costWaterfall)).toBe(
+   'Fees and taxes added ₹150 (15%) to item subtotal',
+  );
+ });
+
+ it('states final paid equals subtotal when no discounts and no fees', () => {
+  const costWaterfall = {
+   subtotal: 1000,
+   food_discount: 0,
+   net_delivery: 0,
+   packaging: 0,
+   platform: 0,
+   tax: 0,
+   tip: 0,
+   other: 0,
+   residual: 0,
+   provider_paid: 1000,
+   refunds: 0,
+  };
+  expect(computeBillWaterfallTakeaway(null, costWaterfall)).toBe(
+   'Final paid equals item subtotal at ₹1,000',
+  );
+ });
+
+ it('derives values from steps array when costWaterfall is not provided', () => {
+  const steps = [
+   { label: 'subtotal', amount: 5000, baseline: 0, height: 5000, direction: 'up' },
+   { label: 'food discount', amount: -500, baseline: 4500, height: 500, direction: 'down' },
+   { label: 'delivery', amount: 250, baseline: 4500, height: 250, direction: 'up' },
+   { label: 'Final paid', amount: 4750, baseline: 0, height: 4750, direction: 'total' },
+  ];
+  expect(computeBillWaterfallTakeaway(steps, null)).toBe(
+   'Discounts saved ₹500 (10%) while fees added ₹250 (5%) to item subtotal',
+  );
+ });
+
+ it('returns null for missing, empty, zero or invalid data', () => {
+  expect(computeBillWaterfallTakeaway(null, null)).toBeNull();
+  expect(computeBillWaterfallTakeaway(undefined, undefined)).toBeNull();
+  expect(computeBillWaterfallTakeaway([], null)).toBeNull();
+  expect(
+   computeBillWaterfallTakeaway(null, {
+    subtotal: 0,
+    food_discount: 0,
+    net_delivery: 0,
+    packaging: 0,
+    platform: 0,
+    tax: 0,
+    tip: 0,
+    other: 0,
+    residual: 0,
+    provider_paid: 0,
+    refunds: 0,
+   }),
+  ).toBeNull();
+  expect(
+   computeBillWaterfallTakeaway(
+    [{ label: 'subtotal', amount: 0, baseline: 0, height: 0, direction: 'up' }],
+    null,
+   ),
+  ).toBeNull();
  });
 });

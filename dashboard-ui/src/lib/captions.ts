@@ -239,3 +239,142 @@ export function computeDayTypeTakeaway(
  const [label, amount] = winner;
  return `${label} account for ${roundPercent(amount, total)}% of total spend`;
 }
+
+export interface WaterfallStepLike {
+ label: string;
+ amount: number;
+ baseline?: number;
+ height?: number;
+ direction?: 'up' | 'down' | 'total' | string;
+}
+
+export interface CostWaterfallLike {
+ subtotal?: number;
+ food_discount?: number;
+ net_delivery?: number;
+ packaging?: number;
+ platform?: number;
+ tax?: number;
+ tip?: number;
+ other?: number;
+ residual?: number;
+ provider_paid?: number;
+ refunds?: number;
+}
+
+/**
+ * "Discounts saved ₹1,200 (15%) while fees added ₹450 (6%) to item subtotal"
+ * Captions the net effect of discounts and fees relative to subtotal.
+ * Returns null for missing, empty, zero, invalid or tied data so no misleading caption is shown.
+ */
+export function computeBillWaterfallTakeaway(
+ steps?: readonly WaterfallStepLike[] | null,
+ costWaterfall?: CostWaterfallLike | null,
+): string | null {
+ let subtotal = 0;
+ let discounts = 0;
+ let fees = 0;
+ let paid = 0;
+
+ if (costWaterfall && typeof costWaterfall === 'object') {
+  if (isFiniteNumber(costWaterfall.subtotal) && costWaterfall.subtotal > 0) {
+   subtotal = costWaterfall.subtotal;
+  }
+  if (isFiniteNumber(costWaterfall.food_discount)) {
+   discounts = Math.abs(costWaterfall.food_discount);
+  }
+  const feeItems = [
+   costWaterfall.net_delivery,
+   costWaterfall.packaging,
+   costWaterfall.platform,
+   costWaterfall.tax,
+   costWaterfall.tip,
+   costWaterfall.other,
+  ];
+  for (const f of feeItems) {
+   if (isFiniteNumber(f) && f > 0) {
+    fees += f;
+   }
+  }
+  if (isFiniteNumber(costWaterfall.provider_paid) && costWaterfall.provider_paid > 0) {
+   paid = costWaterfall.provider_paid;
+  }
+ }
+
+ if (steps && steps.length > 0) {
+  if (subtotal <= 0) {
+   const subStep = steps.find(
+    s =>
+     s &&
+     (s.label.toLowerCase().includes('subtotal') || s.label.toLowerCase().includes('item')),
+   );
+   if (subStep && isFiniteNumber(subStep.amount) && subStep.amount > 0) {
+    subtotal = subStep.amount;
+   }
+  }
+  if (discounts <= 0) {
+   for (const s of steps) {
+    if (!s) continue;
+    if (s.direction === 'down' || s.label.toLowerCase().includes('discount')) {
+     if (isFiniteNumber(s.amount)) {
+      discounts += Math.abs(s.amount);
+     }
+    }
+   }
+  }
+  if (fees <= 0) {
+   for (const s of steps) {
+    if (!s) continue;
+    const l = s.label.toLowerCase();
+    if (
+     s.direction === 'up' &&
+     !l.includes('subtotal') &&
+     !l.includes('item') &&
+     !l.includes('final') &&
+     !l.includes('paid')
+    ) {
+     if (isFiniteNumber(s.amount) && s.amount > 0) {
+      fees += s.amount;
+     }
+    }
+   }
+  }
+  if (paid <= 0) {
+   const totalStep = steps.find(
+    s => s && (s.direction === 'total' || s.label.toLowerCase().includes('final')),
+   );
+   if (totalStep && isFiniteNumber(totalStep.amount) && totalStep.amount > 0) {
+    paid = totalStep.amount;
+   }
+  }
+ }
+
+ if (subtotal <= 0 && paid <= 0 && discounts <= 0 && fees <= 0) {
+  return null;
+ }
+
+ if (subtotal > 0) {
+  const discountPct = roundPercent(discounts, subtotal);
+  const feesPct = roundPercent(fees, subtotal);
+
+  if (discounts > 0 && fees > 0) {
+   return `Discounts saved ${formatRupees(discounts)} (${discountPct}%) while fees added ${formatRupees(fees)} (${feesPct}%) to item subtotal`;
+  }
+  if (discounts > 0) {
+   return `Discounts saved ${formatRupees(discounts)} (${discountPct}%) on item subtotal`;
+  }
+  if (fees > 0) {
+   return `Fees and taxes added ${formatRupees(fees)} (${feesPct}%) to item subtotal`;
+  }
+  if (paid > 0) {
+   return `Final paid equals item subtotal at ${formatRupees(paid)}`;
+  }
+ }
+
+ if (paid > 0) {
+  return `Final paid total is ${formatRupees(paid)}`;
+ }
+
+ return null;
+}
+
