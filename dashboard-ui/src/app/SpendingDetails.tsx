@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import type { components } from '../types/api';
 import { Chart } from './Chart';
 import { tokenAlpha } from '../lib/tokens';
+import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
+
 
 const money = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -63,6 +65,12 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
 
   return (
     <div className="space-y-6">
+      {/* 0. Bill waterfall breakdown */}
+      <BillWaterfallChart
+        steps={charts.waterfall_steps}
+        costWaterfall={charts.cost_waterfall}
+      />
+
       {/* 1. Explicit discount breakdown: Ranked horizontal bars */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
         <div className="border-b pb-2">

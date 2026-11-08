@@ -49,6 +49,9 @@ export interface ChartTheme {
   tooltipBg: string;
   tooltipBorder: string;
   tooltipText: string;
+  // semantic tokens
+  success: string;
+  primary: string;
 }
 
 const toHex = (c: string): string => String.fromCharCode(35) + c;
@@ -139,6 +142,9 @@ export function resolveChartTheme(
     text: base.text,
   };
 
+  const successColor = resolvedMode === "dark" ? toHsl(151, 55, 62) : toHsl(156, 72, 24);
+  const primaryColor = series[0];
+
   return {
     mode: resolvedMode,
     accent: resolvedAccent,
@@ -167,6 +173,8 @@ export function resolveChartTheme(
     tooltipBg: tooltip.background,
     tooltipBorder: tooltip.border,
     tooltipText: tooltip.text,
+    success: successColor,
+    primary: primaryColor,
   };
 }
 

@@ -15,6 +15,7 @@ export interface ChartCardProps {
   title: string;
   subtitle?: string;
   caption?: string;
+  infoPopover?: React.ReactNode;
   isLoading?: boolean;
   isEmpty?: boolean;
   emptyReason?: string;
@@ -68,6 +69,7 @@ function ChartCard({
   title,
   subtitle,
   caption,
+  infoPopover,
   isLoading,
   isEmpty,
   emptyReason,
@@ -231,7 +233,10 @@ function ChartCard({
       <Card className={cn(fullscreen ? "fixed inset-4 z-50 overflow-auto" : "", className)}>
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
           <div className="space-y-1">
-            <CardTitle className="text-base text-foreground">{title}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base text-foreground">{title}</CardTitle>
+              {infoPopover}
+            </div>
             {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-1">
