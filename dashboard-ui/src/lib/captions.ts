@@ -1412,3 +1412,71 @@ export function computeOrderGapsTakeaway(
   return `Median gap between orders is ${medianStr} (longest gap: ${longestStr}; ${within3Pct}% of orders placed within 3 days)`;
 }
 
+export interface DestinationLabelLike {
+  label?: string | null;
+  city?: string | null;
+  orders?: number | null;
+  spend?: number | null;
+  fee?: number | null;
+}
+
+/**
+ * S-064: Dynamic takeaway caption for delivery destinations ranking.
+ * e.g. "Top destination is Home (Bangalore) with ₹18,400 across 32 orders (48% of total spend)"
+ * Returns null when data is missing, empty, all-zero, or tied for top spend.
+ */
+export function computeDestinationsTakeaway(
+  data?: readonly (DestinationLabelLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, { label: string; city: string; orders: number; spend: number }>();
+  for (const item of data) {
+    if (!item) continue;
+    const label = String(item.label ?? '').trim();
+    if (!label) continue;
+    const city = String(item.city ?? '').trim();
+    const ord = item.orders ?? 0;
+    const orders = isFiniteNumber(ord) && ord > 0 ? ord : 0;
+    const sp = item.spend ?? 0;
+    const spend = isFiniteNumber(sp) && sp > 0 ? sp : 0;
+
+    const key = city ? `${label}:::${city}` : label;
+    const existing = totals.get(key);
+    if (existing) {
+      existing.orders += orders;
+      existing.spend += spend;
+    } else {
+      totals.set(key, { label, city, orders, spend });
+    }
+  }
+
+  if (totals.size === 0) return null;
+
+  const rows = [...totals.values()];
+  const totalSpend = sumValues(rows.map((r) => r.spend));
+  const totalOrders = sumValues(rows.map((r) => r.orders));
+  if (totalSpend <= 0 && totalOrders <= 0) return null;
+
+  const winner = totalSpend > 0
+    ? uniqueMax(rows, (r) => r.spend)
+    : uniqueMax(rows, (r) => r.orders);
+
+  if (!winner) return null;
+
+  const destText = winner.city && !winner.label.toLowerCase().includes(winner.city.toLowerCase())
+    ? `${winner.label} (${winner.city})`
+    : winner.label;
+
+  const roundedOrders = Math.round(winner.orders);
+  const orderText = `${roundedOrders} ${roundedOrders === 1 ? 'order' : 'orders'}`;
+
+  if (totalSpend > 0 && winner.spend > 0) {
+    const formattedSpend = formatRupees(winner.spend);
+    const pct = Math.round((winner.spend / totalSpend) * 100);
+    return `Top destination is ${destText} with ${formattedSpend} across ${orderText} (${pct}% of total spend)`;
+  }
+
+  return `Top destination is ${destText} across ${orderText}`;
+}
+

@@ -16,6 +16,7 @@ import {
  computeWeekdayTakeaway,
  computeOrderGapsTakeaway,
  computeWeightedMedianGap,
+ computeDestinationsTakeaway,
  formatRupees,
 } from './captions';
 
@@ -1486,6 +1487,72 @@ describe('computeOrderGapsTakeaway', () => {
     expect(computeOrderGapsTakeaway(undefined)).toBeNull();
     expect(computeOrderGapsTakeaway([])).toBeNull();
     expect(computeOrderGapsTakeaway([{ days: 2, orders: 0 }])).toBeNull();
+  });
+});
+
+describe('computeDestinationsTakeaway', () => {
+  it('formats top destination with city, spend, orders and percentage of total spend', () => {
+    const data = [
+      { label: 'Home', city: 'Bangalore', orders: 32, spend: 18400, fee: 350 },
+      { label: 'Office', city: 'Bangalore', orders: 20, spend: 11600, fee: 200 },
+      { label: 'Parents', city: 'Mysore', orders: 12, spend: 8333, fee: 150 },
+    ];
+    // Total spend = 18400 + 11600 + 8333 = 38333. 18400 / 38333 = 48.00% -> 48%
+    expect(computeDestinationsTakeaway(data)).toBe(
+      'Top destination is Home (Bangalore) with ₹18,400 across 32 orders (48% of total spend)',
+    );
+  });
+
+  it('handles singular order correctly', () => {
+    const data = [
+      { label: 'Home', city: 'Mumbai', orders: 1, spend: 450, fee: 30 },
+    ];
+    expect(computeDestinationsTakeaway(data)).toBe(
+      'Top destination is Home (Mumbai) with ₹450 across 1 order (100% of total spend)',
+    );
+  });
+
+  it('avoids duplicating city if destination label already includes it or city is missing', () => {
+    const withCityInLabel = [
+      { label: 'Bangalore Central', city: 'Bangalore', orders: 10, spend: 5000, fee: 100 },
+    ];
+    expect(computeDestinationsTakeaway(withCityInLabel)).toBe(
+      'Top destination is Bangalore Central with ₹5,000 across 10 orders (100% of total spend)',
+    );
+
+    const withoutCity = [
+      { label: 'Apartment 4B', city: '', orders: 5, spend: 2500, fee: 50 },
+    ];
+    expect(computeDestinationsTakeaway(withoutCity)).toBe(
+      'Top destination is Apartment 4B with ₹2,500 across 5 orders (100% of total spend)',
+    );
+  });
+
+  it('aggregates duplicate destination entries with same label and city', () => {
+    const data = [
+      { label: 'Home', city: 'Bangalore', orders: 12, spend: 6000, fee: 100 },
+      { label: 'Home', city: 'Bangalore', orders: 20, spend: 12400, fee: 250 },
+      { label: 'Office', city: 'Bangalore', orders: 10, spend: 8000, fee: 120 },
+    ];
+    // Aggregated Home: 32 orders, 18400 spend. Total spend = 26400. 18400 / 26400 = 69.69% -> 70%
+    expect(computeDestinationsTakeaway(data)).toBe(
+      'Top destination is Home (Bangalore) with ₹18,400 across 32 orders (70% of total spend)',
+    );
+  });
+
+  it('returns null for missing, empty, or all-zero data', () => {
+    expect(computeDestinationsTakeaway(null)).toBeNull();
+    expect(computeDestinationsTakeaway(undefined)).toBeNull();
+    expect(computeDestinationsTakeaway([])).toBeNull();
+    expect(computeDestinationsTakeaway([{ label: 'Home', city: 'Blr', orders: 0, spend: 0 }])).toBeNull();
+  });
+
+  it('returns null on tied top destinations', () => {
+    const tied = [
+      { label: 'Home', city: 'Bangalore', orders: 10, spend: 5000, fee: 50 },
+      { label: 'Office', city: 'Bangalore', orders: 10, spend: 5000, fee: 50 },
+    ];
+    expect(computeDestinationsTakeaway(tied)).toBeNull();
   });
 });
 
