@@ -959,3 +959,76 @@ export function computeDietTakeaway(
   return `${label} items represent ${percent}% of total order quantity`;
 }
 
+export type DishRankingMetric = "quantity" | "amount";
+
+export interface DishRankingDatumLike {
+  key?: string | null;
+  name?: string | null;
+  quantity?: number | null;
+  count?: number | null;
+  qty?: number | null;
+  amount?: number | null;
+  spend?: number | null;
+  total?: number | null;
+  value?: number | null;
+}
+
+/**
+ * "Top dish is Chicken Biryani with 28 orders (₹6,800)"
+ * Captions the highest-volume or highest-expenditure dish.
+ * Returns null for missing, empty, all-zero, or tied data.
+ */
+export function computeDishRankingTakeaway(
+  data?: readonly (DishRankingDatumLike | null | undefined)[] | null,
+  metric: DishRankingMetric = "quantity",
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, { name: string; quantity: number; amount: number }>();
+  for (const item of data) {
+    if (!item) continue;
+    const name = String(item.name ?? item.key ?? "").trim();
+    if (!name) continue;
+    const qty = item.quantity ?? item.count ?? item.qty ?? 0;
+    const quantity = isFiniteNumber(qty) && qty > 0 ? qty : 0;
+    const amt = item.amount ?? item.spend ?? item.total ?? item.value ?? 0;
+    const amount = isFiniteNumber(amt) && amt > 0 ? amt : 0;
+
+    const existing = totals.get(name);
+    if (existing) {
+      existing.quantity += quantity;
+      existing.amount += amount;
+    } else {
+      totals.set(name, { name, quantity, amount });
+    }
+  }
+
+  if (totals.size === 0) return null;
+
+  const rows = [...totals.values()];
+  const isAmount = metric === "amount";
+
+  const totalPrimary = rows.reduce(
+    (acc, r) => acc + (isAmount ? r.amount : r.quantity),
+    0,
+  );
+  if (totalPrimary <= 0) return null;
+
+  const winner = uniqueMax(rows, (r) => (isAmount ? r.amount : r.quantity));
+  if (!winner) return null;
+
+  const dishName = winner.name;
+  const roundedQty = Math.round(winner.quantity);
+  const roundedAmt = Math.round(winner.amount);
+
+  if (!isAmount) {
+    const qtyText = `${roundedQty} ${roundedQty === 1 ? "order" : "orders"}`;
+    const amtText = roundedAmt > 0 ? ` (${formatRupees(roundedAmt)})` : "";
+    return `Top dish is ${dishName} with ${qtyText}${amtText}`;
+  } else {
+    const amtText = formatRupees(roundedAmt);
+    const qtyText = roundedQty > 0 ? ` (${roundedQty} ${roundedQty === 1 ? "order" : "orders"})` : "";
+    return `Top dish is ${dishName} with ${amtText}${qtyText}`;
+  }
+}
+

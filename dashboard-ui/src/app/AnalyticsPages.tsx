@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -116,6 +116,11 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               diet_unavailable_reason={food.diet_unavailable_reason}
             />
           </div>
+
+          {/* Row 3: S-054 Dish ranking leaderboard */}
+          <DishRankingChart
+            data={data.charts.top_dishes}
+          />
 
           {/* Leaders section with independent pagination */}
           <FoodLeaders />

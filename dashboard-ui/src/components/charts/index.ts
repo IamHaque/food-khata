@@ -12,3 +12,4 @@ export * from "./CuisineTreemapChart";
 export * from "./NewVsRepeatChart";
 export * from "./LoyaltyParetoChart";
 export * from "./DietSplitTrendChart";
+export * from "./DishRankingChart";
