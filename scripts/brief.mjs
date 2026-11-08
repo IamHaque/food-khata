@@ -6,6 +6,7 @@
 //   node scripts/brief.mjs status S-014 DONE "commit abc123; tests x,y"
 //   node scripts/brief.mjs progress              counts only
 //   node scripts/brief.mjs log dec|dev|bl|blk|ver|chg|led "a|b|c|..."   append a log row (IDs auto-filled for dec/dev/bl/blk)
+//   node scripts/brief.mjs lint                  check every markdown table row against its header column count (exit 1 on a ragged row)
 import { readFileSync, writeFileSync } from "node:fs";
 
 const FILE = process.env.BRIEF || "docs/REDESIGN_BRIEF.md";
@@ -112,6 +113,32 @@ if (cmd === "show") {
     if (out.length >= limit) break;
   }
   console.log(out.join("\n") || "none startable (check BLOCKED stories or finish the current phase)");
+} else if (cmd === "lint") {
+  const files = [...new Set([FILE, "docs/ACCESS_PLAN.md"])];
+  const errs = [];
+  let tables = 0, rows = 0;
+  for (const file of files) {
+    let ls;
+    try { ls = readFileSync(file, "utf8").split("\n"); } catch { continue; }
+    const sep = /^\|(?:[\s\-:]*\|)+\s*$/;
+    const cols = (l) => (l.match(/(?<!\\)\|/g) || []).length - 1;
+    for (let i = 0; i < ls.length; i++) {
+      if (!ls[i].startsWith("|")) continue;
+      if (!sep.test(ls[i + 1] ?? "")) continue;
+      tables++;
+      const width = cols(ls[i]);
+      for (let k = i + 2; k < ls.length && ls[k].startsWith("|"); k++) {
+        if (sep.test(ls[k])) continue;
+        rows++;
+        const w = cols(ls[k]);
+        if (w !== width) errs.push(`${file}:${k + 1}: row has ${w} columns, header has ${width}`);
+      }
+    }
+  }
+  if (!tables && !errs.length) errs.push("no markdown tables found by lint (nothing checked)");
+  errs.forEach((e) => console.error("FAIL " + e));
+  if (!errs.length) console.log(`lint ok: ${tables} tables, ${rows} rows checked`);
+  process.exit(errs.length ? 1 : 0);
 } else if (cmd === "log") {
   const cfg = SECTIONS[a];
   if (!cfg) { console.error("log kind: " + Object.keys(SECTIONS)); process.exit(1); }
@@ -141,5 +168,5 @@ if (cmd === "show") {
   write(lines);
   console.log("logged " + row[0]);
 } else {
-  console.log("commands: next [n] | show ID | status ID STATUS [evidence] | progress | log dec|dev|bl|blk|ver|chg|led \"a|b|c\"");
+  console.log("commands: next [n] | show ID | status ID STATUS [evidence] | progress | log dec|dev|bl|blk|ver|chg|led \"a|b|c\" | lint");
 }
