@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -34,8 +34,6 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
 
   const food = data.charts.food;
   const spending = data.charts.spending;
-
-  const sortedLoyalty = [...food.loyalty].sort((a, b) => b.orders - a.orders);
 
   const spendingPanels = [
     {
@@ -106,52 +104,10 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
 
           {/* Row 2: Restaurant Loyalty and Diet item quantities */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Consolidated Restaurant Loyalty (Ranked horizontal bars with AOV and Spend) */}
-            <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Restaurant loyalty</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Order counts by vendor with average order value (AOV) and total spend
-                </p>
-              </div>
-
-              {!sortedLoyalty.length ? (
-                <p className="text-xs text-muted-foreground p-4 text-center">No loyalty data available.</p>
-              ) : (
-                <Chart
-                  summary="Restaurant order count and average order value"
-                  headers={['Restaurant', 'Orders', 'Spend', 'AOV']}
-                  rows={sortedLoyalty.map(x => [
-                    x.name,
-                    x.orders,
-                    `₹${Math.round(x.spend).toLocaleString('en-IN')}`,
-                    `₹${Math.round(x.aov).toLocaleString('en-IN')}`,
-                  ])}
-                  option={{
-                    tooltip: {
-                      trigger: 'axis',
-                      renderMode: 'richText',
-                      axisPointer: { type: 'shadow' },
-                    },
-                    grid: { left: 110, right: 30, bottom: 40, top: 15 },
-                    xAxis: { type: 'value', name: 'Orders' },
-                    yAxis: {
-                      type: 'category',
-                      data: sortedLoyalty.map(x => x.name).reverse(),
-                      axisLabel: { fontSize: 11 },
-                    },
-                    series: [
-                      {
-                        name: 'Orders',
-                        type: 'bar',
-                        itemStyle: { borderRadius: [0, 4, 4, 0] },
-                        data: sortedLoyalty.map(x => x.orders).reverse(),
-                      },
-                    ],
-                  }}
-                />
-              )}
-            </div>
+            {/* S-052 Restaurant Loyalty Pareto Chart */}
+            <LoyaltyParetoChart
+              data={food.loyalty}
+            />
 
             {/* Diet item quantities (Ranked bars for totals, stacked columns for monthly history) */}
             <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
