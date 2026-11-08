@@ -7,7 +7,8 @@
 //   node scripts/orch.mjs probe
 //   node scripts/orch.mjs models
 //   node scripts/orch.mjs reset <model>
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+//   node scripts/orch.mjs bootstrap [worktree]
+import { readFileSync, writeFileSync, existsSync, mkdirSync, symlinkSync } from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 
@@ -210,6 +211,7 @@ function cmdRun(args) {
     process.exit(1);
   }
   ensureRuns();
+  bootstrapWorktree(worktree);
 
   const data = loadModels();
   const state = loadState();
@@ -263,16 +265,65 @@ function cmdRun(args) {
   console.log(`\n[${now()}] DONE ${dispatchId} in ${mins}m`);
 }
 
+// --- bootstrap ---
+export function bootstrapWorktree(targetWorktree) {
+  const start = Date.now();
+  const wt = resolve(process.cwd(), targetWorktree || ".");
+  let mainRepo;
+  try {
+    const gitCommon = execSync("git rev-parse --git-common-dir", {
+      cwd: wt,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+    mainRepo = resolve(wt, gitCommon, "..");
+  } catch {
+    mainRepo = process.cwd();
+  }
+
+  if (resolve(wt) === resolve(mainRepo)) {
+    const durationMs = Date.now() - start;
+    console.log(`[bootstrap] ${wt} is the main repository; skipped (${durationMs}ms)`);
+    return { wt, mainRepo, durationMs, symlinks: [] };
+  }
+
+  const symlinkType = process.platform === "win32" ? "junction" : "dir";
+  const links = [
+    { src: join(mainRepo, ".venv"), dest: join(wt, ".venv") },
+    { src: join(mainRepo, "dashboard-ui", "node_modules"), dest: join(wt, "dashboard-ui", "node_modules") },
+    { src: join(mainRepo, "node_modules"), dest: join(wt, "node_modules") },
+  ];
+
+  const created = [];
+  for (const { src, dest } of links) {
+    if (existsSync(src) && !existsSync(dest)) {
+      mkdirSync(resolve(dest, ".."), { recursive: true });
+      symlinkSync(src, dest, symlinkType);
+      created.push(dest);
+    }
+  }
+
+  const durationMs = Date.now() - start;
+  console.log(`[bootstrap] ${wt} bootstrapped in ${durationMs}ms (${created.length} symlinks created)`);
+  return { wt, mainRepo, durationMs, symlinks: created };
+}
+
+function cmdBootstrap(args) {
+  const target = args[0] || ".";
+  bootstrapWorktree(target);
+}
+
 // --- main ---
 const [, , cmd, ...rest] = process.argv;
 switch (cmd) {
-  case "pick":   cmdPick(rest); break;
-  case "run":    cmdRun(rest); break;
-  case "score":  cmdScore(rest); break;
-  case "probe":  cmdProbe(); break;
-  case "models": cmdModels(); break;
-  case "reset":  cmdReset(rest); break;
+  case "pick":      cmdPick(rest); break;
+  case "run":       cmdRun(rest); break;
+  case "score":     cmdScore(rest); break;
+  case "probe":     cmdProbe(); break;
+  case "models":    cmdModels(); break;
+  case "reset":     cmdReset(rest); break;
+  case "bootstrap": cmdBootstrap(rest); break;
   default:
-    console.log("Commands: pick, run, score, probe, models, reset");
+    console.log("Commands: pick, run, score, probe, models, reset, bootstrap");
     process.exit(1);
 }
