@@ -400,9 +400,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | ID | Title | Phase | Pri | Status | Date | Evidence | Wave |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| FX-01 | Tracker and hygiene | A | P0 | TODO | — | — | A1 |
-| FX-02 | Fast verify harness | A | P0 | TODO | — | — | A1 |
-| FX-04 | Read-only database safety | A | P1 | TODO | — | — | A1 |
+| FX-01 | Tracker and hygiene | A | P0 | IN_PROGRESS | — | — | A1 |
+| FX-02 | Fast verify harness | A | P0 | IN_PROGRESS | — | — | A1 |
+| FX-04 | Read-only database safety | A | P1 | IN_PROGRESS | — | — | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | TODO | — | — | A2 |
 | FX-05 | BaseChart primitive | A | P1 | TODO | — | — | A2 |
 | FX-06 | Browser QA suite | A | P0 | TODO | — | — | A3 |
@@ -518,4 +518,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
 | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — | — |
+| 2026-11-09 | FX-01 | T1 | glm | 1 | in_progress | — |
+| 2026-11-09 | FX-02 | T3 | gemini-high | 1 | in_progress | — |
+| 2026-11-09 | FX-04 | T8 | deepseek | 1 | in_progress | — |
