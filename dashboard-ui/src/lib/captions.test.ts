@@ -886,3 +886,60 @@ describe('computeDailySpendTakeaway', () => {
   });
 });
 
+import { computeCuisineTakeaway } from './captions';
+
+describe('computeCuisineTakeaway (CC-8, S-050)', () => {
+  it('captions the cuisine with the largest spend and its share of total spend', () => {
+    const data = [
+      { name: 'North Indian', spend: 4200 },
+      { name: 'Chinese & Asian', spend: 2800 },
+      { name: 'Pizza & Italian', spend: 1800 },
+      { name: 'Desserts', spend: 1200 },
+    ];
+    // Total spend: 10,000; North Indian: 4200 / 10000 = 42%
+    expect(computeCuisineTakeaway(data)).toBe('North Indian accounts for 42% of food spend');
+  });
+
+  it('aggregates multiple entries with the same cuisine name', () => {
+    const data = [
+      { name: 'Biryani', spend: 3000 },
+      { name: 'Biryani', spend: 2000 },
+      { name: 'South Indian', spend: 2500 },
+    ];
+    // Total: 7500; Biryani: 5000 / 7500 = 67%
+    expect(computeCuisineTakeaway(data)).toBe('Biryani accounts for 67% of food spend');
+  });
+
+  it('handles a single cuisine representing 100% of spend', () => {
+    expect(computeCuisineTakeaway([{ name: 'Fast Food', spend: 1500 }])).toBe(
+      'Fast Food accounts for 100% of food spend',
+    );
+  });
+
+  it('supports value and amount fallback properties', () => {
+    expect(
+      computeCuisineTakeaway([
+        { name: 'Burgers', value: 3000 },
+        { name: 'Beverages', amount: 1000 },
+      ]),
+    ).toBe('Burgers accounts for 75% of food spend');
+  });
+
+  it('returns null on empty, null, undefined, all-zero, negative, or tied data', () => {
+    expect(computeCuisineTakeaway(null)).toBeNull();
+    expect(computeCuisineTakeaway(undefined)).toBeNull();
+    expect(computeCuisineTakeaway([])).toBeNull();
+    expect(computeCuisineTakeaway([{ name: 'Indian', spend: 0 }])).toBeNull();
+    expect(computeCuisineTakeaway([{ name: 'Indian', spend: -100 }])).toBeNull();
+    expect(computeCuisineTakeaway([{ name: 'Indian', spend: Number.NaN }])).toBeNull();
+    expect(computeCuisineTakeaway([{ name: '', spend: 500 }])).toBeNull();
+    // Tied winner: both 2000
+    expect(
+      computeCuisineTakeaway([
+        { name: 'North Indian', spend: 2000 },
+        { name: 'Chinese', spend: 2000 },
+      ]),
+    ).toBeNull();
+  });
+});
+

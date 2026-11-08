@@ -8,3 +8,4 @@ export * from "./FeeScatterChart";
 export * from "./CumulativeSpendChart";
 export * from "./OrderValueDistributionChart";
 export * from "./DailySpendCalendarChart";
+export * from "./CuisineTreemapChart";

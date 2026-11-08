@@ -779,3 +779,41 @@ export function computeDailySpendTakeaway(
   return `Highest daily spend was ${formatRupees(peakDay.spend)} on ${peakDay.date}`;
 }
 
+export interface CuisineDatumLike {
+  name?: string | null;
+  spend?: number | null;
+  orders?: number | null;
+  value?: number | null;
+  amount?: number | null;
+}
+
+/**
+ * "North Indian accounts for 42% of food spend"
+ * Captions the cuisine with the largest spend and its percentage share of food spend.
+ * Returns null for missing, empty, all-zero, or non-positive spend data.
+ */
+export function computeCuisineTakeaway(
+  data?: readonly (CuisineDatumLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, number>();
+  for (const row of data) {
+    if (!row) continue;
+    const spend = row.spend ?? row.value ?? row.amount;
+    if (!isFiniteNumber(spend) || spend <= 0) continue;
+    const label = String(row.name ?? "").trim();
+    if (!label) continue;
+    addTo(totals, label, spend);
+  }
+
+  const total = sumValues(totals.values());
+  if (total <= 0) return null;
+
+  const winner = uniqueMax([...totals.entries()], ([, spend]) => spend);
+  if (!winner) return null;
+
+  const [label, spend] = winner;
+  return `${label} accounts for ${roundPercent(spend, total)}% of food spend`;
+}
+
