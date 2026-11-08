@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
  computeBillWaterfallTakeaway,
  computeDayTypeTakeaway,
+ computeFeeComponentsTakeaway,
  computeMealSlotTakeaway,
  computePlatformTakeaway,
  computeSpendTrendTakeaway,
@@ -510,6 +511,105 @@ describe('computeYearOverYearTakeaway', () => {
       computeYearOverYearTakeaway([
         { year: 2024, month: 1, spend: Number.NaN },
         { year: 2025, month: 1, spend: 5000 },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe('computeFeeComponentsTakeaway', () => {
+  it('captions dominant platform fee across months', () => {
+    expect(
+      computeFeeComponentsTakeaway([
+        {
+          month: '2024-01',
+          platform: 1000,
+          net_delivery: 500,
+          packaging: 200,
+          tax: 800,
+        },
+        {
+          month: '2024-02',
+          platform: 850,
+          net_delivery: 500,
+          packaging: 300,
+          tax: 718,
+        },
+      ]),
+    ).toBe('Platform fees represent 38% of total fees (₹1,850)');
+  });
+
+  it('captions dominant delivery fee', () => {
+    expect(
+      computeFeeComponentsTakeaway([
+        {
+          month: '2024-01',
+          net_delivery: 2200,
+          packaging: 800,
+          platform: 1000,
+          tax: 888,
+        },
+      ]),
+    ).toBe('Delivery fees represent 45% of total fees (₹2,200)');
+  });
+
+  it('captions dominant packaging fee and taxes', () => {
+    expect(
+      computeFeeComponentsTakeaway([
+        {
+          month: '2024-01',
+          net_delivery: 100,
+          packaging: 600,
+          platform: 150,
+          tax: 150,
+        },
+      ]),
+    ).toBe('Packaging fees represent 60% of total fees (₹600)');
+
+    expect(
+      computeFeeComponentsTakeaway([
+        {
+          month: '2024-01',
+          net_delivery: 100,
+          packaging: 100,
+          platform: 100,
+          tax: 700,
+        },
+      ]),
+    ).toBe('Taxes represent 70% of total fees (₹700)');
+  });
+
+  it('supports generic component breakdown items and field aliases', () => {
+    expect(
+      computeFeeComponentsTakeaway([
+        { label: 'platform', amount: 900 },
+        { label: 'delivery', amount: 300 },
+      ]),
+    ).toBe('Platform fees represent 75% of total fees (₹900)');
+
+    expect(
+      computeFeeComponentsTakeaway([
+        { delivery_fee: 600, packaging_fee: 200, platform_fee: 100, taxes: 100 },
+      ]),
+    ).toBe('Delivery fees represent 60% of total fees (₹600)');
+  });
+
+  it('returns null for missing, empty, zero, negative, invalid and tied fee data', () => {
+    expect(computeFeeComponentsTakeaway(null)).toBeNull();
+    expect(computeFeeComponentsTakeaway(undefined)).toBeNull();
+    expect(computeFeeComponentsTakeaway([])).toBeNull();
+    expect(
+      computeFeeComponentsTakeaway([
+        { platform: 0, net_delivery: 0, packaging: 0, tax: 0 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeFeeComponentsTakeaway([
+        { platform: 500, net_delivery: 500, packaging: 100, tax: 100 },
+      ]),
+    ).toBeNull();
+    expect(
+      computeFeeComponentsTakeaway([
+        { platform: -50, net_delivery: Number.NaN },
       ]),
     ).toBeNull();
   });

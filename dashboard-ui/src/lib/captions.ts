@@ -491,3 +491,95 @@ export function computeYearOverYearTakeaway(
   return `${latestYear} spend matched ${priorYear} across comparable months`;
 }
 
+export interface FeeComponentItemLike {
+  month?: string | null;
+  net_delivery?: number;
+  delivery?: number;
+  delivery_fee?: number;
+  packaging?: number;
+  packaging_fee?: number;
+  platform?: number;
+  platform_fee?: number;
+  tax?: number;
+  taxes?: number;
+  total_fees?: number;
+  order_count?: number;
+  label?: string;
+  name?: string;
+  component?: string;
+  type?: string;
+  amount?: number;
+  value?: number;
+  spend?: number;
+}
+
+/**
+ * "Platform fees represent 38% of total fees (₹1,850)"
+ * Captions the dominant fee type across active months.
+ * Returns null for missing, empty, all-zero, negative, or tied data.
+ */
+export function computeFeeComponentsTakeaway(
+  data: readonly FeeComponentItemLike[] | null | undefined,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, number>([
+    ["Platform fees", 0],
+    ["Delivery fees", 0],
+    ["Packaging fees", 0],
+    ["Taxes", 0],
+  ]);
+
+  for (const row of data) {
+    if (!row) continue;
+
+    const netDelivery = row.net_delivery ?? row.delivery ?? row.delivery_fee;
+    if (isFiniteNumber(netDelivery) && netDelivery > 0) {
+      addTo(totals, "Delivery fees", netDelivery);
+    }
+
+    const packaging = row.packaging ?? row.packaging_fee;
+    if (isFiniteNumber(packaging) && packaging > 0) {
+      addTo(totals, "Packaging fees", packaging);
+    }
+
+    const platform = row.platform ?? row.platform_fee;
+    if (isFiniteNumber(platform) && platform > 0) {
+      addTo(totals, "Platform fees", platform);
+    }
+
+    const tax = row.tax ?? row.taxes;
+    if (isFiniteNumber(tax) && tax > 0) {
+      addTo(totals, "Taxes", tax);
+    }
+
+    const rawLabel = String(row.label ?? row.name ?? row.component ?? row.type ?? "")
+      .trim()
+      .toLowerCase();
+    const amount = row.amount ?? row.value ?? row.spend;
+    if (rawLabel && isFiniteNumber(amount) && amount > 0) {
+      if (rawLabel.includes("platform")) {
+        addTo(totals, "Platform fees", amount);
+      } else if (rawLabel.includes("deliver")) {
+        addTo(totals, "Delivery fees", amount);
+      } else if (rawLabel.includes("packag")) {
+        addTo(totals, "Packaging fees", amount);
+      } else if (rawLabel.includes("tax")) {
+        addTo(totals, "Taxes", amount);
+      } else {
+        const customLabel = pluralize(humanize(rawLabel));
+        addTo(totals, customLabel, amount);
+      }
+    }
+  }
+
+  const total = sumValues(totals.values());
+  if (total <= 0) return null;
+
+  const winner = uniqueMax([...totals.entries()], ([, amount]) => amount);
+  if (!winner) return null;
+
+  const [label, amount] = winner;
+  return `${label} represent ${roundPercent(amount, total)}% of total fees (${formatRupees(amount)})`;
+}
+
