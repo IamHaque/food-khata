@@ -1197,7 +1197,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-074 | Export | P1 | DONE | 2026-11-07 | --note |
 | S-075 | Columns and density | P2 | DONE | 2026-11-07 | --note |
 | S-040 | Bill waterfall | P1 | DONE | 2026-11-08 | --note |
-| S-041 | Discounts breakdown | P1 | TODO | | |
+| S-041 | Discounts breakdown | P1 | DONE | 2026-11-08 | --note |
 | S-042 | Year-over-year | P1 | TODO | | |
 | S-043 | Fee components | P1 | TODO | | |
 | S-044 | Fee burden scatter | P1 | TODO | | |
@@ -1267,6 +1267,7 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | DEC-038 | 2026-11-07 | S-073: Saved views stored in food-khata-views with safe storage, managed via Views popover on Orders page, and integrated into Command Palette with live custom event reactivity |  |  |  |  |
 | DEC-039 | 2026-11-07 | GATE-P3b: Phase P3b Orders Gate Audit Passed: All 6 orders stories (S-070 to S-075) pass verification, 370 unit tests pass across 31 files, 5,000-row virtualization with @tanstack/react-virtual and keyboard-driven side sheet verified |  |  |  |  |
 | DEC-040 | 2026-11-08 | 2026-11-08 | S-040 | Step click fallback for Bill waterfall chart | Individual fee breakdown items (delivery, packaging, platform fee, taxes, tip, item subtotal) do not have dedicated filter dimensions in the orders ledger schema (which filters by platform, date, restaurant, cuisine, status, anomaly, etc.). | Clicking a step opens the Orders page (/orders) retaining the current global filter scope. For 'residual' step, anomaly=review is set to inspect reconciling differences. For other steps, current filter scope is preserved. |
+| DEC-041 | 2026-11-08 | 2026-11-08 | S-041 | Discount breakdown data model and legend toggling | Discounts breakdown chart | The API delivers aggregate explicit discounts by component type (food_discount, delivery_fee_discount, total_discount residual) via charts.spending.discount_breakdown. The chart models each discount component as an individual ECharts series stacked with stack: 'discounts' on a shared axis, with an interactive legend allowing dynamic series toggling and instant share/total recalculation in the rich tooltip. Per-month stacked data is seamlessly supported when month-bucketed items are provided. |
 
 ### 8.3 Deviation log
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status (open / accepted / resolved) |
