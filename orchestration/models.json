@@ -7,12 +7,14 @@
   ],
   "defaults": {
     "timeout_minutes": 25,
-    "max_parallel": 3,
+    "timeout_minutes_L": 40,
+    "max_parallel": 4,
     "max_parallel_per_provider": 2,
     "cooldown_minutes": 30,
     "disable_after_consecutive_failures": 3,
     "max_fix_attempts_same_model": 2,
-    "max_packet_input_tokens": 24000
+    "max_packet_input_tokens": 24000,
+    "max_packet_input_tokens_L": 32000
   },
   "models": {
     "gemini-low": {
