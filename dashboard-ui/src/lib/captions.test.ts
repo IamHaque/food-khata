@@ -1121,3 +1121,95 @@ describe('computeDietTakeaway (CC-8, S-053)', () => {
   });
 });
 
+import { computeDishRankingTakeaway } from './captions';
+
+describe('computeDishRankingTakeaway (CC-8, S-054)', () => {
+  it('captions top dish by quantity volume with spend complement', () => {
+    const data = [
+      { name: 'Chicken Biryani', quantity: 28, amount: 6800 },
+      { name: 'Butter Naan', quantity: 22, amount: 1100 },
+      { name: 'Paneer Tikka', quantity: 12, amount: 3600 },
+    ];
+    expect(computeDishRankingTakeaway(data, 'quantity')).toBe(
+      'Top dish is Chicken Biryani with 28 orders (₹6,800)',
+    );
+    // Defaults to quantity
+    expect(computeDishRankingTakeaway(data)).toBe(
+      'Top dish is Chicken Biryani with 28 orders (₹6,800)',
+    );
+  });
+
+  it('handles singular order correctly for quantity metric', () => {
+    const data = [{ name: 'Chef Special', quantity: 1, amount: 750 }];
+    expect(computeDishRankingTakeaway(data, 'quantity')).toBe(
+      'Top dish is Chef Special with 1 order (₹750)',
+    );
+  });
+
+  it('omits amount when zero or missing in quantity mode', () => {
+    const data = [{ name: 'Complimentary Dip', quantity: 15, amount: 0 }];
+    expect(computeDishRankingTakeaway(data, 'quantity')).toBe(
+      'Top dish is Complimentary Dip with 15 orders',
+    );
+  });
+
+  it('captions top dish by expenditure amount with order count complement', () => {
+    const data = [
+      { name: 'Chicken Biryani', quantity: 28, amount: 6800 },
+      { name: 'Mutton Mandi', quantity: 10, amount: 9500 },
+    ];
+    expect(computeDishRankingTakeaway(data, 'amount')).toBe(
+      'Top dish is Mutton Mandi with ₹9,500 (10 orders)',
+    );
+  });
+
+  it('handles singular order correctly for amount metric', () => {
+    const data = [{ name: 'Royal Platter', quantity: 1, amount: 3500 }];
+    expect(computeDishRankingTakeaway(data, 'amount')).toBe(
+      'Top dish is Royal Platter with ₹3,500 (1 order)',
+    );
+  });
+
+  it('omits quantity when zero or missing in amount mode', () => {
+    const data = [{ name: 'Custom Catering', quantity: 0, amount: 12000 }];
+    expect(computeDishRankingTakeaway(data, 'amount')).toBe(
+      'Top dish is Custom Catering with ₹12,000',
+    );
+  });
+
+  it('aggregates duplicate dish entries by name', () => {
+    const data = [
+      { name: 'Chicken Biryani', quantity: 15, amount: 3400 },
+      { name: 'Chicken Biryani', quantity: 13, amount: 3400 },
+      { name: 'Butter Naan', quantity: 20, amount: 1000 },
+    ];
+    expect(computeDishRankingTakeaway(data, 'quantity')).toBe(
+      'Top dish is Chicken Biryani with 28 orders (₹6,800)',
+    );
+  });
+
+  it('returns null when top dishes are tied on the active metric', () => {
+    const tiedByQty = [
+      { name: 'Dish A', quantity: 20, amount: 500 },
+      { name: 'Dish B', quantity: 20, amount: 600 },
+    ];
+    expect(computeDishRankingTakeaway(tiedByQty, 'quantity')).toBeNull();
+
+    const tiedByAmt = [
+      { name: 'Dish A', quantity: 10, amount: 1000 },
+      { name: 'Dish B', quantity: 15, amount: 1000 },
+    ];
+    expect(computeDishRankingTakeaway(tiedByAmt, 'amount')).toBeNull();
+  });
+
+  it('returns null on null, undefined, empty array, or zero/invalid data', () => {
+    expect(computeDishRankingTakeaway(null)).toBeNull();
+    expect(computeDishRankingTakeaway(undefined)).toBeNull();
+    expect(computeDishRankingTakeaway([])).toBeNull();
+    expect(computeDishRankingTakeaway([{ name: 'Biryani', quantity: 0, amount: 0 }])).toBeNull();
+    expect(computeDishRankingTakeaway([{ name: 'Biryani', quantity: -5, amount: -100 }])).toBeNull();
+    expect(computeDishRankingTakeaway([{ name: 'Biryani', quantity: Number.NaN }])).toBeNull();
+    expect(computeDishRankingTakeaway([{ name: '', quantity: 10, amount: 1000 }])).toBeNull();
+  });
+});
+
