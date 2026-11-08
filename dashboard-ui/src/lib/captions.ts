@@ -914,3 +914,48 @@ export function computeLoyaltyParetoTakeaway(
   return `Top ${countFor80} restaurants account for ${actualPercent}% of all orders`;
 }
 
+export interface DietDatumLike {
+  diet?: string | null;
+  item_lines?: number | null;
+  quantity?: number | null;
+  line_total?: number | null;
+}
+
+/**
+ * "Veg items represent 72% of total order quantity"
+ * Captions the diet category with the largest quantity.
+ * Returns null for missing, empty, all-zero, or tied data.
+ */
+export function computeDietTakeaway(
+  data?: readonly (DietDatumLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, number>();
+  for (const item of data) {
+    if (!item) continue;
+    const quantity = item.quantity ?? item.item_lines;
+    if (!isFiniteNumber(quantity) || quantity <= 0) continue;
+    const rawDiet = String(item.diet ?? "").trim();
+    if (!rawDiet) continue;
+    const norm = rawDiet.toLowerCase().replace(/[_\s-]+/g, "");
+    let label = rawDiet;
+    if (norm === "veg") label = "Veg";
+    else if (norm === "nonveg") label = "Non-veg";
+    else if (norm === "unknown") label = "Unknown";
+    else label = humanize(rawDiet);
+
+    addTo(totals, label, quantity);
+  }
+
+  const totalQuantity = sumValues(totals.values());
+  if (totals.size === 0 || totalQuantity <= 0) return null;
+
+  const winner = uniqueMax([...totals.entries()], ([, q]) => q);
+  if (!winner) return null;
+
+  const [label, quantity] = winner;
+  const percent = roundPercent(quantity, totalQuantity);
+  return `${label} items represent ${percent}% of total order quantity`;
+}
+

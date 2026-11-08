@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -109,99 +109,12 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               data={food.loyalty}
             />
 
-            {/* Diet item quantities (Ranked bars for totals, stacked columns for monthly history) */}
-            <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Diet item quantities</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Item quantities across dietary categories. Note: Reflects individual item quantities, not order count.
-                </p>
-              </div>
-
-              {food.diet_unavailable_reason ? (
-                <p className="text-xs text-muted-foreground p-3 rounded-lg border bg-muted/20">
-                  {food.diet_unavailable_reason}
-                </p>
-              ) : !food.diet.length ? (
-                <p className="text-xs text-muted-foreground p-4 text-center">No dietary item data available.</p>
-              ) : (
-                <div className="space-y-4">
-                  <Chart
-                    summary="Current item quantities by diet category"
-                    headers={['Diet category', 'Item quantity', 'Item lines', 'Line total']}
-                    rows={food.diet.map(x => [
-                      x.diet,
-                      x.quantity,
-                      x.item_lines,
-                      `₹${Math.round(x.line_total).toLocaleString('en-IN')}`,
-                    ])}
-                    option={{
-                      tooltip: {
-                        trigger: 'axis',
-                        renderMode: 'richText',
-                        axisPointer: { type: 'shadow' },
-                      },
-                      grid: { left: 80, right: 30, bottom: 40, top: 15 },
-                      xAxis: {
-                        type: 'category',
-                        data: food.diet.map(x => x.diet),
-                        axisLabel: { fontSize: 11 },
-                      },
-                      yAxis: { type: 'value', name: 'Item quantity' },
-                      series: [
-                        {
-                          name: 'Item quantity',
-                          type: 'bar',
-                          itemStyle: { borderRadius: [4, 4, 0, 0] },
-                          data: food.diet.map(x => x.quantity),
-                        },
-                      ],
-                    }}
-                  />
-
-                  {food.diet_monthly.length > 0 && (
-                    <details className="border-t pt-3 group">
-                      <summary className="cursor-pointer text-xs font-semibold text-foreground flex items-center justify-between min-h-[44px]">
-                        <span>Monthly diet quantities history</span>
-                        <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">
-                          ▼
-                        </span>
-                      </summary>
-                      <div className="pt-2">
-                        <Chart
-                          summary="Monthly veg, non-veg and unknown item quantities"
-                          headers={['Month', 'Veg', 'Non-veg', 'Unknown']}
-                          rows={food.diet_monthly.map(x => [x.month, x.veg, x.non_veg, x.unknown])}
-                          option={{
-                            tooltip: { trigger: 'axis', renderMode: 'richText' },
-                            legend: { top: 0 },
-                            grid: { left: 50, right: 25, bottom: 50, top: 35 },
-                            xAxis: {
-                              type: 'category',
-                              data: food.diet_monthly.map(x => x.month),
-                              axisLabel: { hideOverlap: true, fontSize: 11 },
-                            },
-                            yAxis: { type: 'value', name: 'Item quantity' },
-                            series: (
-                              [
-                                ['veg', 'Veg'],
-                                ['non_veg', 'Non-veg'],
-                                ['unknown', 'Unknown'],
-                              ] as const
-                            ).map(([key, name]) => ({
-                              name,
-                              type: 'bar',
-                              stack: 'diet',
-                              data: food.diet_monthly.map(x => x[key]),
-                            })),
-                          }}
-                        />
-                      </div>
-                    </details>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* S-053 Dietary classification split and trend chart */}
+            <DietSplitTrendChart
+              diet={food.diet}
+              diet_monthly={food.diet_monthly}
+              diet_unavailable_reason={food.diet_unavailable_reason}
+            />
           </div>
 
           {/* Leaders section with independent pagination */}

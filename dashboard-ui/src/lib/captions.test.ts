@@ -1056,3 +1056,68 @@ describe('computeLoyaltyParetoTakeaway (CC-8, S-052)', () => {
   });
 });
 
+import { computeDietTakeaway } from './captions';
+
+describe('computeDietTakeaway (CC-8, S-053)', () => {
+  it('computes percentage share for predominant Veg diet category', () => {
+    const data = [
+      { diet: 'Veg', quantity: 72, item_lines: 15, line_total: 2500 },
+      { diet: 'Non-veg', quantity: 28, item_lines: 8, line_total: 1800 },
+    ];
+    expect(computeDietTakeaway(data)).toBe('Veg items represent 72% of total order quantity');
+  });
+
+  it('computes percentage share for predominant Non-veg diet category', () => {
+    const data = [
+      { diet: 'Veg', quantity: 30, item_lines: 5, line_total: 1000 },
+      { diet: 'Non-veg', quantity: 70, item_lines: 12, line_total: 3500 },
+    ];
+    expect(computeDietTakeaway(data)).toBe('Non-veg items represent 70% of total order quantity');
+  });
+
+  it('handles Unknown category when largest', () => {
+    const data = [
+      { diet: 'Veg', quantity: 10 },
+      { diet: 'Non-veg', quantity: 15 },
+      { diet: 'Unknown', quantity: 75 },
+    ];
+    expect(computeDietTakeaway(data)).toBe('Unknown items represent 75% of total order quantity');
+  });
+
+  it('normalizes varying casing and formatting (e.g. non_veg, veg, unknown)', () => {
+    const data = [
+      { diet: 'non_veg', quantity: 60 },
+      { diet: 'veg', quantity: 40 },
+    ];
+    expect(computeDietTakeaway(data)).toBe('Non-veg items represent 60% of total order quantity');
+  });
+
+  it('aggregates duplicate entries and falls back to item_lines if quantity is missing', () => {
+    const data = [
+      { diet: 'Veg', quantity: 30 },
+      { diet: 'Veg', quantity: 20 },
+      { diet: 'Non-veg', item_lines: 25 },
+    ];
+    // Veg = 50, Non-veg = 25, total = 75 -> 50/75 = 67%
+    expect(computeDietTakeaway(data)).toBe('Veg items represent 67% of total order quantity');
+  });
+
+  it('returns null when categories are tied', () => {
+    const data = [
+      { diet: 'Veg', quantity: 50 },
+      { diet: 'Non-veg', quantity: 50 },
+    ];
+    expect(computeDietTakeaway(data)).toBeNull();
+  });
+
+  it('returns null on null, undefined, empty array, or all-zero quantities', () => {
+    expect(computeDietTakeaway(null)).toBeNull();
+    expect(computeDietTakeaway(undefined)).toBeNull();
+    expect(computeDietTakeaway([])).toBeNull();
+    expect(computeDietTakeaway([{ diet: 'Veg', quantity: 0 }])).toBeNull();
+    expect(computeDietTakeaway([{ diet: 'Veg', quantity: -10 }])).toBeNull();
+    expect(computeDietTakeaway([{ diet: 'Veg', quantity: Number.NaN }])).toBeNull();
+    expect(computeDietTakeaway([{ diet: '', quantity: 10 }])).toBeNull();
+  });
+});
+
