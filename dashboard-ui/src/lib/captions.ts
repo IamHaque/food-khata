@@ -415,3 +415,79 @@ export function computeDiscountBreakdownTakeaway(
   const pluralLabel = pluralize(label);
   return `${pluralLabel} represent ${roundPercent(amount, total)}% of total savings (${formatRupees(amount)})`;
 }
+
+export interface YearOverYearDatum {
+  year: number;
+  month: number;
+  spend: number;
+}
+
+/**
+ * "2025 spend exceeded 2024 by ₹14,200 across comparable months"
+ * Captions the spend comparison between the two most recent years across overlapping months.
+ * Returns null when there are fewer than 2 distinct years, no overlapping months,
+ * or when spend is zero or invalid.
+ */
+export function computeYearOverYearTakeaway(
+  data: readonly YearOverYearDatum[] | null | undefined,
+): string | null {
+  if (!data?.length) return null;
+
+  const validEntries = data.filter(
+    (d) =>
+      d &&
+      isFiniteNumber(d.year) &&
+      isFiniteNumber(d.month) &&
+      d.month >= 1 &&
+      d.month <= 12 &&
+      isFiniteNumber(d.spend) &&
+      d.spend >= 0
+  );
+
+  const distinctYears = Array.from(new Set(validEntries.map((d) => d.year))).sort(
+    (a, b) => a - b
+  );
+
+  if (distinctYears.length < 2) return null;
+
+  const latestYear = distinctYears[distinctYears.length - 1];
+  const priorYear = distinctYears[distinctYears.length - 2];
+
+  const latestMonthMap = new Map<number, number>();
+  const priorMonthMap = new Map<number, number>();
+
+  for (const d of validEntries) {
+    if (d.year === latestYear) {
+      latestMonthMap.set(d.month, (latestMonthMap.get(d.month) ?? 0) + d.spend);
+    } else if (d.year === priorYear) {
+      priorMonthMap.set(d.month, (priorMonthMap.get(d.month) ?? 0) + d.spend);
+    }
+  }
+
+  const comparableMonths = Array.from(latestMonthMap.keys()).filter((m) =>
+    priorMonthMap.has(m)
+  );
+
+  if (comparableMonths.length === 0) return null;
+
+  let sumLatest = 0;
+  let sumPrior = 0;
+
+  for (const m of comparableMonths) {
+    sumLatest += latestMonthMap.get(m)!;
+    sumPrior += priorMonthMap.get(m)!;
+  }
+
+  if (sumLatest === 0 && sumPrior === 0) return null;
+
+  const diff = sumLatest - sumPrior;
+
+  if (diff > 0) {
+    return `${latestYear} spend exceeded ${priorYear} by ${formatRupees(diff)} across comparable months`;
+  }
+  if (diff < 0) {
+    return `${latestYear} spend was ${formatRupees(Math.abs(diff))} lower than ${priorYear} across comparable months`;
+  }
+  return `${latestYear} spend matched ${priorYear} across comparable months`;
+}
+

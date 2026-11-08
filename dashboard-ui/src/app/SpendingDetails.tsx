@@ -4,6 +4,7 @@ import { Chart } from './Chart';
 import { tokenAlpha } from '../lib/tokens';
 import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
 import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownChart';
+import { YearOverYearChart } from '../components/charts/YearOverYearChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -14,7 +15,6 @@ const money = new Intl.NumberFormat('en-IN', {
 });
 const num = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function SpendingDetails({ charts }: { charts: components['schemas']['Charts'] }) {
   const years = useMemo(
@@ -27,23 +27,6 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
     () => charts.calendar.filter(x => x.date?.startsWith(year ?? '')),
     [charts.calendar, year]
   );
-
-  // Year-over-year line series with gaps for incomplete years and no smoothing
-  const yearlyData = useMemo(() => {
-    const distinctYears = [...new Set(charts.spending.years.map(x => x.year))].sort();
-    return {
-      distinctYears,
-      series: distinctYears.map(y => ({
-        name: String(y),
-        type: 'line' as const,
-        smooth: false,
-        data: Array.from({ length: 12 }, (_, i) => {
-          const match = charts.spending.years.find(x => x.year === y && x.month === i + 1);
-          return match?.spend ?? null;
-        }),
-      })),
-    };
-  }, [charts.spending.years]);
 
   // Filter valid fee scatter data
   const feeScatterValid = useMemo(
@@ -66,57 +49,9 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
       {/* 1. Explicit discount breakdown */}
       <DiscountBreakdownChart data={charts.spending.discount_breakdown} />
 
-      {/* 2. Year-over-year spend: Line series by year, Jan-Dec axis */}
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-        <div className="border-b pb-2">
-          <h2 className="text-base font-semibold text-foreground">Year-over-year spend comparison</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Monthly spend trajectories across calendar years on a common Jan–Dec axis
-          </p>
-        </div>
-        <Chart
-          summary="Monthly spend by calendar year"
-          headers={['Month', ...yearlyData.distinctYears.map(String)]}
-          rows={MONTH_NAMES.map((m, i) => [
-            m,
-            ...yearlyData.distinctYears.map(y => {
-              const match = charts.spending.years.find(x => x.year === y && x.month === i + 1);
-              return match ? money.format(match.spend) : '—';
-            }),
-          ])}
-          option={{
-            tooltip: {
-              trigger: 'axis' as const,
-              formatter: (params: unknown) => {
-                if (!Array.isArray(params)) return '';
-                const month = (params[0] as { axisValueLabel?: string })?.axisValueLabel ?? '';
-                let res = `<div class="font-bold text-xs mb-1">${month}</div>`;
-                for (const item of params as { seriesName: string; value: number | null }[]) {
-                  const val = item.value !== null ? money.format(item.value) : 'No data';
-                  res += `<div class="flex justify-between gap-3 text-xs"><span>${item.seriesName}:</span> <strong>${val}</strong></div>`;
-                }
-                return res;
-              },
-            },
-            legend: { top: 0, textStyle: { fontSize: 11 } },
-            grid: { left: 65, right: 25, bottom: 40, top: 35 },
-            xAxis: {
-              type: 'category' as const,
-              data: MONTH_NAMES,
-              axisLabel: { fontSize: 11 },
-            },
-            yAxis: {
-              type: 'value' as const,
-              name: 'Spend (₹)',
-              axisLabel: {
-                formatter: (v: number) => `₹${v}`,
-                fontSize: 10,
-              },
-            },
-            series: yearlyData.series,
-          }}
-        />
-      </div>
+      {/* 2. Year-over-year spend comparison */}
+      <YearOverYearChart data={charts.spending.years} />
+
 
       {/* 3. Spend calendar: Calendar heatmap with selected year & local scroll */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
