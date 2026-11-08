@@ -3,7 +3,7 @@ import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
-import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart } from '../components/charts';
+import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
   const { filters, clear } = useFilters();
@@ -58,6 +58,8 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
           <p className="text-xs text-muted-foreground mt-0.5">
             {page === 'Food'
               ? 'Cuisine breakdown, dish trends, dietary distribution, and restaurant loyalty'
+              : page === 'Habits'
+              ? 'Ordering rhythm, temporal habits, and basket sizes'
               : 'Cumulative expenditure, moving averages, fee patterns, and yearly comparisons'}
           </p>
         </div>
@@ -124,6 +126,14 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
 
           {/* Leaders section with independent pagination */}
           <FoodLeaders />
+        </div>
+      ) : page === 'Habits' ? (
+        /* Habits page view */
+        <div className="space-y-6">
+          <HourWeekdayHeatmapChart
+            data={data.charts.behavior.hour_weekday}
+            timing_unavailable_reason={data.charts.behavior.timing_unavailable_reason}
+          />
         </div>
       ) : (
         /* Spending page view */

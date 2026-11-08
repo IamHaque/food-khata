@@ -57,6 +57,22 @@ describe('ChartCard', () => {
     expect(html).toContain('aria-sort');
   });
 
+  it('supports tableHeaders and tableRows props for table view', () => {
+    const headers = ['Day', 'Hour', 'Orders', 'Spend'];
+    const rows = [['Monday', '10:00 - 10:59', 2, 600]];
+    const html = renderToString(
+      <ChartCard title="Heatmap" tableHeaders={headers} tableRows={rows} showTable>
+        <span>chart-here</span>
+      </ChartCard>,
+    );
+    expect(html).toContain('Day');
+    expect(html).toContain('Hour');
+    expect(html).toContain('Orders');
+    expect(html).toContain('Spend');
+    expect(html).toContain('Monday');
+    expect(html).toContain('10:00 - 10:59');
+  });
+
   it('opens fullscreen dialog with content', () => {
     const html = renderToString(
       <ChartCard title="Sales" fullscreen>

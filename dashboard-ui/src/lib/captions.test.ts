@@ -6,6 +6,7 @@ import {
  computeDayTypeTakeaway,
  computeFeeComponentsTakeaway,
  computeFeeScatterTakeaway,
+ computeHourWeekdayTakeaway,
  computeMealSlotTakeaway,
  computeOrderValueDistributionTakeaway,
  computePlatformTakeaway,
@@ -1210,6 +1211,53 @@ describe('computeDishRankingTakeaway (CC-8, S-054)', () => {
     expect(computeDishRankingTakeaway([{ name: 'Biryani', quantity: -5, amount: -100 }])).toBeNull();
     expect(computeDishRankingTakeaway([{ name: 'Biryani', quantity: Number.NaN }])).toBeNull();
     expect(computeDishRankingTakeaway([{ name: '', quantity: 10, amount: 1000 }])).toBeNull();
+  });
+});
+
+describe('computeHourWeekdayTakeaway', () => {
+  it('identifies the peak day and hour with order count', () => {
+    // Friday (weekday 4), 20:00 -> key = 4 * 24 + 20 = 116
+    const data = [
+      { key: '0', orders: 2, spend: 300 },
+      { key: '116', orders: 15, spend: 3500 },
+      { key: '25', orders: 5, spend: 1000 },
+    ];
+    expect(computeHourWeekdayTakeaway(data)).toBe('Peak ordering is Friday at 20:00 with 15 orders');
+  });
+
+  it('handles single order singular phrasing', () => {
+    // Sunday (weekday 6), 13:00 -> key = 6 * 24 + 13 = 157
+    const data = [
+      { key: '157', orders: 1, spend: 250 },
+    ];
+    expect(computeHourWeekdayTakeaway(data)).toBe('Peak ordering is Sunday at 13:00 with 1 order');
+  });
+
+  it('aggregates duplicate keys correctly', () => {
+    const data = [
+      { key: 10, orders: 3, spend: 500 },
+      { key: '10', orders: 4, spend: 700 },
+    ];
+    // weekday 0 (Monday), hour 10
+    expect(computeHourWeekdayTakeaway(data)).toBe('Peak ordering is Monday at 10:00 with 7 orders');
+  });
+
+  it('returns null on tied peak cells', () => {
+    const data = [
+      { key: '10', orders: 8, spend: 1000 },
+      { key: '20', orders: 8, spend: 1200 },
+    ];
+    expect(computeHourWeekdayTakeaway(data)).toBeNull();
+  });
+
+  it('returns null on empty, null, undefined, or all-zero orders', () => {
+    expect(computeHourWeekdayTakeaway(null)).toBeNull();
+    expect(computeHourWeekdayTakeaway(undefined)).toBeNull();
+    expect(computeHourWeekdayTakeaway([])).toBeNull();
+    expect(computeHourWeekdayTakeaway([{ key: '0', orders: 0, spend: 0 }])).toBeNull();
+    expect(computeHourWeekdayTakeaway([{ key: '0', orders: -3, spend: 0 }])).toBeNull();
+    expect(computeHourWeekdayTakeaway([{ key: 'invalid', orders: 5 }])).toBeNull();
+    expect(computeHourWeekdayTakeaway([{ key: '200', orders: 5 }])).toBeNull();
   });
 });
 

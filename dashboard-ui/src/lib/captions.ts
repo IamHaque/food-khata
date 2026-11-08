@@ -1032,3 +1032,76 @@ export function computeDishRankingTakeaway(
   }
 }
 
+export interface HourWeekdayDatum {
+  key?: string | number | null;
+  orders?: number | null;
+  spend?: number | null;
+  count?: number | null;
+  amount?: number | null;
+}
+
+/**
+ * "Peak ordering is Friday at 20:00 with 15 orders"
+ * Captions the day and hour with the most orders. Returns null for missing,
+ * empty, all-zero, or tied data.
+ */
+export function computeHourWeekdayTakeaway(
+  data?: readonly (HourWeekdayDatum | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  interface CellAgg {
+    weekday: number;
+    hour: number;
+    orders: number;
+    spend: number;
+  }
+
+  const cells = new Map<number, CellAgg>();
+  let totalOrders = 0;
+
+  for (const row of data) {
+    if (!row) continue;
+    const rawKey = row.key;
+    if (rawKey == null || rawKey === "") continue;
+    const keyNum = typeof rawKey === "number" ? rawKey : parseInt(String(rawKey), 10);
+    if (!isFiniteNumber(keyNum) || keyNum < 0 || keyNum >= 168) continue;
+
+    const weekday = Math.floor(keyNum / 24);
+    const hour = keyNum % 24;
+    const orders = Number(row.orders ?? row.count ?? 0);
+    const spend = Number(row.spend ?? row.amount ?? 0);
+
+    if (!isFiniteNumber(orders) || orders <= 0) continue;
+
+    const existing = cells.get(keyNum);
+    if (existing) {
+      existing.orders += orders;
+      existing.spend += spend;
+    } else {
+      cells.set(keyNum, { weekday, hour, orders, spend });
+    }
+    totalOrders += orders;
+  }
+
+  if (totalOrders <= 0 || cells.size === 0) return null;
+
+  const winner = uniqueMax([...cells.values()], (c) => c.orders);
+  if (!winner) return null;
+
+  const dayNames = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const dayName = dayNames[winner.weekday] ?? "Unknown";
+  const hourFormatted = `${String(winner.hour).padStart(2, "0")}:00`;
+  const orderCountText = `${winner.orders} ${winner.orders === 1 ? "order" : "orders"}`;
+
+  return `Peak ordering is ${dayName} at ${hourFormatted} with ${orderCountText}`;
+}
+

@@ -22,6 +22,8 @@ export interface ChartCardProps {
   error?: Error | string | null;
   onRetry?: () => void;
   tableData?: Array<Record<string, any>>;
+  tableHeaders?: string[];
+  tableRows?: Array<Array<any>>;
   onExportCsv?: () => void;
   onExportPng?: () => void;
   // controlled view state (optional)
@@ -75,7 +77,9 @@ function ChartCard({
   emptyReason,
   error,
   onRetry,
-  tableData,
+  tableData: tableDataProp,
+  tableHeaders,
+  tableRows,
   onExportCsv,
   onExportPng,
   showTable: showTableProp,
@@ -112,8 +116,18 @@ function ChartCard({
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const tableData = React.useMemo(() => {
+    if (tableDataProp) return tableDataProp;
+    if (tableHeaders && tableRows) {
+      return tableRows.map((row) =>
+        Object.fromEntries(tableHeaders.map((header, idx) => [header, row[idx]])),
+      );
+    }
+    return undefined;
+  }, [tableDataProp, tableHeaders, tableRows]);
+
   const hasTable = Array.isArray(tableData) && tableData.length > 0;
-  const columns = hasTable ? Object.keys(tableData![0]) : [];
+  const columns = hasTable ? (tableHeaders ?? Object.keys(tableData![0])) : [];
 
   const sortedData = React.useMemo(() => {
     if (!hasTable || !tableData) return tableData ?? [];
