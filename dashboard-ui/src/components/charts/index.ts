@@ -10,3 +10,4 @@ export * from "./OrderValueDistributionChart";
 export * from "./DailySpendCalendarChart";
 export * from "./CuisineTreemapChart";
 export * from "./NewVsRepeatChart";
+export * from "./LoyaltyParetoChart";

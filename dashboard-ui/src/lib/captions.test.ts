@@ -1004,3 +1004,55 @@ describe('computeNewVsRepeatTakeaway (CC-8, S-051)', () => {
   });
 });
 
+import { computeLoyaltyParetoTakeaway } from './captions';
+
+describe('computeLoyaltyParetoTakeaway (CC-8, S-052)', () => {
+  it('computes top N restaurants reaching 80% threshold', () => {
+    // 40 + 20 + 10 + 10 = 80 out of 100 (exactly 80%)
+    const data = [
+      { name: 'Faasos', orders: 40 },
+      { name: 'Behrouz Biryani', orders: 20 },
+      { name: 'Oven Story', orders: 10 },
+      { name: 'Lunchbox', orders: 10 },
+      { name: 'Firangi Bake', orders: 10 },
+      { name: 'Sweet Truth', orders: 10 },
+    ];
+    expect(computeLoyaltyParetoTakeaway(data)).toBe('Top 4 restaurants account for 80% of all orders');
+  });
+
+  it('computes top concentration when top 1 restaurant accounts for >= 80%', () => {
+    const data = [
+      { name: 'Faasos', orders: 85 },
+      { name: 'Behrouz Biryani', orders: 15 },
+    ];
+    expect(computeLoyaltyParetoTakeaway(data)).toBe('Top restaurant accounts for 85% of all orders');
+  });
+
+  it('handles single restaurant with 100% of orders', () => {
+    const data = [{ name: 'Faasos', orders: 12 }];
+    expect(computeLoyaltyParetoTakeaway(data)).toBe('Top restaurant accounts for 100% of all orders');
+  });
+
+  it('aggregates duplicate entries by restaurant name and supports count fallback', () => {
+    const data = [
+      { name: 'Faasos', count: 25 },
+      { name: 'Faasos', orders: 25 }, // total 50
+      { name: 'Behrouz', orders: 20 },
+      { name: 'Biryani Blues', orders: 15 }, // cum = 85 out of 100
+      { name: 'KFC', orders: 15 },
+    ];
+    // 50 + 20 + 15 = 85% -> Top 3 restaurants
+    expect(computeLoyaltyParetoTakeaway(data)).toBe('Top 3 restaurants account for 85% of all orders');
+  });
+
+  it('returns null on null, undefined, empty array, all-zero or invalid order counts', () => {
+    expect(computeLoyaltyParetoTakeaway(null)).toBeNull();
+    expect(computeLoyaltyParetoTakeaway(undefined)).toBeNull();
+    expect(computeLoyaltyParetoTakeaway([])).toBeNull();
+    expect(computeLoyaltyParetoTakeaway([{ name: 'Faasos', orders: 0 }])).toBeNull();
+    expect(computeLoyaltyParetoTakeaway([{ name: 'Faasos', orders: -5 }])).toBeNull();
+    expect(computeLoyaltyParetoTakeaway([{ name: 'Faasos', orders: Number.NaN }])).toBeNull();
+    expect(computeLoyaltyParetoTakeaway([{ name: '', orders: 10 }])).toBeNull();
+  });
+});
+

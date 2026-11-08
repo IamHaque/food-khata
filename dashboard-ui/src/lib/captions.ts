@@ -861,3 +861,56 @@ export function computeNewVsRepeatTakeaway(
   return `Repeat orders account for ${repeatPercent}% of orders overall`;
 }
 
+export interface LoyaltyParetoDatumLike {
+  key?: string | null;
+  name?: string | null;
+  orders?: number | null;
+  count?: number | null;
+  spend?: number | null;
+  aov?: number | null;
+}
+
+/**
+ * "Top 4 restaurants account for 80% of all orders"
+ * Captions restaurant concentration using the Pareto principle (cumulative 80% order threshold).
+ * Returns null for missing, empty, or all-zero order data.
+ */
+export function computeLoyaltyParetoTakeaway(
+  data?: readonly (LoyaltyParetoDatumLike | null | undefined)[] | null,
+): string | null {
+  if (!data?.length) return null;
+
+  const totals = new Map<string, number>();
+  for (const item of data) {
+    if (!item) continue;
+    const orders = item.orders ?? item.count;
+    if (!isFiniteNumber(orders) || orders <= 0) continue;
+    const name = String(item.name ?? item.key ?? "").trim();
+    if (!name) continue;
+    totals.set(name, (totals.get(name) ?? 0) + orders);
+  }
+
+  const totalOrders = sumValues(totals.values());
+  if (totals.size === 0 || totalOrders <= 0) return null;
+
+  const valid = [...totals.entries()].map(([name, orders]) => ({ name, orders }));
+  valid.sort((a, b) => b.orders - a.orders);
+
+  let cumOrders = 0;
+  let countFor80 = 0;
+  for (let i = 0; i < valid.length; i++) {
+    cumOrders += valid[i].orders;
+    countFor80 = i + 1;
+    if (cumOrders >= 0.8 * totalOrders) {
+      break;
+    }
+  }
+
+  const actualPercent = Math.round((cumOrders / totalOrders) * 100);
+
+  if (countFor80 === 1) {
+    return `Top restaurant accounts for ${actualPercent}% of all orders`;
+  }
+  return `Top ${countFor80} restaurants account for ${actualPercent}% of all orders`;
+}
+
