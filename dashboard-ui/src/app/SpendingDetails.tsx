@@ -6,6 +6,7 @@ import { BillWaterfallChart } from '../components/charts/BillWaterfallChart';
 import { DiscountBreakdownChart } from '../components/charts/DiscountBreakdownChart';
 import { YearOverYearChart } from '../components/charts/YearOverYearChart';
 import { FeeComponentsChart } from '../components/charts/FeeComponentsChart';
+import { FeeScatterChart } from '../components/charts/FeeScatterChart';
 
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -29,15 +30,6 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
     [charts.calendar, year]
   );
 
-  // Filter valid fee scatter data
-  const feeScatterValid = useMemo(
-    () =>
-      charts.spending.fee_scatter.filter(
-        x => x.fee_percent !== null && Number.isFinite(x.fee_percent) && Number.isFinite(x.amount)
-      ),
-    [charts.spending.fee_scatter]
-  );
-  const feeScatterExcluded = charts.spending.fee_scatter.length - feeScatterValid.length;
 
   return (
     <div className="space-y-6">
@@ -135,58 +127,9 @@ export function SpendingDetails({ charts }: { charts: components['schemas']['Cha
       <FeeComponentsChart data={charts.monthly_fee_components} />
 
 
-      {/* 5. Fee burden vs order value: Scatter plot */}
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">
-        <div className="border-b pb-2">
-          <h2 className="text-base font-semibold text-foreground">Fee burden vs order value</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Observed percentage fee burden relative to order value across individual orders
-          </p>
-        </div>
-        <Chart
-          summary="Fees percentage versus provider-paid order amount"
-          headers={['Order amount', 'Fees', 'Fee %']}
-          rows={feeScatterValid.map(x => [money.format(x.amount), money.format(x.fees), `${num.format(x.fee_percent!)}%`])}
-          option={{
-            tooltip: {
-              formatter: (params: unknown) => {
-                const p = params as { value: [number, number] };
-                if (!p || !Array.isArray(p.value)) return '';
-                const [amt, pct] = p.value;
-                return `<div class="text-xs"><div>Order: <strong>${money.format(amt)}</strong></div><div>Fee burden: <strong>${num.format(pct)}%</strong></div></div>`;
-              },
-            },
-            grid: { left: 65, right: 30, bottom: 45, top: 25 },
-            xAxis: {
-              type: 'value' as const,
-              name: 'Order amount (₹)',
-              axisLabel: {
-                formatter: (v: number) => `₹${v}`,
-                fontSize: 10,
-              },
-            },
-            yAxis: {
-              type: 'value' as const,
-              name: 'Fees (%)',
-              axisLabel: {
-                formatter: (v: number) => `${v}%`,
-                fontSize: 10,
-              },
-            },
-            series: [
-              {
-                type: 'scatter',
-                data: feeScatterValid.map(x => [x.amount, x.fee_percent]),
-                symbolSize: 7,
-              },
-            ],
-          }}
-        />
-        <p className="text-xs text-muted-foreground">
-          {feeScatterExcluded > 0 && `${feeScatterExcluded} orders with undefined fee ratios are excluded. `}
-          Scatter represents observed billing ratios and does not imply a direct causal relationship.
-        </p>
-      </div>
+      {/* 5. Fee burden vs order value: Scatter plot (S-044) */}
+      <FeeScatterChart data={charts.spending.fee_scatter} />
+
 
       {/* 6. Platform comparison table */}
       <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3">

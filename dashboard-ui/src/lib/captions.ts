@@ -583,3 +583,64 @@ export function computeFeeComponentsTakeaway(
   return `${label} represent ${roundPercent(amount, total)}% of total fees (${formatRupees(amount)})`;
 }
 
+export interface FeeScatterItemLike {
+  amount?: number | null;
+  fees?: number | null;
+  fee_percent?: number | null;
+  order_id?: string | number | null;
+}
+
+/**
+ * "Average fee burden is 14% of order value"
+ * Captions the average fee burden relative to order value across orders.
+ * Returns null for missing, empty, all-zero, negative, or invalid data.
+ */
+export function computeFeeScatterTakeaway(
+  data: readonly FeeScatterItemLike[] | null | undefined
+): string | null {
+  if (!data?.length) return null;
+
+  let totalAmount = 0;
+  let totalFees = 0;
+  let feePercentSum = 0;
+  let validCount = 0;
+  let hasValidFees = false;
+
+  for (const item of data) {
+    if (!item) continue;
+    const amount = item.amount;
+    const feePercent = item.fee_percent;
+    const fees = item.fees;
+
+    if (!isFiniteNumber(amount) || amount <= 0) continue;
+    if (!isFiniteNumber(feePercent) || feePercent < 0) continue;
+
+    feePercentSum += feePercent;
+    validCount++;
+    totalAmount += amount;
+
+    if (isFiniteNumber(fees) && fees >= 0) {
+      totalFees += fees;
+      hasValidFees = true;
+    }
+  }
+
+  if (validCount === 0 || totalAmount <= 0) return null;
+
+  // All-zero fee data
+  if (feePercentSum === 0 && (!hasValidFees || totalFees === 0)) {
+    return null;
+  }
+
+  const avgFeePercent = hasValidFees && totalFees > 0
+    ? Math.round((totalFees / totalAmount) * 100)
+    : Math.round(feePercentSum / validCount);
+
+  if (avgFeePercent <= 0 && feePercentSum <= 0 && (!hasValidFees || totalFees === 0)) {
+    return null;
+  }
+
+  const displayPct = avgFeePercent === 0 ? "<1" : String(avgFeePercent);
+  return `Average fee burden is ${displayPct}% of order value`;
+}
+
