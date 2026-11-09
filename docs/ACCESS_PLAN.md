@@ -597,5 +597,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-15 | T2 | gemini-3.8-flash | 1 | running | — |
 | 2026-11-09 | AC-16 | T2 | gemini-3.8-flash | 1 | running | — |
 | 2026-11-10 | AC-14 | T2 | beam | 2 | running | resume-AC-14-20261110; isolated T3 worktree |
-| 2026-11-10 | AC-15 | T2 | deepseek | 2 | running | resume-AC-15-20261110; isolated T3 worktree |
+| 2026-11-10 | AC-15 | T2 | deepseek | 2 | F1 | Free usage limit reached; failover to Terra Medium |
 | 2026-11-10 | AC-16 | T2 | terra-medium | 2 | running | resume-AC-16-20261110; isolated T3 worktree |
+| 2026-11-10 | AC-15 | T2 | terra-medium | 3 | running | resume-AC-15-terra-20261110; quota failover in isolated worktree |
