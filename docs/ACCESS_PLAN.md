@@ -415,7 +415,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-09 | commit 6a1ef89; users/<id>/ isolation, DB per-user, cache keying, AEAD encryption at rest, adoption backup, pytest 146 passed | B3 |
-| AC-07 | Owner, setup and registration | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-07-1 to gemini-high | B4 |
+| AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
 | AC-09 | Job runner | B | P0 | IN_PROGRESS | 2026-11-09 | failover dispatch-AC-09-2 to gemini-med | B4 |
 | AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
 | AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
@@ -530,6 +530,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-06 | `node scripts/verify.mjs . --backend; audit-AC-06-1` | all pass (pytest 140 passed, auth core, scrypt, sessions, csrf, throttle, 979 vitest; audit pass) | 65 s | 79f8dda |
 | 2026-11-09 | AC-12 | `node scripts/verify.mjs . --backend` | all pass (979 vitest passed, typed client, declarative primitives, 140 pytest) | 64 s | 9ad3ffa |
 | 2026-11-09 | AC-08 | `node scripts/verify.mjs . --backend` | all pass (pytest 146 passed, per-user isolation, AEAD encryption, 979 vitest) | 64 s | 6a1ef89 |
+| 2026-11-09 | AC-07 | `node scripts/verify.mjs . --backend` | all pass (pytest 152 passed, owner setup, registration, 979 vitest) | 68 s | 911b751 |
 
 ### 5.9 Changelog
 
@@ -554,6 +555,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-06 | Auth core implemented with scrypt password hashing, app.db server sessions, CSRF token validation, login throttling, full route auth sweep, and OpenAPI contract C-0 | 79f8dda |
 | 2026-11-09 | AC-12 | Frontend access foundation: typed API client from OpenAPI C-0, AuthShell, defineForm, StatusBanner primitives, and route composition root | 9ad3ffa |
 | 2026-11-09 | AC-08 | Per-user data folder isolation (users/<id>/), per-user DB and cache keying, AEAD encrypted sessions/phones, and adoption | 6a1ef89 |
+| 2026-11-09 | AC-07 | Owner setup and registration management: loopback/setup code claim, hashed join code windows, 8 user cap, admin actions, and CLI recovery | 911b751 |
 
 ### 5.10 Delegation ledger
 
@@ -575,7 +577,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-06 | T8 | gemini-high | 1 | pass | T6 audit deepseek pass |
 | 2026-11-09 | AC-08 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | AC-12 | T2 | beam | 1 | pass | — |
-| 2026-11-09 | AC-07 | T8 | gemini-high | 1 | running | — |
+| 2026-11-09 | AC-07 | T8 | gemini-high | 1 | pass | — |
 | 2026-11-09 | AC-09 | T8 | deepseek | 1 | fail (quota) | failover to gemini-med |
 | 2026-11-09 | AC-09 | T8 | gemini-med | 2 | running | — |
 
