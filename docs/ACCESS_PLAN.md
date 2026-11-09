@@ -618,4 +618,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-15 | T6 | terra-medium | 1 | F3 | Discard not durable; imported partial can be misreported as unimported; fix dispatched |
 | 2026-11-10 | AC-15 | T8 | terra-high | 5 | review | a46fb9a; durable decisions implemented; parent verify and independent persistence audit pending |
 | 2026-11-10 | AC-15 | T6 | sol-medium | 2 | F3 | Reproduced analytics/decision crash mismatch and non-atomic migration; mobile imported capture incorrect |
-| 2026-11-10 | AC-15 | T8 | terra-high | 6 | running | fix-AC-15-crash-20261110; atomic analytics receipt and migration plus failure-injection tests |
+| 2026-11-10 | AC-15 | T8 | terra-high | 6 | review | fb01fb2; atomic receipt/migration and lifecycle fixes; parent verify and independent recheck pending |
+| 2026-11-10 | AC-15 | T6 | sol-medium | 3 | running | audit-AC-15-crash-fixed-20261110; transaction/restart/migration recheck |
