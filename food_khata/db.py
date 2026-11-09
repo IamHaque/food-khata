@@ -285,6 +285,10 @@ class AnalyticsDB:
                 imported_at TEXT NOT NULL, PRIMARY KEY(account_id, platform)
             );
 
+            CREATE TABLE IF NOT EXISTS partial_import_receipts (
+                job_id TEXT PRIMARY KEY
+            );
+
             CREATE TABLE IF NOT EXISTS restaurants (
                 id TEXT PRIMARY KEY,
                 platform TEXT NOT NULL,
@@ -973,11 +977,15 @@ class AnalyticsDB:
         return True
 
     def ingest_account(
-        self, storage: Storage, local_id: str, *, incremental: bool = True
+        self, storage: Storage, local_id: str, *, incremental: bool = True, partial_job_id: str | None = None
     ) -> dict[str, Any]:
         """Ingest all platform histories saved under a specific local account."""
         acc_path = storage.account_path(local_id)
         if not acc_path.exists():
+            if partial_job_id is not None:
+                with self.connection() as conn:
+                    conn.execute("INSERT OR IGNORE INTO partial_import_receipts VALUES (?)", (partial_job_id,))
+                    conn.commit()
             return {
                 "swiggy": 0,
                 "zomato": 0,
@@ -1097,6 +1105,8 @@ class AnalyticsDB:
                             }
                         )
 
+            if partial_job_id is not None:
+                conn.execute("INSERT OR IGNORE INTO partial_import_receipts VALUES (?)", (partial_job_id,))
             conn.commit()
 
         counts["total"] = counts["swiggy"] + counts["zomato"]

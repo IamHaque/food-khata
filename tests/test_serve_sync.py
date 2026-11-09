@@ -157,6 +157,9 @@ def test_use_partial_ingest(tmp_path):
     res_data = use_res.json()
     assert res_data["status"] == "ok"
     assert "imported" in res_data
+    assert client.get(f"/api/sync/jobs/{job_id}").json()["partial_decision"] == "imported"
+    assert client.post(f"/api/sync/jobs/{job_id}/discard-partial").json()["partial_decision"] == "imported"
+    assert client.post(f"/api/sync/jobs/{job_id}/use-partial").json()["imported"] == 0
 
 
 def test_authorization_user_isolation_sync(tmp_path):
@@ -183,6 +186,28 @@ def test_authorization_user_isolation_sync(tmp_path):
     cancel_res = client.post(f"/api/sync/jobs/{alice_job_id}/cancel")
     assert cancel_res.status_code == 404
     assert cancel_res.json()["error"]["code"] == "NOT_FOUND"
+
+    for action in ("use-partial", "discard-partial"):
+        response = client.post(f"/api/sync/jobs/{alice_job_id}/{action}")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "NOT_FOUND"
+
+
+def test_discard_partial_api_persists_across_restart(tmp_path):
+    from food_khata.jobs.db import create_job
+
+    client, data_root, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    account_id = _link_account(client)
+    job = client.post("/api/sync/jobs", json={"account_id": account_id}).json()
+    create_job(app_db, job_id="discard-api", user_id=job["user_id"], account_id=account_id,
+               provider="zomato", status="failed")
+    assert client.post("/api/sync/jobs/discard-api/discard-partial").json()["partial_decision"] == "discarded"
+    restarted = TestClient(create_app(tmp_path / "dummy.db", app_db_path=app_db, data_root=data_root), base_url="http://127.0.0.1:8765")
+    authenticate_client(restarted, username="alice", is_owner=True)
+    assert restarted.get("/api/sync/jobs/discard-api").json()["partial_decision"] == "discarded"
+    assert restarted.post("/api/sync/jobs/discard-api/discard-partial").json()["partial_decision"] == "discarded"
+    assert restarted.post("/api/sync/jobs/discard-api/use-partial").status_code == 400
 
 
 def test_job_limits_enforced_409(tmp_path, monkeypatch):

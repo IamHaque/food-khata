@@ -1,0 +1,1 @@
+Legacy partial-import decisions are recovered from retained `IMPORTED_PARTIAL` job events during migration. If those events were pruned before migration, the earlier decision cannot be determined from the app database and remains pending.

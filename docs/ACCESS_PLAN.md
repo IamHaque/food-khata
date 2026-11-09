@@ -422,7 +422,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | DONE | 2026-11-10 | 8c1c276; trunk verify all pass 104.92s; parent synthetic 1440/390 regression and visual review pass; App mounting belongs to AC-17 | B6 |
-| AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
+| AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-10 | fb01fb2 merged; parent verify 95.32s and independent crash/API/visual audit pass; trunk verify pending | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
@@ -466,7 +466,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-001 | 2026-11-09 | FX-06 | Spec asked for emerald and violet accents | Tested emerald and indigo accents | Violet is not defined in VALID_ACCENTS (palette is emerald, indigo, amber, rose, slate) | No negative impact, tested 2 valid accents | Accepted |
 | DEV-002 | 2026-11-09 | AC-08 | Planned split if over 450 lines | Kept as single coherent story (~1200 diff lines including crypto & tests) | Splitting would create complex partial abstractions across AEAD and context | Clean single atomic commit | Accepted |
 
-| DEV-003 | 2026-11-10 | AC-15 | C-1 lacks durable partial discard decision | Add persisted partial decision and additive API support | Independent audit reproduced reload and import/discard inconsistency | Preserve import idempotence and user isolation; no deletion of imported orders | In progress |
+| DEV-003 | 2026-11-10 | AC-15 | C-1 lacks durable partial discard decision | Add persisted partial decision and additive API support | Independent audit reproduced reload and import/discard inconsistency | Preserve import idempotence and user isolation; no deletion of imported orders | Implemented and audited |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -481,7 +481,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Resolved by f2d4a44; trunk 8c1c276 typecheck passes |
 
-| BL-009 | 2026-11-10 | AC-15 audit | use_partial accepts queued jobs; restrict actions to valid partial lifecycle states in crash fix | P1 | Included in current fix dispatch |
+| BL-009 | 2026-11-10 | AC-15 audit | use_partial accepts queued jobs; restrict actions to valid partial lifecycle states in crash fix | P1 | Resolved by fb01fb2; partial lifecycle actions restricted |
 
 ### 5.5 Blockers
 
@@ -619,4 +619,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-15 | T8 | terra-high | 5 | review | a46fb9a; durable decisions implemented; parent verify and independent persistence audit pending |
 | 2026-11-10 | AC-15 | T6 | sol-medium | 2 | F3 | Reproduced analytics/decision crash mismatch and non-atomic migration; mobile imported capture incorrect |
 | 2026-11-10 | AC-15 | T8 | terra-high | 6 | review | fb01fb2; atomic receipt/migration and lifecycle fixes; parent verify and independent recheck pending |
-| 2026-11-10 | AC-15 | T6 | sol-medium | 3 | running | audit-AC-15-crash-fixed-20261110; transaction/restart/migration recheck |
+| 2026-11-10 | AC-15 | T6 | sol-medium | 3 | pass | Atomic receipt and migration; crash/restart/concurrency/ownership/CSRF plus 1440/390 visuals independently verified |
