@@ -624,4 +624,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-15 | T6 | sol-medium | 3 | pass | Atomic receipt and migration; crash/restart/concurrency/ownership/CSRF plus 1440/390 visuals independently verified |
 | 2026-11-10 | AC-17 | T3 | terra-high | 1 | review | ef376c0; parent verification and independent auth/cache/visual review pending |
 | 2026-11-10 | AC-17 | T6 | sol-medium | 1 | F3 | Cross-tab URL filter leakage; paused/code job banners misleading; stale completion notice |
-| 2026-11-10 | AC-17 | T5 | terra-high | 2 | running | fix-AC-17-audit-20261110; identity URL reset and accurate/acknowledged job banners |
+| 2026-11-10 | AC-17 | T5 | terra-high | 2 | review | 09522c9; cross-tab/return URL and banner fixes; parent verify and independent recheck pending |
+| 2026-11-10 | AC-17 | T6 | sol-medium | 2 | running | recheck-AC-17-20261110; identity leakage and banner regression recheck |
