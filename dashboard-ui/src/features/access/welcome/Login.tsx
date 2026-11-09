@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { authApi, ApiError } from "../api";
-import { notifyAuthChange } from "../auth";
+import { notifyAuthChange, safeReturnPath } from "../auth";
 import { useQueryClient } from "@tanstack/react-query";
 
 export interface LoginProps {
@@ -75,7 +75,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        navigate(returnUrl, { replace: true });
+        navigate(safeReturnPath(returnUrl), { replace: true });
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {

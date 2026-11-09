@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import '../styles/app.css';
 import AccessRoutes from '../features/access/routes';
-import { RequireAuth } from '../features/access/auth';
+import { RequireAuth, safeReturnPath } from '../features/access/auth';
 import { AccessBanners } from '../features/access/banners/AccessBanners';
 import { SessionControls } from '../features/access/banners/SessionControls';
 import { useAccounts } from '../features/access/api';
@@ -348,7 +348,7 @@ function Shell() {
 export function App() {
   const { pathname } = useLocation();
   useEffect(() => {
-    const onStorage = (event: StorageEvent) => { if (event.key === "food-khata-auth-change") window.location.reload(); };
+    const onStorage = (event: StorageEvent) => { if (event.key === "food-khata-auth-change") window.location.replace(safeReturnPath(window.location.pathname)); };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);

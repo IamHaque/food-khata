@@ -71,3 +71,13 @@ export function useLogout() {
     qc.clear();
   };
 }
+
+export function safeReturnPath(value: string): string {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin || !value.startsWith('/') || value.startsWith('//')) return '/';
+    return url.pathname;
+  } catch {
+    return '/';
+  }
+}
