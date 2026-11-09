@@ -1,5 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { authApi, ownerApi } from "./client";
+import { authApi, ownerApi, accountsApi } from "./client";
+
+export function useAccounts() {
+  return useQuery({
+    queryKey: ["accounts"],
+    queryFn: () => accountsApi.list(),
+    staleTime: 30_000,
+    retry: false,
+  });
+}
 
 export function useSetupStatus() {
   return useQuery({

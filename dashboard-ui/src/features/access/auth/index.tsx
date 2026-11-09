@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { authApi } from "../api";
-import { queryClient } from "../../app/providers";
+import { queryClient } from "../../../app/providers";
 
 export function useAuth() {
   return useQuery({

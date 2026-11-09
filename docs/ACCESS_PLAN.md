@@ -421,7 +421,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-11 | LAN mode and transport | B | P1 | DONE | 2026-11-09 | commit 2af129a; loopback default, --lan opt-in, host allow-list (400 on unknown), TLS cert/key and HTTPS secure cookies, provider traffic host-isolated, pytest 172 passed | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
-| AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
+| AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-10 | f2d4a44 merged; parent verify 99.65s and interactive 1440/390 pass; trunk verify and app mounting pending | B6 |
 | AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
 | AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-10 | 42efe37 + 9e1c313 merged; parent browser follow-up passed; trunk verify passed 89.76s; shared integration/typecheck inclusion pending | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
@@ -479,7 +479,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-105 | 2026-11-08 | Handoff | HTTPS as the default for `--lan` | P2 | Decide in AC-11 |
 | BL-106 | 2026-11-09 | Review | Run the browser suite in an environment that can install Chromium | P2 | Resolved by DEC-010: the executing agent has a preview browser |
 
-| BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Open |
+| BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Resolved by f2d4a44; trunk check pending |
 
 ### 5.5 Blockers
 
