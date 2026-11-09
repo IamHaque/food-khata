@@ -53,6 +53,9 @@ def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
 class SetupStatusResponse(BaseModel):
     has_owner: bool = Field(description="True if an owner account exists")
     registration_open: bool = Field(description="True if registration is currently open")
+    insecure_transport: bool = Field(
+        default=False, description="True if running on insecure HTTP transport"
+    )
 
 
 class RegisterRequest(BaseModel):
@@ -104,18 +107,28 @@ def _is_loopback_client(request: Request) -> bool:
 
 
 def _is_secure_request(request: Request) -> bool:
+    if getattr(request.app.state, "is_https", False):
+        return True
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
 
 @router.get("/setup-status", response_model=SetupStatusResponse)
-def setup_status(conn: Annotated[sqlite3.Connection, Depends(get_auth_db)]):
+def setup_status(
+    request: Request,
+    conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
+):
     """Check whether server setup is needed and if registration is open."""
     has_own = has_owner(conn)
     if not has_own:
         reg_open = True
     else:
         reg_open = is_registration_window_open(conn)
-    return SetupStatusResponse(has_owner=has_own, registration_open=reg_open)
+    is_secure = _is_secure_request(request)
+    return SetupStatusResponse(
+        has_owner=has_own,
+        registration_open=reg_open,
+        insecure_transport=not is_secure,
+    )
 
 
 @router.post("/register", response_model=UserResponse)

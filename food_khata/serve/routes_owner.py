@@ -61,6 +61,8 @@ def _is_loopback_client(request: Request) -> bool:
 
 
 def _is_secure_request(request: Request) -> bool:
+    if getattr(request.app.state, "is_https", False):
+        return True
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
 

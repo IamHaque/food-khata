@@ -1,7 +1,6 @@
 """Local, read-only dashboard API."""
 
 import inspect
-import ipaddress
 import json
 import logging
 import math
@@ -11,7 +10,6 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
-from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -43,6 +41,7 @@ from .routes_auth import router as auth_router
 from .routes_owner import router as owner_router
 from .routes_sync import router as sync_router
 from .schemas import Bill, Dashboard, FilterOptions, Filters, Health, Leaders, Orders, Slim
+from .security import get_allowed_hosts, validate_host_and_origin
 from .spending import spending
 
 
@@ -53,6 +52,8 @@ def create_app(
     app_db_path: Path | str | None = None,
     data_root: Path | str | None = None,
     lan: bool = False,
+    allow_hosts: list[str] | set[str] | None = None,
+    is_https: bool = False,
 ) -> FastAPI:
     app = FastAPI(title="Food Khata API")
     db_path = Path(db_path)
@@ -89,6 +90,8 @@ def create_app(
     app.state.data_root = resolved_data_root
     app.state.legacy_db_path = legacy_db
     app.state.lan = lan
+    app.state.allow_hosts = get_allowed_hosts(allow_hosts, lan=lan)
+    app.state.is_https = is_https
     init_app_db(resolved_app_db)
     from food_khata.jobs import JobControl, JobRunner
 
@@ -103,28 +106,13 @@ def create_app(
 
     @app.middleware("http")
     async def safety(request: Request, call_next):
-        try:
-            host = urlsplit("//" + request.headers.get("host", "")).hostname
-            local_host = host == "localhost" or bool(
-                host and ipaddress.ip_address(host).is_loopback
-            )
-        except ValueError:
-            local_host = False
-        origin = request.headers.get("origin")
-        if not lan and (
-            not local_host
-            or (
-                origin
-                and origin
-                not in {
-                    f"http://{request.headers.get('host')}",
-                    f"https://{request.headers.get('host')}",
-                }
-            )
-        ):
-            return JSONResponse(
-                {"error": {"code": "forbidden", "message": "Local requests only."}}, status_code=403
-            )
+        security_error = validate_host_and_origin(
+            request,
+            allowed_hosts=app.state.allow_hosts,
+            lan=app.state.lan,
+        )
+        if security_error is not None:
+            return security_error
         started = time.monotonic()
         try:
             response = await call_next(request)
