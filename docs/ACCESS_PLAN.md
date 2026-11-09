@@ -423,7 +423,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
 | AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
-| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
+| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-10 | 42efe37 + 9e1c313 merged; parent browser follow-up passed; trunk verify and shared integration pending | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
@@ -603,6 +603,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-16 | T2 | terra-medium | 2 | F3 | No implementation; reassigned to Terra High |
 | 2026-11-10 | AC-15 | T2 | terra-medium | 3 | F3 | No code or completed checks; reassigned to SOL Medium |
 | 2026-11-10 | AC-16 | T2 | terra-high | 3 | review | commit 42efe37; browser scenarios and screenshots reported; parent verify running |
-| 2026-11-10 | AC-15 | T2 | sol-medium | 4 | running | resume-AC-15-sol-20261110; complete sync UI and local API helpers |
-| 2026-11-10 | AC-14 | T6 | sol-medium | 1 | running | audit-AC-14-20261110; independent scenario and screenshot review before merge |
-| 2026-11-10 | AC-16 | T6 | sol-medium | 1 | running | audit-AC-16-20261110; independent owner API and visual review |
+| 2026-11-10 | AC-15 | T2 | sol-medium | 4 | review | commit 4ed6a68; independent audit pending |
+| 2026-11-10 | AC-14 | T6 | sol-medium | 1 | F3 | OTP handle, stale cache, JSON errors and dialog accessibility defects; fix dispatched |
+| 2026-11-10 | AC-16 | T6 | sol-medium | 1 | pass | API and static visuals pass; countdown announcement fixed; expiry/error/dialog follow-up passed |
+| 2026-11-10 | AC-14 | T5 | terra-high | 3 | running | fix-AC-14-audit-20261110; four findings plus access typechecking |
+| 2026-11-10 | AC-15 | T6 | terra-medium | 1 | running | audit-AC-15-20261110; independent API/scenario/visual review |
