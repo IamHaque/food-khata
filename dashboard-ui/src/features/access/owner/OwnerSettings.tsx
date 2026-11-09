@@ -69,7 +69,7 @@ function OwnerControls() {
         <Button variant="outline" disabled={busy} onClick={() => void windowAction(3600)}>1 hour</Button>
         <Button variant="outline" disabled={busy} onClick={() => void windowAction(null)}>Until closed</Button>
         <Button variant="destructive" disabled={busy} onClick={() => void windowAction()}>Close</Button>
-      </div><p aria-live="polite" className="text-sm text-muted-foreground">{status.data ? windowText : "Window status unavailable"}</p>
+      </div><p className="text-sm text-muted-foreground">{status.data ? windowText : "Window status unavailable"}</p>
     </section>
     <section className="space-y-3"><h2 className="text-lg font-semibold">Household join code</h2>
       <p className="text-sm text-muted-foreground">The existing code cannot be retrieved. Rotate to reveal a new code. Rotating makes the old code stop working.</p>
