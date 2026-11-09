@@ -403,8 +403,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-01 | Tracker and hygiene | A | P0 | DONE | 2026-11-09 | commit 565e6ea; brief.mjs lint passes (29 tables / 457 rows), clean venv pytest passes | A1 |
 | FX-02 | Fast verify harness | A | P0 | DONE | 2026-11-09 | commit 66a393a; fast verify ~20s, vitest pool 11.4s, audit pass | A1 |
 | FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
-| FX-03 | Lazy routes and bundle budget | A | P1 | TODO | — | — | A2 |
-| FX-05 | BaseChart primitive | A | P1 | TODO | — | — | A2 |
+| FX-03 | Lazy routes and bundle budget | A | P1 | IN_PROGRESS | — | — | A2 |
+| FX-05 | BaseChart primitive | A | P1 | IN_PROGRESS | — | — | A2 |
 | FX-06 | Browser QA suite | A | P0 | TODO | — | — | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | TODO | — | — | A4 |
 | GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
@@ -530,3 +530,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-01 | T1 | glm | 1 | pass | — |
 | 2026-11-09 | FX-02 | T3 | gemini-high | 1 | pass | T6 audit gemini-med pass |
 | 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
+| 2026-11-09 | FX-03 | T2 | beam | 1 | in_progress | — |
+| 2026-11-09 | FX-05 | T3 | gemini-high | 1 | in_progress | — |
