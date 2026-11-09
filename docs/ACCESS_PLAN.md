@@ -410,7 +410,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | GA | Redesign final acceptance | A | P0 | DONE | 2026-11-09 | commit 7adba9b; T9 audit pass (gemini-high); all 62 redesign + FX-01..FX-07 DONE; full verify.mjs pass | A4 |
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | DONE | 2026-11-09 | commit ebdaba7; interactive wireframes.html with 10 screens x 2 viewports (1440/390), 8 sync states, user approved (Wave B0 freeze) | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | DONE | 2026-11-09 | commit cc5cf95; early-stop fixed, lifetime_complete flag, batched checkpoints (33 writes vs 1053), pytest 129 passed | B1 |
-| AC-03 | Database robustness | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-03-1 to gemini-med | B1 |
+| AC-03 | Database robustness | B | P0 | DONE | 2026-11-09 | commit 516ca75; WAL mode, busy timeout, order quarantine table, incremental ingest, pytest 133 passed | B1 |
 | AC-04 | Sync service | B | P0 | TODO | — | — | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | TODO | — | — | B2 |
@@ -524,6 +524,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-01 | `node scripts/verify.mjs . --backend` | all pass (wireframes.html verified; user approval obtained) | 32 s | ebdaba7 |
 | 2026-11-09 | AC-05 | `node scripts/verify.mjs . --backend; audit-AC-05-1` | all pass (pytest 124 passed, FakeProvider tests, 979 vitest; audit pass) | 33 s | 35c74bb |
 | 2026-11-09 | AC-02 | `node scripts/verify.mjs . --backend` | all pass (pytest 129 passed, sync checkpoints batched, 979 vitest) | 34 s | cc5cf95 |
+| 2026-11-09 | AC-03 | `node scripts/verify.mjs . --backend` | all pass (pytest 133 passed, WAL concurrency, quarantine, 979 vitest) | 61 s | 516ca75 |
 
 ### 5.9 Changelog
 
@@ -543,6 +544,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-01 | Interactive access wireframes v2 created at docs/access/wireframes.html and approved by user | ebdaba7 |
 | 2026-11-09 | AC-05 | Provider linking service, two-step login handles (10m TTL), FakeProvider test double, and session disconnect | 35c74bb |
 | 2026-11-09 | AC-02 | Fixed sync early-stop bug, added lifetime_complete preservation, batched checkpoints (5 pages/50 details), and added MODE_LABELS | cc5cf95 |
+| 2026-11-09 | AC-03 | Enabled WAL mode and busy timeout on AnalyticsDB/readonly connections, added quarantine table and incremental ingest | 516ca75 |
 
 ### 5.10 Delegation ledger
 
@@ -558,7 +560,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | GA | T9 | gemini-high | 1 | pass | — |
 | 2026-11-09 | AC-01 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | AC-02 | T8 | deepseek | 1 | pass | — |
-| 2026-11-09 | AC-03 | T8 | gemini-med | 1 | running | — |
+| 2026-11-09 | AC-03 | T8 | gemini-med | 1 | pass | — |
 | 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high pass |
 
 
