@@ -477,6 +477,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-105 | 2026-11-08 | Handoff | HTTPS as the default for `--lan` | P2 | Decide in AC-11 |
 | BL-106 | 2026-11-09 | Review | Run the browser suite in an environment that can install Chromium | P2 | Resolved by DEC-010: the executing agent has a preview browser |
 
+| BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Open |
+
 ### 5.5 Blockers
 
 | ID | Date | Story | Description | Needed to unblock | Status |
@@ -600,6 +602,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-15 | T2 | deepseek | 2 | F1 | Free usage limit reached; failover to Terra Medium |
 | 2026-11-10 | AC-16 | T2 | terra-medium | 2 | F3 | No implementation; reassigned to Terra High |
 | 2026-11-10 | AC-15 | T2 | terra-medium | 3 | F3 | No code or completed checks; reassigned to SOL Medium |
-| 2026-11-10 | AC-16 | T2 | terra-high | 3 | running | resume-AC-16-high-20261110; show/copy code on rotation using existing API |
+| 2026-11-10 | AC-16 | T2 | terra-high | 3 | review | commit 42efe37; browser scenarios and screenshots reported; parent verify running |
 | 2026-11-10 | AC-15 | T2 | sol-medium | 4 | running | resume-AC-15-sol-20261110; complete sync UI and local API helpers |
 | 2026-11-10 | AC-14 | T6 | sol-medium | 1 | running | audit-AC-14-20261110; independent scenario and screenshot review before merge |
+| 2026-11-10 | AC-16 | T6 | sol-medium | 1 | running | audit-AC-16-20261110; independent owner API and visual review |
