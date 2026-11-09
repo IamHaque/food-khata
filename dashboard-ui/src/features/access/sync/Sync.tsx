@@ -4,11 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { AuthShell, StatusBanner } from "../primitives";
-import { isSyncActive, syncApi, SYNC_LOGOUT_WARNING, type SyncJob, type SyncMode } from "./api";
-
-export function SyncLogoutWarning({ jobs }: { jobs: SyncJob[] }) {
-  return jobs.some(isSyncActive) ? <StatusBanner variant="warning">{SYNC_LOGOUT_WARNING}</StatusBanner> : null;
-}
+import { isSyncActive, syncApi, type SyncJob, type SyncMode } from "./api";
+export { SyncLogoutWarning } from "./SyncLogoutWarning";
 
 const modes: [SyncMode, string, string][] = [
   ["new", "New orders", "Fetch orders added since your last sync."],
@@ -70,7 +67,7 @@ export function SyncJobScreen({ jobId }: { jobId: string }) {
       {job.status === "done" && <StatusBanner variant="success">Sync complete. Your dashboard is ready.</StatusBanner>}
     </>}
     {action.error && <StatusBanner variant="error">{action.error.message}</StatusBanner>}
-    <Link className="block underline" to="/">Back to Home</Link>
+    <Link className="block underline" to="/home">Back to Home</Link>
   </section>;
 }
 
@@ -78,5 +75,5 @@ export default function Sync() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
   const accountId = params.get("account");
-  return <AuthShell title="Sync orders">{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId} accountId={accountId} onStarted={job => setParams({ job: job.id })} /> : <><p>Choose a linked account from Home to start a sync.</p><Link to="/">Back to Home</Link></>}</AuthShell>;
+  return <AuthShell title="Sync orders">{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId} accountId={accountId} onStarted={job => setParams({ job: job.id })} /> : <><p>Choose a linked account from Home to start a sync.</p><Link to="/home">Back to Home</Link></>}</AuthShell>;
 }

@@ -11,6 +11,8 @@ type Step = "phone" | "code";
 
 export function LinkAccount() {
   const navigate = useNavigate();
+  const timer = React.useRef<ReturnType<typeof setTimeout>>();
+  React.useEffect(() => () => clearTimeout(timer.current), []);
   const queryClient = useQueryClient();
   const [provider, setProvider] = React.useState("fake");
   const [phone, setPhone] = React.useState("");
@@ -46,7 +48,7 @@ export function LinkAccount() {
       await accountsApi.linkVerify(handle, code);
       await queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setSuccess(true);
-      setTimeout(() => navigate("/"), 800);
+      timer.current = setTimeout(() => navigate("/home"), 800);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "HANDLE_EXPIRED" || err.code === "INVALID_HANDLE") {

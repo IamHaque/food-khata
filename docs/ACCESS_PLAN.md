@@ -424,7 +424,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-14 | Accounts and linking screens | B | P0 | DONE | 2026-11-10 | 8c1c276; trunk verify all pass 104.92s; parent synthetic 1440/390 regression and visual review pass; App mounting belongs to AC-17 | B6 |
 | AC-15 | Sync screens and background states | B | P0 | DONE | 2026-11-10 | a917762 + 1d4e11b; trunk verify 94.05s; independent crash/restart/API/1440/390 audit pass | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
-| AC-17 | Dashboard integration | B | P1 | IN_PROGRESS | 2026-11-10 | Wave B7 implementation dispatched after B6 trunk verification | B7 |
+| AC-17 | Dashboard integration | B | P1 | IN_PROGRESS | 2026-11-10 | 09522c9 merged; parent verify 79.48s; independent isolation/API/visual recheck pass; trunk verify pending | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
 
@@ -467,6 +467,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-002 | 2026-11-09 | AC-08 | Planned split if over 450 lines | Kept as single coherent story (~1200 diff lines including crypto & tests) | Splitting would create complex partial abstractions across AEAD and context | Clean single atomic commit | Accepted |
 
 | DEV-003 | 2026-11-10 | AC-15 | C-1 lacks durable partial discard decision | Add persisted partial decision and additive API support | Independent audit reproduced reload and import/discard inconsistency | Preserve import idempotence and user isolation; no deletion of imported orders | Implemented and audited |
+
+| DEV-004 | 2026-11-10 | AC-17 | Finished-while-away notice needs initial acknowledgement baseline | Browser-local per-user marker; first visit ignores completions older than five minutes | Avoid replaying ancient successes without prior browser state | Later unacknowledged completions remain visible; independently accepted | Accepted |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -625,4 +627,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-17 | T3 | terra-high | 1 | review | ef376c0; parent verification and independent auth/cache/visual review pending |
 | 2026-11-10 | AC-17 | T6 | sol-medium | 1 | F3 | Cross-tab URL filter leakage; paused/code job banners misleading; stale completion notice |
 | 2026-11-10 | AC-17 | T5 | terra-high | 2 | review | 09522c9; cross-tab/return URL and banner fixes; parent verify and independent recheck pending |
-| 2026-11-10 | AC-17 | T6 | sol-medium | 2 | running | recheck-AC-17-20261110; identity leakage and banner regression recheck |
+| 2026-11-10 | AC-17 | T6 | sol-medium | 2 | pass | 6 supplied plus 2 independent synthetic regressions; delayed-response cache/preset isolation and visuals pass |

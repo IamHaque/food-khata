@@ -45,6 +45,11 @@ import {
   Menu,
 } from 'lucide-react';
 import '../styles/app.css';
+import AccessRoutes from '../features/access/routes';
+import { RequireAuth, safeReturnPath } from '../features/access/auth';
+import { AccessBanners } from '../features/access/banners/AccessBanners';
+import { SessionControls } from '../features/access/banners/SessionControls';
+import { useAccounts } from '../features/access/api';
 
 const pages = [
   { name: 'Overview', icon: LayoutDashboard },
@@ -88,6 +93,7 @@ function Shell() {
   const location = useLocation();
   const { filters, metadata, notice } = useFilters();
   const health = useHealth(filters);
+  const accounts = useAccounts();
 
   return (
     <TooltipProvider>
@@ -162,7 +168,8 @@ function Shell() {
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 min-w-0">
+          <SessionControls />
           <SyncStatusChip />
           <CommandPalette />
           <ThemeControl />
@@ -265,6 +272,7 @@ function Shell() {
 
         {/* Content Area */}
         <div className="shell-content flex-1 min-w-0 max-w-[1440px] mx-auto w-full flex flex-col px-4 sm:px-6 lg:px-8 py-6 space-y-5 overflow-x-hidden">
+          <AccessBanners />
           {notice && (
             <p
               role="status"
@@ -276,7 +284,7 @@ function Shell() {
             </p>
           )}
 
-          {metadata.isError ? (
+          {accounts.data?.length === 0 ? null : metadata.isError ? (
             <div
               role="alert"
               className="rounded-lg border border-destructive/20 bg-destructive/10 p-3.5 text-xs text-destructive flex items-center justify-between"
@@ -297,7 +305,7 @@ function Shell() {
             <FilterBar />
           )}
 
-          {health.data && (!health.data.history_complete || !health.data.details_complete) && (
+          {accounts.data?.length !== 0 && health.data && (!health.data.history_complete || !health.data.details_complete) && (
             <p
               className="partial rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2"
               role="status"
@@ -309,7 +317,7 @@ function Shell() {
 
           {/* Routes */}
           <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
-            <Suspense fallback={<PageSkeleton />}>
+            {accounts.data?.length !== 0 && <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Overview />} />
                 <Route path="/spending" element={<AnalyticsPage page="Spending" />} />
@@ -323,7 +331,7 @@ function Shell() {
                 {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
-            </Suspense>
+            </Suspense>}
           </main>
 
           <footer className="border-t pt-3 text-center text-xs text-muted-foreground">
@@ -338,9 +346,12 @@ function Shell() {
 }
 
 export function App() {
-  return (
-    <FilterProvider>
-      <Shell />
-    </FilterProvider>
-  );
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => { if (event.key === "food-khata-auth-change") window.location.replace(safeReturnPath(window.location.pathname)); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/sync", "/settings"].includes(pathname)) return <AccessRoutes />;
+  return <RequireAuth><FilterProvider><Shell /></FilterProvider></RequireAuth>;
 }

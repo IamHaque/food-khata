@@ -1,3 +1,4 @@
+import { userStorageKey } from './user-storage';
 export const SAVED_VIEWS_KEY = 'food-khata-views';
 
 export interface SavedView {
@@ -49,7 +50,7 @@ export function loadSavedViews(): SavedView[] {
     const storage = safeGetStorage();
     if (!storage) return [];
 
-    const raw = storage.getItem(SAVED_VIEWS_KEY);
+    const raw = storage.getItem(userStorageKey(SAVED_VIEWS_KEY));
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
@@ -84,7 +85,7 @@ function persistViews(views: SavedView[]): void {
   try {
     const storage = safeGetStorage();
     if (!storage) return;
-    storage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views));
+    storage.setItem(userStorageKey(SAVED_VIEWS_KEY), JSON.stringify(views));
     dispatchViewsChanged();
   } catch {
     // Ignore storage quota, security or permission errors

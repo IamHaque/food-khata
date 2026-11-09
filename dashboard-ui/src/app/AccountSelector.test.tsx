@@ -3,6 +3,8 @@ import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import { AccountSelector } from './AccountSelector';
 
+vi.mock('../features/access/api', () => ({ useAccounts: () => ({ data: [{ local_id: 'alice', phone: 'Alice Cooper', provider: 'SWIGGY', order_count: 842 }, { local_id: 'bob', phone: 'Bob', provider: 'ZOMATO', order_count: 120 }] }) }));
+
 vi.mock('./FilterContext', () => ({
   useFilters: () => ({
     filters: { account_ids: [] },
