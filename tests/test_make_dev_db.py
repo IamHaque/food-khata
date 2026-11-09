@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from food_khata.db import AnalyticsDB
-from food_khata.serve.app import create_app
+from food_khata.serve.app import authenticate_client, create_app
 from scripts.make_dev_db import DB_FILENAME, generate, self_check
 
 TABLES = ("orders", "accounts", "restaurants", "delivery_addresses", "order_items")
@@ -42,6 +42,7 @@ def test_generate_creates_rich_database(tmp_path):
 def test_generated_database_serves_health_endpoint(tmp_path):
     db_path = generate(tmp_path, seed=42)
     client = TestClient(create_app(db_path), base_url="http://127.0.0.1")
+    authenticate_client(client)
 
     response = client.get("/api/meta/data-health")
 

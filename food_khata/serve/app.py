@@ -10,7 +10,7 @@ import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -19,6 +19,18 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from food_khata.auth import (
+    CSRF_COOKIE_NAME,
+    CSRF_HEADER_NAME,
+    SESSION_COOKIE_NAME,
+    STATE_CHANGING_METHODS,
+    connect_app_db,
+    create_test_user_session,
+    get_session,
+    init_app_db,
+    validate_csrf_token,
+)
+
 from .behavior import behavior
 from .charts import kpi_history, overview, remaining
 from .db import connect_readonly, database_version
@@ -26,12 +38,19 @@ from .filters import build_where
 from .food import food
 from .metrics import FEES_SQL, compute_metrics, monthly_totals
 from .places import places
+from .routes_accounts import router as accounts_router
+from .routes_auth import router as auth_router
+from .routes_owner import router as owner_router
+from .routes_sync import router as sync_router
 from .schemas import Bill, Dashboard, FilterOptions, Filters, Health, Leaders, Orders, Slim
 from .spending import spending
 
 
 def create_app(
-    db_path: Path | str, dev: bool = False, dist_path: Path | str | None = None
+    db_path: Path | str,
+    dev: bool = False,
+    dist_path: Path | str | None = None,
+    app_db_path: Path | str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Food Khata API")
     db_path = Path(db_path)
@@ -40,6 +59,16 @@ def create_app(
         if dist_path is not None
         else Path(__file__).resolve().parents[2] / "dashboard-ui" / "dist"
     )
+    if app_db_path is not None:
+        resolved_app_db = Path(app_db_path)
+    else:
+        p = Path(db_path)
+        if str(db_path) != ":memory:" and not str(db_path).startswith("file:"):
+            resolved_app_db = p.parent / "app.db"
+        else:
+            resolved_app_db = Path("app.db")
+    app.state.app_db_path = resolved_app_db
+    init_app_db(resolved_app_db)
     cache = {}
     cache_lock = threading.Lock()
 
@@ -81,6 +110,55 @@ def create_app(
             )
         return response
 
+    UNAUTHENTICATED_ROUTES = frozenset({
+        "/health",
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/setup-status",
+        "/api/auth/csrf",
+    })
+
+    @app.middleware("http")
+    async def auth_and_csrf(request: Request, call_next):
+        raw_path = request.url.path
+        path = raw_path.rstrip("/") if raw_path != "/" else "/"
+        is_api = path.startswith("/api/") or path == "/api"
+
+        session_id = request.cookies.get(SESSION_COOKIE_NAME) or request.headers.get("x-session-id")
+        session = None
+        if session_id:
+            conn = connect_app_db(app.state.app_db_path)
+            try:
+                session = get_session(conn, session_id)
+            finally:
+                conn.close()
+
+        request.state.session = session
+        request.state.user = session
+
+        is_unauthenticated = (path in UNAUTHENTICATED_ROUTES) or (not is_api)
+        if not is_unauthenticated and session is None:
+            return JSONResponse(
+                {"error": {"code": "unauthorized", "message": "Authentication required."}},
+                status_code=401,
+            )
+
+        if is_api and request.method in STATE_CHANGING_METHODS:
+            csrf_header = request.headers.get(CSRF_HEADER_NAME)
+            expected_csrf = None
+            if session:
+                expected_csrf = session.get("csrf_token")
+            if not expected_csrf:
+                expected_csrf = request.cookies.get(CSRF_COOKIE_NAME)
+
+            if not validate_csrf_token(csrf_header, expected_csrf):
+                return JSONResponse(
+                    {"error": {"code": "forbidden", "message": "Invalid or missing CSRF token."}},
+                    status_code=403,
+                )
+
+        return await call_next(request)
+
     @app.exception_handler(RequestValidationError)
     @app.exception_handler(ValidationError)
     async def invalid(request, exc):
@@ -91,7 +169,15 @@ def create_app(
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request, exc):
-        codes = {404: "not_found", 503: "database_not_found"}
+        codes = {
+            401: "unauthorized",
+            403: "forbidden",
+            404: "not_found",
+            409: "conflict",
+            422: "validation_error",
+            429: "too_many_requests",
+            503: "database_not_found",
+        }
         return JSONResponse(
             {
                 "error": {
@@ -100,6 +186,7 @@ def create_app(
                 }
             },
             status_code=exc.status_code,
+            headers=dict(exc.headers) if exc.headers else None,
         )
 
     @app.exception_handler(sqlite3.DatabaseError)
@@ -587,6 +674,15 @@ def create_app(
     ):
         return leaders(conn, filters, "item", min_qty, page, page_size, sort, direction)
 
+    @app.get("/health", tags=["system"])
+    def health_check():
+        return {"status": "ok"}
+
+    app.include_router(auth_router)
+    app.include_router(owner_router)
+    app.include_router(accounts_router)
+    app.include_router(sync_router)
+
     @app.get("/{path:path}", include_in_schema=False)
     def static(path: str):
         if path.startswith("api/") or path == "api" or path.startswith("data/") or path == "data":
@@ -632,3 +728,20 @@ def create_app(
         raise HTTPException(404, "UI build missing; run the dashboard UI separately.")
 
     return app
+
+
+def authenticate_client(
+    client: Any,
+    username: str = "testuser",
+    is_owner: bool = True,
+) -> tuple[str, str]:
+    """Helper for test suites to attach an authenticated session and CSRF headers to a TestClient."""
+    app_db_path = getattr(client.app.state, "app_db_path", None)
+    if not app_db_path:
+        raise ValueError("Client app has no app_db_path configured")
+    session_id, csrf_token = create_test_user_session(app_db_path, username, is_owner)
+    client.cookies.set(SESSION_COOKIE_NAME, session_id)
+    client.cookies.set(CSRF_COOKIE_NAME, csrf_token)
+    client.headers[CSRF_HEADER_NAME] = csrf_token
+    return session_id, csrf_token
+
