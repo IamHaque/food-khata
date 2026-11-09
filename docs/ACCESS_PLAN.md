@@ -481,6 +481,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Resolved by f2d4a44; trunk 8c1c276 typecheck passes |
 
+| BL-009 | 2026-11-10 | AC-15 audit | use_partial accepts queued jobs; restrict actions to valid partial lifecycle states in crash fix | P1 | Included in current fix dispatch |
+
 ### 5.5 Blockers
 
 | ID | Date | Story | Description | Needed to unblock | Status |
@@ -615,4 +617,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-14 | T5 | terra-high | 3 | review | f2d4a44; parent interactive checks 1440/390 pass; parent verify running |
 | 2026-11-10 | AC-15 | T6 | terra-medium | 1 | F3 | Discard not durable; imported partial can be misreported as unimported; fix dispatched |
 | 2026-11-10 | AC-15 | T8 | terra-high | 5 | review | a46fb9a; durable decisions implemented; parent verify and independent persistence audit pending |
-| 2026-11-10 | AC-15 | T6 | sol-medium | 2 | running | audit-AC-15-durable-20261110; migration/order/crash/isolation review |
+| 2026-11-10 | AC-15 | T6 | sol-medium | 2 | F3 | Reproduced analytics/decision crash mismatch and non-atomic migration; mobile imported capture incorrect |
+| 2026-11-10 | AC-15 | T8 | terra-high | 6 | running | fix-AC-15-crash-20261110; atomic analytics receipt and migration plus failure-injection tests |
