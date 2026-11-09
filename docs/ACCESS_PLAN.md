@@ -411,9 +411,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | DONE | 2026-11-09 | commit ebdaba7; interactive wireframes.html with 10 screens x 2 viewports (1440/390), 8 sync states, user approved (Wave B0 freeze) | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | DONE | 2026-11-09 | commit cc5cf95; early-stop fixed, lifetime_complete flag, batched checkpoints (33 writes vs 1053), pytest 129 passed | B1 |
 | AC-03 | Database robustness | B | P0 | DONE | 2026-11-09 | commit 516ca75; WAL mode, busy timeout, order quarantine table, incremental ingest, pytest 133 passed | B1 |
-| AC-04 | Sync service | B | P0 | TODO | — | — | B2 |
+| AC-04 | Sync service | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-04-1 to beam | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
-| AC-06 | Auth core | B | P0 | TODO | — | — | B2 |
+| AC-06 | Auth core | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-06-1 to gemini-high | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | TODO | — | — | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | TODO | — | — | B4 |
 | AC-09 | Job runner | B | P0 | TODO | — | — | B4 |
@@ -562,5 +562,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-02 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | AC-03 | T8 | gemini-med | 1 | pass | — |
 | 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high pass |
+| 2026-11-09 | AC-04 | T8 | beam | 1 | running | — |
+| 2026-11-09 | AC-06 | T8 | gemini-high | 1 | running | — |
 
 
