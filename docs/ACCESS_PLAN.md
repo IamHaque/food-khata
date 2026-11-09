@@ -408,7 +408,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-06 | Browser QA suite | A | P0 | DONE | 2026-11-09 | commit 4c884fe; 28 Playwright checks pass (axe 0 violations, responsive, perf) | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | DONE | 2026-11-09 | commit ab244cb; 40 snapshots across 5 routes x 2 viewports x 2 modes x 2 accents, 12 problems review pack, recharts cleanup | A4 |
 | GA | Redesign final acceptance | A | P0 | DONE | 2026-11-09 | commit 7adba9b; T9 audit pass (gemini-high); all 62 redesign + FX-01..FX-07 DONE; full verify.mjs pass | A4 |
-| AC-01 | Wireframes v2 and flow freeze | B | P0 | TODO | — | — | B0 |
+| AC-01 | Wireframes v2 and flow freeze | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-01-1 to beam | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | TODO | — | — | B1 |
 | AC-03 | Database robustness | B | P0 | TODO | — | — | B1 |
 | AC-04 | Sync service | B | P0 | TODO | — | — | B2 |
@@ -550,5 +550,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-06 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-07 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | GA | T9 | gemini-high | 1 | pass | — |
+| 2026-11-09 | AC-01 | T2 | beam | 1 | running | — |
 
 
