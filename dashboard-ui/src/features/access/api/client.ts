@@ -98,6 +98,7 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
       (data as any)?.error_code;
     const message =
       errObj?.message ??
+      (data as any)?.detail?.message ??
       (data as any)?.detail ??
       (data as any)?.message ??
       res.statusText;
@@ -125,7 +126,7 @@ export const authApi = {
     return data;
   },
   async login(username: string, password: string) {
-    const data = await request<{ user: components["schemas"]["UserResponse"]; csrf_token: string }>("/api/auth/login", {
+    const data = await request<{ user: components["schemas"]["food_khata__serve__routes_auth__UserResponse"]; csrf_token: string }>("/api/auth/login", {
       method: "POST",
       body: { username, password },
     });
@@ -136,13 +137,13 @@ export const authApi = {
     return request("/api/auth/logout", { method: "POST" });
   },
   async me() {
-    return request<components["schemas"]["UserResponse"]>("/api/auth/me");
+    return request<components["schemas"]["food_khata__serve__routes_auth__UserResponse"]>("/api/auth/me");
   },
   async setupStatus() {
     return request<components["schemas"]["SetupStatusResponse"]>("/api/auth/setup-status");
   },
   async register(username: string, password: string, join_code?: string) {
-    return request<components["schemas"]["UserResponse"]>("/api/auth/register", {
+    return request<components["schemas"]["food_khata__serve__routes_auth__UserResponse"]>("/api/auth/register", {
       method: "POST",
       body: { username, password, join_code: join_code || undefined },
     });
@@ -165,10 +166,10 @@ export const accountsApi = {
       body: { handle, code, account_name },
     });
   },
-  async verifyAgain(accountId: string, code?: string) {
+  async verifyAgain(accountId: string) {
     return request<components["schemas"]["VerifyAgainResponse"]>(`/api/accounts/${accountId}/verify-again`, {
       method: "POST",
-      body: code ? { code } : {},
+      body: {},
     });
   },
   async disconnect(accountId: string, wipe_data = false) {
@@ -184,7 +185,7 @@ export const ownerApi = {
     return request<{ has_owner: boolean; is_loopback: boolean }>("/api/owner/setup");
   },
   async setup(data: { username: string; password: string; setup_code?: string; adopt_data?: boolean }) {
-    return request<components["schemas"]["UserResponse"]>("/api/owner/setup", {
+    return request<components["schemas"]["food_khata__serve__routes_owner__UserResponse"]>("/api/owner/setup", {
       method: "POST",
       body: data,
     });
@@ -195,7 +196,7 @@ export type LoginRequest = components["schemas"]["LoginRequest"];
 export type LoginResponse = components["schemas"]["LoginResponse"];
 export type RegisterRequest = components["schemas"]["RegisterRequest"];
 export type SetupStatusResponse = components["schemas"]["SetupStatusResponse"];
-export type UserResponse = components["schemas"]["UserResponse"];
+export type UserResponse = components["schemas"]["food_khata__serve__routes_auth__UserResponse"];
 export type CsrfResponse = components["schemas"]["CsrfResponse"];
 export type StatusResponse = components["schemas"]["StatusResponse"];
 export { z };

@@ -2,11 +2,16 @@ import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { accountsApi, ApiError } from "../api";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Step = "phone" | "code";
 
 export function LinkAccount() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [provider, setProvider] = React.useState("fake");
   const [phone, setPhone] = React.useState("");
   const [code, setCode] = React.useState("");
@@ -39,6 +44,7 @@ export function LinkAccount() {
     setSubmitting(true);
     try {
       await accountsApi.linkVerify(handle, code);
+      await queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setSuccess(true);
       setTimeout(() => navigate("/"), 800);
     } catch (err) {
@@ -74,20 +80,20 @@ export function LinkAccount() {
         {step === "phone" && (
           <form onSubmit={sendCode} className="space-y-4">
             <div className="space-y-1">
-              <label className="block text-sm font-medium">Provider</label>
-              <select
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              >
-                <option value="fake">Fake (testing)</option>
-                <option value="zomato">Zomato</option>
-                <option value="swiggy">Swiggy</option>
-              </select>
+              <label htmlFor="provider" className="block text-sm font-medium">Provider</label>
+              <Select value={provider} onValueChange={setProvider}>
+                <SelectTrigger id="provider"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fake">Fake (testing)</SelectItem>
+                  <SelectItem value="zomato">Zomato</SelectItem>
+                  <SelectItem value="swiggy">Swiggy</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
-              <label className="block text-sm font-medium">Phone number</label>
-              <input
+              <label htmlFor="phone" className="block text-sm font-medium">Phone number</label>
+              <Input
+                id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -95,13 +101,13 @@ export function LinkAccount() {
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               />
             </div>
-            <button
+            <Button
               type="submit"
               disabled={submitting}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               {submitting ? "Sending…" : "Send code"}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -109,8 +115,9 @@ export function LinkAccount() {
           <form onSubmit={verify} className="space-y-4">
             <p className="text-sm text-muted-foreground">Enter the code sent to {phone}.</p>
             <div className="space-y-1">
-              <label className="block text-sm font-medium">SMS OTP code</label>
-              <input
+              <label htmlFor="code" className="block text-sm font-medium">SMS OTP code</label>
+              <Input
+                id="code"
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
@@ -119,16 +126,16 @@ export function LinkAccount() {
               />
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="submit"
                 disabled={submitting}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
               >
                 {submitting ? "Verifying…" : "Verify"}
-              </button>
-              <button type="button" onClick={resetToPhone} className="rounded-md border px-4 py-2 text-sm">
+              </Button>
+              <Button variant="outline" type="button" onClick={resetToPhone} className="rounded-md border px-4 py-2 text-sm">
                 Back
-              </button>
+              </Button>
             </div>
           </form>
         )}

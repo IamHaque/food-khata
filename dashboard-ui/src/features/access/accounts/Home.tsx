@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { useAccounts } from "../api";
 import { accountsApi, ApiError } from "../api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 function statusChip(status: string) {
   const cls =
@@ -21,9 +24,10 @@ function statusChip(status: string) {
 export function Home() {
   const navigate = useNavigate();
   const accounts = useAccounts();
+  const disconnectTrigger = React.useRef<HTMLButtonElement | null>(null);
   const [disconnecting, setDisconnecting] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
-  const [verifyHandle, setVerifyHandle] = React.useState<{ id: string; handle: string } | null>(null);
+  const [verifyHandle, setVerifyHandle] = React.useState<string | null>(null);
   const [verifyCode, setVerifyCode] = React.useState("");
 
   const handleDisconnect = async (id: string, wipe: boolean) => {
@@ -41,7 +45,7 @@ export function Home() {
   const startVerifyAgain = async (id: string) => {
     try {
       const res = await accountsApi.verifyAgain(id);
-      setVerifyHandle({ id, handle: res.handle });
+      setVerifyHandle(res.handle);
     } catch (err) {
       if (err instanceof ApiError) setMessage(err.message);
     }
@@ -50,7 +54,7 @@ export function Home() {
   const submitVerifyAgain = async () => {
     if (!verifyHandle) return;
     try {
-      await accountsApi.verifyAgain(verifyHandle.id, verifyCode);
+      await accountsApi.linkVerify(verifyHandle, verifyCode);
       setMessage("Verified successfully.");
       setVerifyHandle(null);
       setVerifyCode("");
@@ -111,48 +115,33 @@ export function Home() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setDisconnecting(acc.id)}
+                  onClick={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(acc.id); }}
                   className="rounded-md border px-2 py-1 text-xs font-medium"
                 >
                   Disconnect
                 </button>
               </div>
-              {disconnecting === acc.id && (
-                <div className="rounded-md border bg-muted p-3 space-y-2">
-                  <p className="text-sm">Keep or wipe this account's data?</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDisconnect(acc.id, false)}
-                      className="rounded-md border px-2 py-1 text-xs"
-                    >
-                      Keep data
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDisconnect(acc.id, true)}
-                      className="rounded-md border px-2 py-1 text-xs text-destructive"
-                    >
-                      Wipe data
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDisconnecting(null)}
-                      className="rounded-md border px-2 py-1 text-xs"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
 
+        <Dialog open={disconnecting !== null} onOpenChange={(open) => { if (!open) setDisconnecting(null); }}>
+          <DialogContent className="w-[calc(100%-2rem)] rounded-lg" onCloseAutoFocus={(event) => { event.preventDefault(); disconnectTrigger.current?.focus(); }}>
+            <DialogTitle>Disconnect account?</DialogTitle>
+            <DialogDescription>Keep or wipe this account's data?</DialogDescription>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => disconnecting && handleDisconnect(disconnecting, false)}>Keep data</Button>
+              <Button variant="destructive" onClick={() => disconnecting && handleDisconnect(disconnecting, true)}>Wipe data</Button>
+              <Button variant="outline" onClick={() => setDisconnecting(null)}>Cancel</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {verifyHandle && (
           <div className="rounded-md border bg-muted p-3 space-y-2">
             <p className="text-sm font-medium">Verify again</p>
-            <input
+            <Input
+              aria-label="SMS code"
               type="text"
               value={verifyCode}
               onChange={(e) => setVerifyCode(e.target.value)}

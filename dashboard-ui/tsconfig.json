@@ -24,6 +24,7 @@
     "src/entry.tsx",
     "src/legacy.d.ts",
     "src/app",
+    "src/features/access",
     "src/lib/api.ts",
     "src/lib/filters.ts",
     "src/hooks/api.ts",
