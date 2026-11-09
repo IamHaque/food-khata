@@ -405,7 +405,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | DONE | 2026-11-09 | commit a6892ca; entry index-*.js 97.7 kB gzip <= 250 kB, manualChunks split | A2 |
 | FX-05 | BaseChart primitive | A | P1 | DONE | 2026-11-09 | commit b180101; 14 charts migrated, 732 lines net deleted, 979 unit tests pass | A2 |
-| FX-06 | Browser QA suite | A | P0 | IN_PROGRESS | — | — | A3 |
+| FX-06 | Browser QA suite | A | P0 | DONE | 2026-11-09 | commit 4c884fe; 28 Playwright checks pass (axe 0 violations, responsive, perf) | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | TODO | — | — | A4 |
 | GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | TODO | — | — | B0 |
@@ -453,12 +453,13 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-014 | 2026-11-09 | FX-02 | vitest isolate:false breaks fullscreen tests; adopted worker threads pool + disableConsoleIntercept bringing unit tests to 11.4s and fast path to ~20s. | Performance without test breakage | Fast verify test configuration | Accepted |
 | DEC-015 | 2026-11-09 | FX-03 | Measured entry chunk at 97.7 kB gzip; configured manualChunks for echarts and react vendor; check-bundle.mjs validates <= 250 kB budget. | Confirmed entry chunk budget and route lazy loading | Bundle budget & code splitting | Accepted |
 | DEC-016 | 2026-11-09 | FX-05 | Implemented declarative BaseChart wrapper with lifecycle stability, ResizeObserver, theme sync, and event delegation; migrated 14 charts deleting 732 net lines. | Eliminates boilerplate while preserving 100% test parity | Chart component architecture | Accepted |
+| DEC-017 | 2026-11-09 | FX-06 | Integrated @axe-core/playwright in Playwright E2E suite; tested emerald and indigo accents across 5 routes; added aria-label on Orders progress bar to achieve 0 axe violations. | Automated a11y & responsive QA | E2E test suite | Accepted |
 
 ### 5.3 Deviation log
 
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — | — | — |
+| DEV-001 | 2026-11-09 | FX-06 | Spec asked for emerald and violet accents | Tested emerald and indigo accents | Violet is not defined in VALID_ACCENTS (palette is emerald, indigo, amber, rose, slate) | No negative impact, tested 2 valid accents | Accepted |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -515,6 +516,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-02 | `node scripts/verify.mjs . --backend; audit-FX-02-1` | all pass (guardrails, typecheck, lint, unit 11.98s, ruff, pytest 114 passed; audit pass) | 33 s | 66a393a |
 | 2026-11-09 | FX-03 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (entry 97.7 kB gzip, vitest 967 passed, pytest 114 passed) | 42 s | a6892ca |
 | 2026-11-09 | FX-05 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (vitest 979 passed, pytest 114 passed, entry 97.7 kB gzip) | 41 s | b180101 |
+| 2026-11-09 | FX-06 | `npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (28 Playwright checks, axe 0 violations, responsive, perf) | 52 s | 4c884fe |
 
 ### 5.9 Changelog
 
@@ -528,6 +530,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-02 | Vitest pool configuration (unit ~11s), stage order early exit in verify.mjs, and instant worktree bootstrap | 66a393a |
 | 2026-11-09 | FX-03 | React.lazy page routing, ECharts/React manualChunks, and scripts/check-bundle.mjs entry budget enforcement (97.7 kB gzip) | a6892ca |
 | 2026-11-09 | FX-05 | BaseChart primitive implemented, 14 chart components migrated, 732 lines net deleted | b180101 |
+| 2026-11-09 | FX-06 | Playwright browser QA suite added with axe a11y, responsive viewports, and performance gates | 4c884fe |
 
 ### 5.10 Delegation ledger
 
@@ -538,4 +541,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | FX-03 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-05 | T3 | gemini-high | 1 | pass | — |
-| 2026-11-09 | FX-06 | T2 | beam | 1 | in_progress | — |
+| 2026-11-09 | FX-06 | T2 | beam | 1 | pass | — |
