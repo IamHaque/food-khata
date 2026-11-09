@@ -1,0 +1,71 @@
+"""Food Khata background job runner and lifecycle control (AC-09)."""
+
+from __future__ import annotations
+
+from .db import (
+    add_job_event,
+    count_user_active_jobs,
+    create_job,
+    get_job,
+    get_job_events,
+    init_jobs_tables,
+    list_jobs,
+    mark_interrupted_on_startup,
+    prune_job_events,
+    update_job,
+)
+from .runner import (
+    MAX_QUEUED_PER_USER,
+    MAX_RUNNING_PER_USER,
+    ActiveJob,
+    JobControl,
+    JobLimitExceeded,
+    JobNotFoundError,
+    JobPayload,
+    JobRunner,
+)
+from .states import (
+    ACTIVE_STATES,
+    ALL_STATES,
+    CANCELLED,
+    DONE,
+    FAILED,
+    INTERRUPTED,
+    NEEDS_CODE,
+    PAUSED,
+    QUEUED,
+    RUNNING,
+    TERMINAL_STATES,
+)
+
+__all__ = [
+    "JobControl",
+    "JobRunner",
+    "JobLimitExceeded",
+    "JobNotFoundError",
+    "JobPayload",
+    "ActiveJob",
+    "init_jobs_tables",
+    "mark_interrupted_on_startup",
+    "create_job",
+    "get_job",
+    "update_job",
+    "list_jobs",
+    "add_job_event",
+    "get_job_events",
+    "count_user_active_jobs",
+    "prune_job_events",
+    "MAX_RUNNING_PER_USER",
+    "MAX_QUEUED_PER_USER",
+    "QUEUED",
+    "RUNNING",
+    "NEEDS_CODE",
+    "PAUSED",
+    "DONE",
+    "FAILED",
+    "CANCELLED",
+    "INTERRUPTED",
+    "ALL_STATES",
+    "TERMINAL_STATES",
+    "ACTIVE_STATES",
+]

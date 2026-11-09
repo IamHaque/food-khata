@@ -90,6 +90,14 @@ def create_app(
     app.state.legacy_db_path = legacy_db
     app.state.lan = lan
     init_app_db(resolved_app_db)
+    from food_khata.jobs import JobControl, JobRunner
+
+    job_runner = JobRunner(resolved_app_db, data_root=resolved_data_root)
+    job_runner.mark_interrupted_on_startup()
+    app.state.job_runner = job_runner
+    app.state.job_control = JobControl(
+        resolved_app_db, data_root=resolved_data_root, runner=job_runner
+    )
     cache = {}
     cache_lock = threading.Lock()
 

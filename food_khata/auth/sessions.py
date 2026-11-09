@@ -67,6 +67,9 @@ def init_app_db(db_path: Path | str) -> None:
         CREATE INDEX IF NOT EXISTS idx_registration_attempts ON registration_attempts(ip, attempted_at);
         """)
         conn.commit()
+        from ..jobs.db import init_jobs_tables
+
+        init_jobs_tables(conn)
     finally:
         conn.close()
 
