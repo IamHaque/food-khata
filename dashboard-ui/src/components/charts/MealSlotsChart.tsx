@@ -12,7 +12,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import {
   Popover,
   PopoverContent,
@@ -24,13 +24,6 @@ import {
   resolveChartTheme,
   type ChartTheme,
 } from "@/lib/chart-theme";
-import { useFilters } from "@/app/FilterContext";
-import { subscribeTheme } from "@/app/theme";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 import {
   hourToMealSlot,
   type CrossFilterDimension,
@@ -476,13 +469,6 @@ export function MealSlotsInfoContent() {
   );
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function MealSlotsChart({
   data,
@@ -540,137 +526,28 @@ export function MealSlotsChart({
     if (empty) return undefined;
     return computeMealSlotsTakeaway(data) ?? undefined;
   }, [captionProp, empty, data]);
-
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(
-    `meal-slots-chart-${Math.random().toString(36).slice(2, 9)}`,
-  );
-  const chartId = idRef.current;
-
-  const callbacksRef = React.useRef({ filtersContext, onSlotClick });
-  callbacksRef.current = { filtersContext, onSlotClick };
-
-  const dataRef = React.useRef({ data, activeSelectedSlots });
-  dataRef.current = { data, activeSelectedSlots };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
+  const highlightMatcher = React.useCallback((dimension: string, value: string) => {
+    if (dimension === "meal_slot" || dimension === "hour") {
+      let slotKey = value;
+      if (dimension === "hour") {
+        try {
+          slotKey = hourToMealSlot(value);
+        } catch {
+          return undefined;
+        }
+      }
+      const norm = String(slotKey).trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const idx = MEAL_SLOT_KEYS.indexOf(norm as any);
+      if (idx !== -1) {
+        return {
+          type: "highlight",
+          seriesIndex: 0,
+          dataIndex: idx,
+        };
+      }
     }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const current = dataRef.current;
-    const option = buildMealSlotsOption({
-      data: current.data ?? [],
-      theme,
-      selectedSlots: current.activeSelectedSlots,
-      prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+    return undefined;
   }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, (dimension, value) => {
-      if (dimension === "meal_slot" || dimension === "hour") {
-        let slotKey = value;
-        if (dimension === "hour") {
-          try {
-            slotKey = hourToMealSlot(value);
-          } catch {
-            return undefined;
-          }
-        }
-        const norm = String(slotKey).trim().toLowerCase().replace(/[\s-]+/g, "_");
-        const idx = MEAL_SLOT_KEYS.indexOf(norm as any);
-        if (idx !== -1) {
-          return {
-            type: "highlight",
-            seriesIndex: 0,
-            dataIndex: idx,
-          };
-        }
-      }
-      return undefined;
-    });
-
-    const handleClick = (params: unknown) => {
-      handleMealSlotClick(
-        params,
-        callbacksRef.current.filtersContext,
-        callbacksRef.current.onSlotClick,
-      );
-    };
-
-    const handleMouseOver = (params: any) => {
-      const slotKey =
-        params?.data?.key ||
-        (typeof params?.dataIndex === "number"
-          ? MEAL_SLOT_KEYS[params.dataIndex]
-          : null);
-      if (slotKey) {
-        emitHighlight(chartId, "meal_slot", slotKey);
-      }
-    };
-
-    const handleMouseOut = () => {
-      emitClear(chartId);
-    };
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleMouseOver);
-    chart.on("mouseout", handleMouseOut);
-    chart.on("globalout", handleMouseOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleMouseOver);
-      chart.off("mouseout", handleMouseOut);
-      chart.off("globalout", handleMouseOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [empty, isLoading, error, data, activeSelectedSlots, applyUpdate]);
 
   const infoPopover = (
     <Popover>
@@ -693,7 +570,7 @@ export function MealSlotsChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={caption}
@@ -711,15 +588,33 @@ export function MealSlotsChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={title}
-        className="cursor-pointer"
-        style={{ height: 320, width: "100%" }}
-      />
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildMealSlotsOption({
+          data: currentData ?? [],
+          theme,
+          selectedSlots: activeSelectedSlots,
+          prefersReducedMotion,
+        })
+      }
+      onClick={(params) => {
+        handleMealSlotClick(
+          params,
+          filtersContext,
+          onSlotClick,
+        );
+      }}
+      highlightDimension="meal_slot"
+      getHighlightValue={(params) =>
+        params?.data?.key ||
+        (typeof params?.dataIndex === "number"
+          ? MEAL_SLOT_KEYS[params.dataIndex]
+          : undefined)
+      }
+      highlightMatcher={highlightMatcher}
+      registerModules={registerOnce}
+      ariaLabel={title}
+    />
   );
 }
 

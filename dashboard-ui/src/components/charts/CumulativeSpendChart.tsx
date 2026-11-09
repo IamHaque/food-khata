@@ -12,7 +12,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   getCurrentChartTheme,
@@ -24,14 +24,7 @@ import {
   computeCumulativeSpendTakeaway,
   formatRupees,
 } from "@/lib/captions";
-import { subscribeTheme } from "@/app/theme";
-import { useFilters } from "@/app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-  isDimensionMatch,
-} from "@/lib/highlight-bus";
+import { isDimensionMatch } from "@/lib/highlight-bus";
 
 let registered = false;
 function registerOnce() {
@@ -310,13 +303,6 @@ export interface CumulativeSpendChartProps {
   onMonthClick?: (month: string) => void;
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function CumulativeSpendChart({
   data,
@@ -337,12 +323,6 @@ export function CumulativeSpendChart({
   onMonthClick,
 }: CumulativeSpendChartProps) {
   const filters = useOptionalFilters();
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(
-    `cumulative-spend-${Math.random().toString(36).slice(2, 9)}`
-  );
-  const chartId = idRef.current;
 
   const processed = React.useMemo(
     () => processCumulativeSpendData(data, milestoneStep),
@@ -376,51 +356,12 @@ export function CumulativeSpendChart({
     }));
   }, [data, processed]);
 
-  const callbacksRef = React.useRef({ onMonthClick, filters, processed });
-  callbacksRef.current = { onMonthClick, filters, processed };
-
-  const dataRef = React.useRef({ data, milestoneStep });
-  dataRef.current = { data, milestoneStep };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opt = buildCumulativeSpendOption({
-      data: dataRef.current.data,
-      theme,
-      prefersReducedMotion,
-      milestoneStep: dataRef.current.milestoneStep,
-    });
-
-    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty) return;
-
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, {
+  const highlightMatcher = React.useMemo(
+    () => ({
       dimension: "month",
-      matcher: (dim, val) => {
+      matcher: (dim: string, val: string) => {
         if (dim !== "month") return false;
-        const currentProcessed = callbacksRef.current.processed;
-        const months = currentProcessed.map((p) => p.label);
+        const months = processed.map((p) => p.label);
         const matchIdx = months.findIndex((m) =>
           isDimensionMatch("month", m, val)
         );
@@ -429,11 +370,13 @@ export function CumulativeSpendChart({
         }
         return undefined;
       },
-    });
+    }),
+    [processed]
+  );
 
-    const handleOver = (params: any) => {
-      const currentProcessed = callbacksRef.current.processed;
-      const months = currentProcessed.map((p) => p.label);
+  const getMonthFromParams = React.useCallback(
+    (params: any) => {
+      const months = processed.map((p) => p.label);
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (
         !month &&
@@ -442,86 +385,10 @@ export function CumulativeSpendChart({
       ) {
         month = months[params.dataIndex];
       }
-      if (month) {
-        emitHighlight(chartId, "month", String(month));
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const handleMouseLeave = () => emitClear(chartId);
-    node.addEventListener("mouseleave", handleMouseLeave);
-
-    const handleClick = (params: any) => {
-      const currentProcessed = callbacksRef.current.processed;
-      const months = currentProcessed.map((p) => p.label);
-      let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
-      if (
-        !month &&
-        typeof params?.dataIndex === "number" &&
-        months[params.dataIndex]
-      ) {
-        month = months[params.dataIndex];
-      }
-      if (month) {
-        if (callbacksRef.current.onMonthClick) {
-          callbacksRef.current.onMonthClick(String(month));
-        } else if (callbacksRef.current.filters?.applyCrossFilter) {
-          callbacksRef.current.filters.applyCrossFilter("month", String(month));
-        }
-      }
-    };
-    chart.on("click", handleClick);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    resizeObserver.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      chart.off("click", handleClick);
-      node.removeEventListener("mouseleave", handleMouseLeave);
-      unregister();
-      resizeObserver.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, isEmpty, applyUpdate]);
-
-  React.useEffect(() => {
-    if (isEmpty) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    const observer = new MutationObserver(() => {
-      applyUpdate();
-    });
-    if (typeof document !== "undefined" && document.documentElement) {
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-accent"],
-      });
-    }
-
-    return () => {
-      unsubscribe();
-      observer.disconnect();
-    };
-  }, [data, isEmpty, milestoneStep, applyUpdate]);
+      return month ? String(month) : undefined;
+    },
+    [processed]
+  );
 
   const infoPopover = (
     <Popover>
@@ -557,7 +424,7 @@ export function CumulativeSpendChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={effectiveCaption}
@@ -573,19 +440,34 @@ export function CumulativeSpendChart({
       onShowTableChange={onShowTableChange}
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
-    >
-      <div className="space-y-2">
-        <div className="sr-only" aria-live="polite">
-          {effectiveCaption || "Cumulative expenditure trajectory across monthly periods with milestone markers."}
-        </div>
-        <div
-          ref={containerRef}
-          role="img"
-          aria-label={`${title}: ${subtitle}`}
-          style={{ height: 320, width: "100%" }}
-        />
-      </div>
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildCumulativeSpendOption({
+          data: currentData,
+          theme,
+          prefersReducedMotion,
+          milestoneStep,
+        })
+      }
+      onSelect={(month) => {
+        if (onMonthClick) {
+          onMonthClick(String(month));
+        } else if (filters?.applyCrossFilter) {
+          filters.applyCrossFilter("month", String(month));
+        }
+      }}
+      crossFilterDimension="month"
+      getCrossFilterValue={getMonthFromParams}
+      highlightDimension="month"
+      getHighlightValue={getMonthFromParams}
+      highlightMatcher={highlightMatcher}
+      registerModules={registerOnce}
+      ariaLabel={`${title}: ${subtitle}`}
+      ariaDescription={
+        effectiveCaption ||
+        "Cumulative expenditure trajectory across monthly periods with milestone markers."
+      }
+    />
   );
 }
 

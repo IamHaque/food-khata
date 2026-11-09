@@ -11,7 +11,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import {
   Popover,
   PopoverContent,
@@ -23,13 +23,6 @@ import {
   resolveChartTheme,
   type ChartTheme,
 } from "@/lib/chart-theme";
-import { useFilters } from "@/app/FilterContext";
-import { subscribeTheme } from "@/app/theme";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 import {
   hourToMealSlot,
   weekdayToDayType,
@@ -395,13 +388,6 @@ export function buildHourWeekdayHeatmapOption(
   return option;
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export interface HourWeekdayHeatmapChartProps {
   data?: readonly HourWeekdayDatum[] | null;
@@ -474,113 +460,29 @@ export function HourWeekdayHeatmapChart({
     emptyReason ||
     "No order timing data available";
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(
-    `hour-weekday-heatmap-${Math.random().toString(36).slice(2, 9)}`,
-  );
-  const chartId = idRef.current;
-
-  const callbacksRef = React.useRef({ filters, onCellClick });
-  callbacksRef.current = { filters, onCellClick };
-
-  const dataRef = React.useRef({ data });
-  dataRef.current = { data };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
+  const handleHover = React.useCallback((params: any) => {
+    let hour: number | null = null;
+    if (Array.isArray(params?.value) && params.value.length >= 1) {
+      hour = Number(params.value[0]);
+    } else if (Array.isArray(params?.data) && params.data.length >= 1) {
+      hour = Number(params.data[0]);
     }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildHourWeekdayHeatmapOption(dataRef.current.data ?? [], {
-      theme,
-      reducedMotion: prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+    if (hour != null && Number.isFinite(hour) && hour >= 0 && hour <= 23) {
+      try {
+        return hourToMealSlot(hour);
+      } catch {
+        // ignore
+      }
+    }
+    return undefined;
   }, []);
 
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, () => undefined);
-
-    const handleClick = (params: unknown) => {
-      handleHourWeekdayCellClick(
-        params,
-        callbacksRef.current.filters,
-        callbacksRef.current.onCellClick,
-      );
-    };
-
-    const handleOver = (params: any) => {
-      let hour: number | null = null;
-      if (Array.isArray(params?.value) && params.value.length >= 1) {
-        hour = Number(params.value[0]);
-      } else if (Array.isArray(params?.data) && params.data.length >= 1) {
-        hour = Number(params.data[0]);
-      }
-      if (hour != null && Number.isFinite(hour) && hour >= 0 && hour <= 23) {
-        try {
-          const slot = hourToMealSlot(hour);
-          emitHighlight(chartId, "meal_slot", slot);
-        } catch {
-          // ignore
-        }
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [empty, isLoading, error, data, applyUpdate]);
+  const handleClick = React.useCallback(
+    (params: unknown) => {
+      handleHourWeekdayCellClick(params, filters, onCellClick);
+    },
+    [filters, onCellClick]
+  );
 
   const infoPopover = (
     <Popover>
@@ -620,7 +522,7 @@ export function HourWeekdayHeatmapChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={caption ?? undefined}
@@ -638,19 +540,25 @@ export function HourWeekdayHeatmapChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div className="overflow-x-auto select-custom-scroll pb-2">
-        <div className="min-w-[640px]">
-          <div
-            ref={containerRef}
-            role="img"
-            aria-label={title}
-            className="cursor-pointer"
-            style={{ height: 280, width: "100%" }}
-          />
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildHourWeekdayHeatmapOption(currentData ?? [], {
+          theme,
+          reducedMotion: prefersReducedMotion,
+        })
+      }
+      onClick={handleClick}
+      highlightDimension="meal_slot"
+      getHighlightValue={handleHover}
+      chartHeight={280}
+      chartWrapper={(chartNode) => (
+        <div className="overflow-x-auto select-custom-scroll pb-2">
+          <div className="min-w-[640px]">{chartNode}</div>
         </div>
-      </div>
-    </ChartCard>
+      )}
+      registerModules={registerOnce}
+      ariaLabel={title}
+    />
   );
 }
 

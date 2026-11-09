@@ -10,21 +10,13 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import {
-  getCurrentChartTheme,
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
 } from "../../lib/chart-theme";
 import { computePlatformTakeaway, formatRupees } from "../../lib/captions";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "../../lib/highlight-bus";
-import { useFilters } from "../../app/FilterContext";
-import { subscribeTheme } from "../../app/theme";
 
 export interface PlatformSplitItem {
   platform: string;
@@ -249,13 +241,6 @@ export function buildPlatformSplitOption({
   };
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function PlatformSplitChart({
   data,
@@ -276,14 +261,6 @@ export function PlatformSplitChart({
   fullscreen,
   onFullscreenChange,
 }: PlatformSplitChartProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const autoIdRef = React.useRef<string | null>(null);
-  if (!autoIdRef.current) {
-    autoIdRef.current = `platform-chart-${Math.random().toString(36).slice(2, 9)}`;
-  }
-  const chartId = autoIdRef.current;
-
   const filterContext = useOptionalFilters();
   const activeSelectedPlatforms =
     selectedPlatformsProp ?? filterContext?.filters.platforms ?? [];
@@ -332,50 +309,10 @@ export function PlatformSplitChart({
     [onPlatformClick, filterContext]
   );
 
-  const handleSliceClickRef = React.useRef(handleSliceClick);
-  React.useEffect(() => {
-    handleSliceClickRef.current = handleSliceClick;
-  });
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-    registerPlatformChartModules();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opt = buildPlatformSplitOption({
-      data: data ?? [],
-      theme,
-      prefersReducedMotion,
-      selectedPlatforms: activeSelectedPlatforms,
-      totalSpend,
-    });
-
-    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-  }, [data, activeSelectedPlatforms, totalSpend, isEmpty, isLoading, error]);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-
-    registerPlatformChartModules();
-
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, {
+  const highlightMatcher = React.useMemo(
+    () => ({
       dimension: "platform",
-      matcher: (dim, val, ch) => {
+      matcher: (dim: string, val: string, ch: any) => {
         if (dim === "platform") {
           const opt = (ch.getOption?.() || {}) as Record<string, unknown>;
           const seriesList = (Array.isArray(opt.series) ? opt.series : []) as Array<{
@@ -410,80 +347,12 @@ export function PlatformSplitChart({
         }
         return undefined;
       },
-    });
-
-    const handleMouseOver = (params: unknown) => {
-      const p = params as { name?: string };
-      if (p && p.name) {
-        emitHighlight(chartId, "platform", p.name);
-      }
-    };
-
-    const handleMouseOut = () => {
-      emitClear(chartId);
-    };
-
-    const handleClick = (params: unknown) => {
-      const p = params as { name?: string; event?: { event?: MouseEvent } };
-      if (p && p.name) {
-        const isMulti = Boolean(p.event?.event?.shiftKey);
-        handleSliceClickRef.current(p.name, isMulti);
-      }
-    };
-
-    chart.on("mouseover", handleMouseOver);
-    chart.on("mouseout", handleMouseOut);
-    chart.on("globalout", handleMouseOut);
-    chart.on("click", handleClick);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    resizeObserver.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("mouseover", handleMouseOver);
-      chart.off("mouseout", handleMouseOut);
-      chart.off("globalout", handleMouseOut);
-      chart.off("click", handleClick);
-      unregister();
-      resizeObserver.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, isEmpty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    const observer = new MutationObserver(() => {
-      applyUpdate();
-    });
-    if (typeof document !== "undefined" && document.documentElement) {
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-accent"],
-      });
-    }
-
-    return () => {
-      unsubscribe();
-      observer.disconnect();
-    };
-  }, [applyUpdate]);
+    }),
+    []
+  );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={computedCaption}
@@ -498,18 +367,24 @@ export function PlatformSplitChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={`Donut chart of spend share by platform, total spend ${formatRupees(
-          totalSpend
-        )}`}
-        tabIndex={0}
-        style={{ height: 320, width: "100%", minHeight: 280 }}
-        className="cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring rounded-md"
-      />
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildPlatformSplitOption({
+          data: currentData ?? [],
+          theme,
+          prefersReducedMotion,
+          selectedPlatforms: activeSelectedPlatforms,
+          totalSpend,
+        })
+      }
+      onSelect={(platform, isMulti) => handleSliceClick(String(platform), Boolean(isMulti))}
+      highlightDimension="platform"
+      highlightMatcher={highlightMatcher}
+      registerModules={registerPlatformChartModules}
+      ariaLabel={`Donut chart of spend share by platform, total spend ${formatRupees(
+        totalSpend
+      )}`}
+    />
   );
 }
 

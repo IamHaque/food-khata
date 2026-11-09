@@ -12,11 +12,10 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { SegmentedControl } from "../ui/segmented-control";
 import {
-  getCurrentChartTheme,
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
@@ -27,13 +26,6 @@ import {
   type DietDatumLike,
 } from "../../lib/captions";
 import { tokenAlpha } from "../../lib/tokens";
-import { subscribeTheme } from "../../app/theme";
-import { useFilters } from "../../app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "../../lib/highlight-bus";
 
 export interface DietSplitItem extends DietDatumLike {
   diet: string;
@@ -107,13 +99,6 @@ function registerDietChartModules() {
 }
 registerDietChartModules();
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function getDietColor(diet: string, theme: ChartTheme): string {
   const norm = diet.trim().toLowerCase().replace(/[_\s-]+/g, "");
@@ -499,11 +484,6 @@ export function DietSplitTrendChart({
   onFullscreenChange,
 }: DietSplitTrendChartProps) {
   const filters = useOptionalFilters();
-  const [, setTick] = React.useState(0);
-
-  React.useEffect(() => {
-    return subscribeTheme(() => setTick((t) => t + 1));
-  }, []);
 
   const [viewModeState, setViewModeState] =
     React.useState<DietViewMode>(defaultViewMode);
@@ -600,145 +580,50 @@ export function DietSplitTrendChart({
     return `Monthly dietary volume trend across ${validMonthly.length} months`;
   }, [empty, resolvedEmptyReason, viewMode, validDiet, validMonthly]);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(
-    `diet-chart-${Math.random().toString(36).slice(2, 9)}`,
-  );
-  const chartId = idRef.current;
-
-  // Track active veg filter
   const activeVegFilter = filters?.filters?.veg ?? "all";
 
-  const callbacksRef = React.useRef({ onDietClick, filters, viewMode });
-  callbacksRef.current = { onDietClick, filters, viewMode };
-
-  const dataRef = React.useRef({ viewMode, validDiet, validMonthly, activeVegFilter });
-  dataRef.current = { viewMode, validDiet, validMonthly, activeVegFilter };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const current = dataRef.current;
-    let option: EChartsCoreOption;
-    if (current.viewMode === "split") {
-      option = buildDietDonutOption({
-        data: current.validDiet,
-        theme,
-        prefersReducedMotion,
-        selectedCategory: current.activeVegFilter,
-      });
-    } else {
-      option = buildDietTrendOption({
-        data: current.validMonthly,
-        theme,
-        prefersReducedMotion,
-      });
-    }
-
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-
-    registerDietChartModules();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, {
-      dimension: "diet",
-    });
-
-    const handleClick = (params: any) => {
+  const handleClick = React.useCallback(
+    (params: any) => {
       const rawCategory =
         params?.name || params?.seriesName || params?.data?.diet || "";
       if (!rawCategory) return;
       const targetFilter = normalizeDietFilterValue(rawCategory);
-      const curFilters = callbacksRef.current.filters;
 
-      if (curFilters?.update) {
-        if (curFilters.filters.veg === targetFilter) {
-          curFilters.update({ veg: "all" });
+      if (filters?.update) {
+        if (filters.filters.veg === targetFilter) {
+          filters.update({ veg: "all" });
         } else {
-          curFilters.update({ veg: targetFilter });
+          filters.update({ veg: targetFilter });
         }
       }
 
-      callbacksRef.current.onDietClick?.(rawCategory, targetFilter);
-    };
+      onDietClick?.(rawCategory, targetFilter);
+    },
+    [filters, onDietClick]
+  );
 
-    const handleOver = (params: any) => {
-      if (callbacksRef.current.viewMode === "trend") {
-        const month =
-          params?.axisValueLabel || params?.axisValue || params?.name;
-        if (month) emitHighlight(chartId, "month", String(month));
+  const spec = React.useCallback(
+    (
+      _chartData: any,
+      theme: ChartTheme,
+      { prefersReducedMotion }: { prefersReducedMotion: boolean }
+    ) => {
+      if (viewMode === "split") {
+        return buildDietDonutOption({
+          data: validDiet,
+          theme,
+          prefersReducedMotion,
+          selectedCategory: activeVegFilter,
+        });
       }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  // Update chart options on data / mode / theme change
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [
-    empty,
-    isLoading,
-    error,
-    viewMode,
-    validDiet,
-    validMonthly,
-    activeVegFilter,
-    applyUpdate,
-  ]);
+      return buildDietTrendOption({
+        data: validMonthly,
+        theme,
+        prefersReducedMotion,
+      });
+    },
+    [viewMode, validDiet, validMonthly, activeVegFilter]
+  );
 
   const infoPopover = (
     <Popover>
@@ -795,7 +680,7 @@ export function DietSplitTrendChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={computedCaption ?? undefined}
@@ -811,27 +696,30 @@ export function DietSplitTrendChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
+      data={{ viewMode, validDiet, validMonthly, activeVegFilter }}
+      spec={spec}
+      onClick={handleClick}
+      highlightDimension={viewMode === "trend" ? "month" : "diet"}
+      getHighlightValue={(params) =>
+        viewMode === "trend"
+          ? params?.axisValueLabel || params?.axisValue || params?.name
+          : undefined
+      }
+      registerModules={registerDietChartModules}
+      ariaLabel={title}
+      ariaDescription={ariaDescription}
     >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <SegmentedControl
-            options={[
-              { value: "split", label: "Split" },
-              { value: "trend", label: "Trend" },
-            ]}
-            value={viewMode}
-            onChange={(v) => handleViewModeChange(v as DietViewMode)}
-          />
-        </div>
-        <div
-          ref={containerRef}
-          role="img"
-          aria-label={title}
-          aria-description={ariaDescription}
-          style={{ height: 320, width: "100%" }}
+      <div className="flex items-center justify-between">
+        <SegmentedControl
+          options={[
+            { value: "split", label: "Split" },
+            { value: "trend", label: "Trend" },
+          ]}
+          value={viewMode}
+          onChange={(v) => handleViewModeChange(v as DietViewMode)}
         />
       </div>
-    </ChartCard>
+    </BaseChart>
   );
 }
 

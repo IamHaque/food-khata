@@ -10,7 +10,7 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   getCurrentChartTheme,
@@ -18,12 +18,6 @@ import {
   resolveChartTheme,
   type ChartTheme,
 } from "@/lib/chart-theme";
-import { useFilters } from "@/app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -147,14 +141,6 @@ export function handleDayClick(
   return null;
 }
 
-function useOptionalFilters() {
-
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function buildCalendarHeatmapOption(
   data: readonly CalendarHeatmapDatum[] | null | undefined,
@@ -389,92 +375,25 @@ export function CalendarHeatmapChart({
   const caption = computeCalendarTakeaway(data, selectedYear);
   const empty = isEmpty || (allRows.length === 0 && !isLoading && !error);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(`calendar-heatmap-${Math.random().toString(36).slice(2, 9)}`);
-  const chartId = idRef.current;
+  const handleClick = React.useCallback(
+    (params: unknown) => {
+      handleDayClick(params, filters, onDayClick);
+    },
+    [filters, onDayClick]
+  );
 
-  const callbacksRef = React.useRef({ filters, onDayClick });
-  React.useEffect(() => {
-    callbacksRef.current = { filters, onDayClick };
-  });
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
+  const handleHover = React.useCallback((params: any) => {
+    let dateStr: string | null = null;
+    if (Array.isArray(params?.value)) dateStr = String(params.value[0]);
+    else if (params?.name) dateStr = String(params.name);
+    if (dateStr && dateStr.length >= 7) {
+      return dateStr.slice(0, 7);
     }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildCalendarHeatmapOption(data ?? [], {
-      year: selectedYear,
-      theme,
-      reducedMotion: prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [data, selectedYear]);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, () => undefined);
-
-    const handleClick = (params: unknown) => {
-      handleDayClick(params, callbacksRef.current.filters, callbacksRef.current.onDayClick);
-    };
-
-    const handleOver = (params: any) => {
-      let dateStr: string | null = null;
-      if (Array.isArray(params?.value)) dateStr = String(params.value[0]);
-      else if (params?.name) dateStr = String(params.name);
-      if (dateStr && dateStr.length >= 7) {
-        emitHighlight(chartId, "month", dateStr.slice(0, 7));
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) chart.resize();
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, applyUpdate]);
-
-  React.useEffect(() => {
-    applyUpdate();
-  }, [applyUpdate]);
+    return undefined;
+  }, []);
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={caption ?? undefined}
@@ -485,49 +404,55 @@ export function CalendarHeatmapChart({
       onRetry={onRetry}
       tableData={tableData}
       className={className}
-    >
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {yearSelectorVariant === "segmented" ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-medium">Year:</span>
-              <SegmentedControl
-                options={availableYears.map((y) => ({ value: y, label: y }))}
-                value={selectedYear}
-                onChange={handleYearChange}
-              />
-            </div>
-          ) : (
-            <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-              <span className="text-muted-foreground">Year:</span>
-              <select
-                aria-label="Calendar year"
-                value={selectedYear}
-                onChange={(e) => handleYearChange(e.target.value)}
-                className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
-              >
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
+      data={{ data, selectedYear }}
+      spec={(_d, theme, { prefersReducedMotion }) =>
+        buildCalendarHeatmapOption(data ?? [], {
+          year: selectedYear,
+          theme,
+          reducedMotion: prefersReducedMotion,
+        })
+      }
+      onClick={handleClick}
+      highlightDimension="month"
+      getHighlightValue={handleHover}
+      chartHeight={210}
+      chartWrapper={(chartNode) => (
         <div className="overflow-x-auto select-custom-scroll pb-2">
-          <div className="min-w-[750px]">
-            <div
-              ref={containerRef}
-              role="img"
-              aria-label={title}
-              className="cursor-pointer"
-              style={{ height: 210, width: "100%" }}
+          <div className="min-w-[750px]">{chartNode}</div>
+        </div>
+      )}
+      registerModules={registerOnce}
+      ariaLabel={title}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {yearSelectorVariant === "segmented" ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">Year:</span>
+            <SegmentedControl
+              options={availableYears.map((y) => ({ value: y, label: y }))}
+              value={selectedYear}
+              onChange={handleYearChange}
             />
           </div>
-        </div>
+        ) : (
+          <label className="flex items-center gap-2 text-xs font-medium text-foreground">
+            <span className="text-muted-foreground">Year:</span>
+            <select
+              aria-label="Calendar year"
+              value={selectedYear}
+              onChange={(e) => handleYearChange(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
-    </ChartCard>
+    </BaseChart>
   );
 }
 

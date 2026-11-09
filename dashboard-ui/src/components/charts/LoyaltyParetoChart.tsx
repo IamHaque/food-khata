@@ -12,10 +12,9 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
-  getCurrentChartTheme,
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
@@ -25,14 +24,7 @@ import {
   formatRupees,
   type LoyaltyParetoDatumLike,
 } from "../../lib/captions";
-import { subscribeTheme } from "../../app/theme";
-import { useFilters } from "../../app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-  isDimensionMatch,
-} from "../../lib/highlight-bus";
+import { isDimensionMatch } from "../../lib/highlight-bus";
 
 export interface LoyaltyParetoDatum extends LoyaltyParetoDatumLike {
   key?: string | null;
@@ -87,13 +79,6 @@ function registerLoyaltyParetoModules() {
 }
 registerLoyaltyParetoModules();
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export interface NormalizedLoyaltyItem {
   key: string;
@@ -498,15 +483,7 @@ export function LoyaltyParetoChart({
   fullscreen,
   onFullscreenChange,
 }: LoyaltyParetoChartProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
   const filterContext = useOptionalFilters();
-
-  const idRef = React.useRef<string | null>(null);
-  if (!idRef.current) {
-    idRef.current = `loyalty-pareto-chart-${Math.random().toString(36).slice(2, 9)}`;
-  }
-  const chartId = idRef.current;
 
   const { items: ranked, totalOrders } = React.useMemo(() => normalizeLoyaltyData(data), [data]);
   const limit = typeof maxItems === "number" && maxItems > 0 ? maxItems : 20;
@@ -547,52 +524,12 @@ export function LoyaltyParetoChart({
     return `Restaurant loyalty Pareto chart ranking ${topCount} restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: ${totalOrders}.`;
   }, [displayed, totalOrders]);
 
-  const callbacksRef = React.useRef({ onRestaurantClick, filterContext, displayed });
-  callbacksRef.current = { onRestaurantClick, filterContext, displayed };
-
-  const dataRef = React.useRef({ data, maxItems });
-  dataRef.current = { data, maxItems };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opt = buildLoyaltyParetoOption({
-      data: dataRef.current.data,
-      theme,
-      prefersReducedMotion,
-      maxItems: dataRef.current.maxItems,
-    });
-
-    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-
-    registerLoyaltyParetoModules();
-
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, {
+  const highlightMatcher = React.useMemo(
+    () => ({
       dimension: "restaurant",
-      matcher: (dim, val) => {
+      matcher: (dim: string, val: string) => {
         if (dim !== "restaurant") return false;
-        const currentDisplayed = callbacksRef.current.displayed;
-        const matchIdx = currentDisplayed.findIndex(
+        const matchIdx = displayed.findIndex(
           (d) =>
             isDimensionMatch("restaurant", d.name, val) ||
             isDimensionMatch("restaurant", d.key, val),
@@ -602,70 +539,9 @@ export function LoyaltyParetoChart({
         }
         return undefined;
       },
-    });
-
-    const handleOver = (params: any) => {
-      const idx = params?.dataIndex;
-      const currentDisplayed = callbacksRef.current.displayed;
-      const row = typeof idx === "number" && idx >= 0 && idx < currentDisplayed.length ? currentDisplayed[idx] : undefined;
-      const restaurant = row?.name ?? row?.key ?? params?.name ?? params?.axisValue;
-      if (restaurant) {
-        emitHighlight(chartId, "restaurant", String(restaurant));
-      }
-    };
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const handleMouseLeave = () => emitClear(chartId);
-    node.addEventListener("mouseleave", handleMouseLeave);
-
-    const handleClick = (params: any) => {
-      handleLoyaltyParetoClick(
-        params,
-        callbacksRef.current.displayed,
-        callbacksRef.current.filterContext,
-        callbacksRef.current.onRestaurantClick,
-      );
-    };
-    chart.on("click", handleClick);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    resizeObserver.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      node.removeEventListener("mouseleave", handleMouseLeave);
-      unregister();
-      resizeObserver.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [isEmpty, isLoading, error, chartId, applyUpdate]);
-
-  React.useEffect(() => {
-    if (isEmpty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [isEmpty, isLoading, error, data, maxItems, applyUpdate]);
+    }),
+    [displayed]
+  );
 
   const infoPopover = (
     <Popover>
@@ -705,7 +581,7 @@ export function LoyaltyParetoChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={computedCaption}
@@ -721,15 +597,34 @@ export function LoyaltyParetoChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={title}
-        aria-description={ariaDescription}
-        style={{ height: 320, width: "100%" }}
-      />
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildLoyaltyParetoOption({
+          data: currentData,
+          theme,
+          prefersReducedMotion,
+          maxItems,
+        })
+      }
+      onClick={(params) => {
+        handleLoyaltyParetoClick(
+          params,
+          displayed,
+          filterContext,
+          onRestaurantClick,
+        );
+      }}
+      highlightDimension="restaurant"
+      getHighlightValue={(params) => {
+        const idx = params?.dataIndex;
+        const row = typeof idx === "number" && idx >= 0 && idx < displayed.length ? displayed[idx] : undefined;
+        return row?.name ?? row?.key ?? params?.name ?? params?.axisValue;
+      }}
+      highlightMatcher={highlightMatcher}
+      registerModules={registerLoyaltyParetoModules}
+      ariaLabel={title}
+      ariaDescription={ariaDescription}
+    />
   );
 }
 
