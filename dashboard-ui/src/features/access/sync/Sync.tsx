@@ -1,8 +1,8 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { Button } from "../../../components/ui/Button";
-import { Input } from "../../../components/ui/Input";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import { AuthShell, StatusBanner } from "../primitives";
 import { isSyncActive, syncApi, SYNC_LOGOUT_WARNING, type SyncJob, type SyncMode } from "./api";
 

@@ -422,7 +422,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | DONE | 2026-11-10 | 8c1c276; trunk verify all pass 104.92s; parent synthetic 1440/390 regression and visual review pass; App mounting belongs to AC-17 | B6 |
-| AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-10 | fb01fb2 merged; parent verify 95.32s and independent crash/API/visual audit pass; trunk verify pending | B6 |
+| AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-10 | fb01fb2 merged; parent verify 95.32s and independent crash/API/visual audit pass; trunk typecheck found casing imports and missing fixture decision; corrected and rechecking | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |

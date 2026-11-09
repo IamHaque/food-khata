@@ -12,7 +12,7 @@ vi.mock("@tanstack/react-query", () => ({
   useMutation: (options: unknown) => { state.mutation = options; return { mutate: state.mutate, error: state.error, isPending: false }; },
   useQueryClient: () => ({ setQueryData: state.set, invalidateQueries: state.invalidate }),
 }));
-const job = (status: string): SyncJob => ({ id: "synthetic-job", user_id: "synthetic-user", account_id: "synthetic-account", provider: "swiggy", mode: "new", status, phase: "bills", counts: { orders: 12 } });
+const job = (status: string): SyncJob => ({ id: "synthetic-job", user_id: "synthetic-user", account_id: "synthetic-account", provider: "swiggy", mode: "new", status, partial_decision: "pending", phase: "bills", counts: { orders: 12 } });
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>);
 beforeEach(() => { vi.restoreAllMocks(); state.data = undefined; state.error = null; state.mutate.mockClear(); state.set.mockClear(); setCsrfToken("synthetic-csrf"); });
 
