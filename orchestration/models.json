@@ -3,7 +3,8 @@
     "Command templates are STARTING POINTS. S-009 must verify each one with `node scripts/orch.mjs probe` and correct it here.",
     "Placeholders: {model} {packet} {worktree} {thinking}. The runner cd's into the worktree and passes the packet file contents as the prompt.",
     "OpenCode models are addressed as opencode/<id>. Free Zen ids rotate; probe at the start of every phase.",
-    "Strength notes are priors from third-party reports, not guarantees. The live scorecard in orchestration/state.json overrides them."
+    "Strength notes are priors from third-party reports, not guarantees. The live scorecard in orchestration/state.json overrides them.",
+    "2026-11-10: Gemini routing aliases use GPT Terra at matching effort via T3; OpenCode remains preferred for routine work. SOL low/medium allowed as fallback only."
   ],
   "defaults": {
     "timeout_minutes": 25,
@@ -18,67 +19,206 @@
   },
   "models": {
     "gemini-low": {
-      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "low", "vision": true,
+      "provider": "gemini",
+      "id": "gemini-3.8-flash",
+      "thinking": "low",
+      "vision": true,
       "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
       "note": "Fast, cheap Gemini. Good for small edits, read-only exploration, summaries."
     },
     "gemini-med": {
-      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "medium", "vision": true,
+      "provider": "gemini",
+      "id": "gemini-3.8-flash",
+      "thinking": "medium",
+      "vision": true,
       "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
       "note": "Default Gemini for review, audits and mid-complexity code."
     },
     "gemini-high": {
-      "provider": "gemini", "id": "gemini-3.8-flash", "thinking": "high", "vision": true,
+      "provider": "gemini",
+      "id": "gemini-3.8-flash",
+      "thinking": "high",
+      "vision": true,
       "cmd": "gemini -m {id} -p \"$(cat {packet})\" --yolo",
       "note": "Reserve for hard cross-cutting work, escalations and phase-gate reviews."
     },
     "beam": {
-      "provider": "opencode", "id": "opencode/beam-free", "vision": false,
+      "provider": "opencode",
+      "id": "opencode/beam-free",
+      "vision": false,
       "cmd": "opencode run -m {id} \"$(cat {packet})\"",
       "note": "Reported as the strongest free agentic coder. First choice for real implementation."
     },
     "deepseek": {
-      "provider": "opencode", "id": "opencode/deepseek-v4.1-flash-free", "vision": false,
+      "provider": "opencode",
+      "id": "opencode/deepseek-v4.1-flash-free",
+      "vision": false,
       "cmd": "opencode run -m {id} \"$(cat {packet})\"",
       "note": "Solid general coder with large context. Tests, backend Python, refactors."
     },
     "glm": {
-      "provider": "opencode", "id": "opencode/glm-5.3-flash-free", "vision": false,
+      "provider": "opencode",
+      "id": "opencode/glm-5.3-flash-free",
+      "vision": false,
       "cmd": "opencode run -m {id} \"$(cat {packet})\"",
       "note": "Cheap and quick. Mechanical edits, CSS and token work, boilerplate."
     },
     "mimo": {
-      "provider": "opencode", "id": "opencode/mimo-v2.6-flash-free", "vision": false,
+      "provider": "opencode",
+      "id": "opencode/mimo-v2.6-flash-free",
+      "vision": false,
       "cmd": "opencode run -m {id} \"$(cat {packet})\"",
       "note": "Fast. Reported tool-call fragility (several calls batched in one block). Use for read-only or single-shot tasks, not long tool loops."
     },
     "nemotron-vl": {
-      "provider": "opencode", "id": "opencode/nemotron-3.5-super-vl-free", "vision": true,
+      "provider": "opencode",
+      "id": "opencode/nemotron-3.5-super-vl-free",
+      "vision": true,
       "cmd": "opencode run -m {id} \"$(cat {packet})\"",
       "note": "Multimodal. Screenshot review and visual checks."
     }
   },
   "_t3_routing": {
     "_note": "DEC-001 2026-11-07: gemini CLI returns IneligibleTierError; opencode CLI has no run subcommand. All sub-agents dispatched via T3 delegate_task MCP tool instead of CLI exec. Mapping below.",
-    "gemini-low":    { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "low" } },
-    "gemini-med":    { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "medium" } },
-    "gemini-high":   { "providerInstanceId": "antigravity", "model": "gemini-3.8-flash", "options": { "thinking_level": "high" } },
-    "beam":          { "providerInstanceId": "opencode", "model": "opencode/beam-free", "options": { "variant": "high" } },
-    "deepseek":      { "providerInstanceId": "opencode", "model": "opencode/deepseek-v4.1-flash-free", "options": { "variant": "high" } },
-    "glm":           { "providerInstanceId": "opencode", "model": "opencode/glm-5.3-flash-free", "options": { "variant": "high" } },
-    "mimo":          { "providerInstanceId": "opencode", "model": "opencode/mimo-v2.6-flash-free", "options": {} },
-    "nemotron-vl":   { "providerInstanceId": "opencode", "model": "opencode/nemotron-3.5-super-vl-free", "options": {}, "note": "NOT in current opencode list; use gemini-med or gemini-high for vision fallback" }
+    "gemini-low": {
+      "providerInstanceId": "codex",
+      "model": "gpt-6.1-terra",
+      "options": {
+        "reasoningEffort": "low"
+      },
+      "note": "User-approved Gemini quota replacement 2026-11-10; SOL low/medium permitted as fallback."
+    },
+    "gemini-med": {
+      "providerInstanceId": "codex",
+      "model": "gpt-6.1-terra",
+      "options": {
+        "reasoningEffort": "medium"
+      },
+      "note": "User-approved Gemini quota replacement 2026-11-10; SOL low/medium permitted as fallback."
+    },
+    "gemini-high": {
+      "providerInstanceId": "codex",
+      "model": "gpt-6.1-terra",
+      "options": {
+        "reasoningEffort": "high"
+      },
+      "note": "User-approved Gemini quota replacement 2026-11-10; SOL low/medium permitted as fallback."
+    },
+    "beam": {
+      "providerInstanceId": "opencode",
+      "model": "opencode/beam-free",
+      "options": {
+        "variant": "high"
+      }
+    },
+    "deepseek": {
+      "providerInstanceId": "opencode",
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "options": {
+        "variant": "high"
+      }
+    },
+    "glm": {
+      "providerInstanceId": "opencode",
+      "model": "opencode/glm-5.3-flash-free",
+      "options": {
+        "variant": "high"
+      }
+    },
+    "mimo": {
+      "providerInstanceId": "opencode",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "options": {}
+    },
+    "nemotron-vl": {
+      "providerInstanceId": "opencode",
+      "model": "opencode/nemotron-3.5-super-vl-free",
+      "options": {},
+      "note": "NOT in current opencode list; use gemini-med or gemini-high for vision fallback"
+    }
   },
   "task_classes": {
-    "T1": { "name": "Mechanical edits (renames, tokens, CSS, config, boilerplate)", "chain": ["glm", "gemini-low", "deepseek", "gemini-med"] },
-    "T2": { "name": "Component or page implementation with unit tests", "chain": ["beam", "deepseek", "gemini-med", "gemini-high"] },
-    "T3": { "name": "Complex or cross-cutting logic (theme engine, cross-filter, URL state, virtualization, motion, chart adapter)", "chain": ["gemini-high", "beam", "gemini-med", "deepseek"] },
-    "T4": { "name": "Visual review of screenshots", "chain": ["nemotron-vl", "gemini-med", "gemini-high"], "needs_vision": true },
-    "T5": { "name": "Fix loop from failing tests, types or lint", "chain": ["deepseek", "glm", "beam", "gemini-med"] },
-    "T6": { "name": "Independent spec and Gherkin audit (must differ from the implementer)", "chain": ["gemini-med", "deepseek", "gemini-high"], "independent": true },
-    "T7": { "name": "Read-only exploration and summaries", "chain": ["mimo", "glm", "gemini-low", "deepseek"] },
-    "T8": { "name": "Backend Python (seed script, API additions, pytest)", "chain": ["deepseek", "beam", "gemini-med", "gemini-high"] },
-    "T9": { "name": "Phase-gate review (whole phase, high stakes)", "chain": ["gemini-high", "gemini-med", "beam"], "independent": true }
+    "T1": {
+      "name": "Mechanical edits (renames, tokens, CSS, config, boilerplate)",
+      "chain": [
+        "glm",
+        "gemini-low",
+        "deepseek",
+        "gemini-med"
+      ]
+    },
+    "T2": {
+      "name": "Component or page implementation with unit tests",
+      "chain": [
+        "beam",
+        "deepseek",
+        "gemini-med",
+        "gemini-high"
+      ]
+    },
+    "T3": {
+      "name": "Complex or cross-cutting logic (theme engine, cross-filter, URL state, virtualization, motion, chart adapter)",
+      "chain": [
+        "gemini-high",
+        "beam",
+        "gemini-med",
+        "deepseek"
+      ]
+    },
+    "T4": {
+      "name": "Visual review of screenshots",
+      "chain": [
+        "nemotron-vl",
+        "gemini-med",
+        "gemini-high"
+      ],
+      "needs_vision": true
+    },
+    "T5": {
+      "name": "Fix loop from failing tests, types or lint",
+      "chain": [
+        "deepseek",
+        "glm",
+        "beam",
+        "gemini-med"
+      ]
+    },
+    "T6": {
+      "name": "Independent spec and Gherkin audit (must differ from the implementer)",
+      "chain": [
+        "gemini-med",
+        "deepseek",
+        "gemini-high"
+      ],
+      "independent": true
+    },
+    "T7": {
+      "name": "Read-only exploration and summaries",
+      "chain": [
+        "mimo",
+        "glm",
+        "gemini-low",
+        "deepseek"
+      ]
+    },
+    "T8": {
+      "name": "Backend Python (seed script, API additions, pytest)",
+      "chain": [
+        "deepseek",
+        "beam",
+        "gemini-med",
+        "gemini-high"
+      ]
+    },
+    "T9": {
+      "name": "Phase-gate review (whole phase, high stakes)",
+      "chain": [
+        "gemini-high",
+        "gemini-med",
+        "beam"
+      ],
+      "independent": true
+    }
   },
   "escalation": {
     "after_quality_failures": 2,

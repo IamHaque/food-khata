@@ -421,9 +421,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-11 | LAN mode and transport | B | P1 | DONE | 2026-11-09 | commit 2af129a; loopback default, --lan opt-in, host allow-list (400 on unknown), TLS cert/key and HTTPS secure cookies, provider traffic host-isolated, pytest 172 passed | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
-| AC-14 | Accounts and linking screens | B | P0 | TODO | — | — | B6 |
-| AC-15 | Sync screens and background states | B | P0 | TODO | — | — | B6 |
-| AC-16 | Owner settings | B | P1 | TODO | — | — | B6 |
+| AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
+| AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
+| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
@@ -456,6 +456,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-017 | 2026-11-09 | FX-06 | Integrated @axe-core/playwright in Playwright E2E suite; tested emerald and indigo accents across 5 routes; added aria-label on Orders progress bar to achieve 0 axe violations. | Automated a11y & responsive QA | E2E test suite | Accepted |
 | DEC-018 | 2026-11-09 | FX-07 | Redesigned dashboard verified: 12 original design problems resolved, UI is cohesive, responsive, accessible, and premium across all 5 routes and theme accents. | Human review requirement of FX-07 | Design sign-off readiness | Accepted |
 | DEC-019 | 2026-11-09 | FX-07 | Playwright visual regression suite runs 40 snapshots deterministically; .gitignore keeps raster captures local while tracked specs protect against regressions. | Visual safety without repository bloat | Visual regression testing | Accepted |
+
+| DEC-020 | 2026-11-10 | Orchestration | Replace Gemini dispatches with Terra low/medium/high; SOL low/medium fallback; retain OpenCode | User authorization after quota exhaustion | T3 routing aliases updated | Accepted |
 
 ### 5.3 Deviation log
 
@@ -591,5 +593,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-10 | T8 | gemini-3.8-flash | 1 | pass | — |
 | 2026-11-09 | AC-11 | T8 | gemini-3.8-flash | 1 | pass | — |
 | 2026-11-09 | AC-13 | T2 | gemini-3.8-flash | 1 | pass | — |
+| 2026-11-09 | AC-14 | T2 | gemini-3.8-flash | 1 | running | — |
+| 2026-11-09 | AC-15 | T2 | gemini-3.8-flash | 1 | running | — |
+| 2026-11-09 | AC-16 | T2 | gemini-3.8-flash | 1 | running | — |
 
 
