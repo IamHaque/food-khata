@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Food Khata - Access Wireframes v2</title>
+<style>
+:root{
+  --background:150 20% 98%;--surface:0 0% 100%;--surface-2:#eef3f0;--foreground:158 18% 12%;
+  --muted-foreground:143 14% 28%;--border:150 10% 80%;--primary:156 90% 20%;--primary-foreground:0 0% 100%;
+  --accent:150 15% 95%;--success:156 72% 24%;--warning:38 100% 25%;--danger:0 72% 38%;
+  --radius:1rem;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-full:9999px;
+  --shadow-1:0 1px 2px 0 rgb(0 0 0 / .05);--shadow-2:0 2px 8px -2px rgb(0 0 0 / .08);--shadow-3:0 12px 32px -12px rgb(0 0 0 / .18);
+  --font:"Inter Variable",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+.dark{
+  --background:160 15% 7%;--surface:160 13% 10%;--surface-2:#1c2721;--foreground:150 14% 93%;
+  --muted-foreground:150 14% 72%;--border:155 9% 22%;--primary:150 58% 65%;--primary-foreground:160 20% 7%;
+  --accent:155 9% 16%;--success:151 55% 62%;--warning:44 70% 68%;--danger:0 65% 60%;
+  --shadow-1:0 1px 2px 0 rgb(0 0 0 / .25);--shadow-2:0 2px 8px -2px rgb(0 0 0 / .35);--shadow-3:0 12px 32px -12px rgb(0 0 0 / .5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font)}
+body{min-height:100vh}
+button,input,select,textarea{font:inherit}
+a{color:hsl(var(--primary))}
+.container{max-width:100%}
+.toolbar{
+  position:sticky;top:0;z-index:50;background:hsl(var(--surface));border-bottom:1px solid hsl(var(--border));
+  padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;box-shadow:var(--shadow-1)
+}
+.toolbar h1{font-size:14px;font-weight:600;margin:0;margin-right:8px}
+.toolbar select,.toolbar button{border:1px solid hsl(var(--border));background:hsl(var(--surface-2));color:hsl(var(--foreground));
+  border-radius:var(--radius-sm);padding:6px 10px;font-size:13px}
+.toolbar button.primary{background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-color:hsl(var(--primary))}
+.stage-wrap{padding:24px;display:flex;justify-content:center}
+.stage{
+  width:var(--vw,1440px);max-width:100%;min-height:720px;background:hsl(var(--background));
+  border:1px solid hsl(var(--border));border-radius:var(--radius-lg);box-shadow:var(--shadow-3);
+  overflow:hidden;container-type:inline-size;position:relative
+}
+@media (max-width:420px){.stage{width:390px}}
+.card{background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-1)}
+.card h2{margin:0 0 8px;font-size:16px}
+.card h3{margin:0 0 6px;font-size:14px}
+.muted{color:hsl(var(--muted-foreground));font-size:13px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.btn{border:1px solid hsl(var(--border));background:hsl(var(--surface));color:hsl(var(--foreground));border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;cursor:pointer}
+.btn.primary{background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-color:hsl(var(--primary))}
+.btn.danger{background:hsl(var(--danger));color:#fff;border-color:hsl(var(--danger))}
+.btn.ghost{background:transparent}
+.input{border:1px solid hsl(var(--border));background:hsl(var(--surface));color:hsl(var(--foreground));border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;width:100%}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-full);font-size:11px;font-weight:600;border:1px solid hsl(var(--border))}
+.badge.ok{background:hsl(var(--success)/.12);color:hsl(var(--success));border-color:hsl(var(--success)/.3)}
+.badge.warn{background:hsl(var(--warning)/.12);color:hsl(var(--warning));border-color:hsl(var(--warning)/.3)}
+.badge.danger{background:hsl(var(--danger)/.12);color:hsl(var(--danger));border-color:hsl(var(--danger)/.3)}
+.badge.neutral{background:hsl(var(--accent));color:hsl(var(--muted-foreground))}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--radius-full);background:hsl(var(--accent));font-size:12px}
+.banner{border:1px solid hsl(var(--border));border-radius:var(--radius-md);padding:12px 14px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.banner.info{background:hsl(var(--primary)/.08);border-color:hsl(var(--primary)/.3)}
+.banner.warn{background:hsl(var(--warning)/.08);border-color:hsl(var(--warning)/.3)}
+.banner.success{background:hsl(var(--success)/.08);border-color:hsl(var(--success)/.3)}
+.progress{height:8px;background:hsl(var(--accent));border-radius:var(--radius-full);overflow:hidden}
+.progress>div{height:100%;background:hsl(var(--primary));width:40%;transition:width .3s}
+.modal-backdrop{position:absolute;inset:0;background:rgb(0 0 0 /.4);display:flex;align-items:center;justify-content:center;padding:24px;z-index:20}
+.modal{background:hsl(var(--surface));border:1px solid hsl(var(--border));border-radius:var(--radius-lg);padding:20px;max-width:420px;width:100%;box-shadow:var(--shadow-3)}
+.screen{display:none;padding:24px}
+.screen.active{display:block}
+@container (max-width: 420px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .modal{max-width:100%;border-radius:var(--radius-md)}
+  .stage{border-radius:0}
+}
+.nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.nav button{border:none;background:hsl(var(--accent));color:hsl(var(--foreground));padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px}
+.nav button.active{background:hsl(var(--primary));color:hsl(var(--primary-foreground))}
+.section-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:hsl(var(--muted-foreground));margin:16px 0 8px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid hsl(var(--border));font-size:13px}
+.account-card{border:1px solid hsl(var(--border));border-radius:var(--radius-md);padding:14px;background:hsl(var(--surface));display:flex;flex-direction:column;gap:8px}
+.status-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:600}
+.status-chip.ok{background:hsl(var(--success)/.12);color:hsl(var(--success))}
+.status-chip.expiring{background:hsl(var(--warning)/.12);color:hsl(var(--warning))}
+.status-chip.expired{background:hsl(var(--danger)/.12);color:hsl(var(--danger))}
+.dialog{border:1px solid hsl(var(--border));border-radius:var(--radius-md);padding:14px;background:hsl(var(--surface-2))}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid hsl(var(--border))}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.codebox{font-family:ui-monospace,monospace;background:hsl(var(--surface-2));padding:8px 10px;border-radius:var(--radius-sm);letter-spacing:.15em}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <h1>Access Wireframes v2</h1>
+  <select id="screenSel" aria-label="Screen selector"></select>
+  <select id="viewportSel" aria-label="Viewport">
+    <option value="1440">Desktop 1440px</option>
+    <option value="390">Mobile 390px</option>
+  </select>
+  <select id="syncSel" aria-label="Sync state">
+    <option value="queued">queued</option>
+    <option value="running">running</option>
+    <option value="needs_code">needs code</option>
+    <option value="paused">paused</option>
+    <option value="interrupted">interrupted</option>
+    <option value="done">done</option>
+    <option value="failed">failed</option>
+    <option value="cancelled">cancelled</option>
+  </select>
+  <button id="themeBtn">Toggle Dark/Light</button>
+  <span class="muted" id="stateLabel"></span>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <!-- 1. Setup -->
+    <section class="screen" data-screen="setup">
+      <div class="card" style="max-width:520px;margin:0 auto">
+        <h2>Set up this server</h2>
+        <p class="muted">Claim owner access. From loopback or with the one-time setup code printed at --lan start.</p>
+        <div class="col" style="margin-top:12px">
+          <label>Setup code (only when not on host)<input class="input" placeholder="XXXX-XXXX" /></label>
+          <label>Username<input class="input" placeholder="owner" /></label>
+          <label>Password<input class="input" type="password" placeholder="••••••••" /></label>
+          <label>Confirm password<input class="input" type="password" placeholder="••••••••" /></label>
+          <label class="toggle"><input type="checkbox" /> Adopt existing .food-khata data</label>
+          <button class="btn primary">Claim owner</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Login -->
+    <section class="screen" data-screen="login">
+      <div class="card" style="max-width:400px;margin:0 auto">
+        <h2>Log in</h2>
+        <p class="muted">Username and password. (Owner name is not shown.)</p>
+        <div class="col" style="margin-top:12px">
+          <label>Username<input class="input" placeholder="username" /></label>
+          <label>Password<input class="input" type="password" placeholder="••••••••" /></label>
+          <button class="btn primary">Log in</button>
+          <a href="#" style="font-size:13px">Register instead</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Register -->
+    <section class="screen" data-screen="register">
+      <div class="card" style="max-width:440px;margin:0 auto">
+        <h2>Register</h2>
+        <p class="muted">Join code, username + password. Window state from API.</p>
+        <div class="col" style="margin-top:12px">
+          <label>Join code<input class="input" placeholder="ABCD-1234" /></label>
+          <label>Username<input class="input" placeholder="username" /></label>
+          <label>Password<input class="input" type="password" placeholder="••••••••" /></label>
+          <label>Confirm password<input class="input" type="password" placeholder="••••••••" /></label>
+          <label class="toggle"><input type="checkbox" id="norecovery" /> I understand there is no recovery if password is lost</label>
+          <button class="btn primary" id="regBtn" disabled>Register</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Accounts/Home -->
+    <section class="screen" data-screen="accounts">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">Home / Accounts</h2>
+        <button class="btn primary">Link account</button>
+      </div>
+      <div class="grid grid-2" id="accountCards">
+        <div class="account-card">
+          <div class="row" style="justify-content:space-between">
+            <strong>Swiggy</strong><span class="status-chip ok" data-sync>ok</span>
+          </div>
+          <div class="muted">user@example.com • last sync 2h ago</div>
+          <div class="row"><button class="btn ghost">Sync</button><button class="btn ghost">Disconnect</button></div>
+        </div>
+        <div class="account-card">
+          <div class="row" style="justify-content:space-between">
+            <strong>Zomato</strong><span class="status-chip expiring" data-sync>expiring</span>
+          </div>
+          <div class="muted">phone • last sync 1d ago</div>
+          <div class="row"><button class="btn ghost">Verify again</button><button class="btn ghost">Disconnect</button></div>
+        </div>
+      </div>
+      <div class="section-title">Sync state (home)</div>
+      <div class="card" id="homeSyncCard">
+        <div class="row" style="justify-content:space-between">
+          <strong>Current sync</strong><span class="badge neutral" id="homeSyncBadge">queued</span>
+        </div>
+        <div class="muted" id="homeSyncText">Queued…</div>
+        <div class="progress" style="margin-top:8px"><div id="homeProg" style="width:10%"></div></div>
+      </div>
+    </section>
+
+    <!-- 5. Link Provider Modal -->
+    <section class="screen" data-screen="link">
+      <div class="card" style="max-width:600px;margin:0 auto">
+        <h2>Link provider (modal)</h2>
+        <p class="muted">Phone number → SMS OTP → success.</p>
+      </div>
+      <div class="modal-backdrop" style="position:relative;margin-top:16px;border-radius:var(--radius-lg)">
+        <div class="modal">
+          <h3>Link Swiggy account</h3>
+          <div class="col">
+            <label>Phone number<input class="input" placeholder="+91 98765 43210" /></label>
+            <button class="btn primary">Send code</button>
+            <label>SMS OTP code<input class="input" placeholder="123456" /></label>
+            <button class="btn primary">Verify</button>
+            <div class="banner success"><span>Linked successfully</span><button class="btn ghost">Done</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Sync Chooser Modal -->
+    <section class="screen" data-screen="chooser">
+      <div class="card" style="max-width:600px;margin:0 auto">
+        <h2>Sync chooser (modal)</h2>
+      </div>
+      <div class="modal-backdrop" style="position:relative;margin-top:16px;border-radius:var(--radius-lg)">
+        <div class="modal">
+          <h3>Choose a sync</h3>
+          <div class="col">
+            <label class="row" style="justify-content:space-between;border:1px solid hsl(var(--border));padding:10px;border-radius:var(--radius-sm)">
+              <span><strong>New orders</strong><br/><span class="muted">Fetch new + repair missing bill details. Default on later visits.</span></span>
+              <input type="radio" name="mode" checked />
+            </label>
+            <label class="row" style="justify-content:space-between;border:1px solid hsl(var(--border));padding:10px;border-radius:var(--radius-sm)">
+              <span><strong>All history</strong><br/><span class="muted">Full scan (Swiggy ~20 min+ per 1,000 orders).</span></span>
+              <input type="radio" name="mode" />
+            </label>
+            <label class="row" style="justify-content:space-between;border:1px solid hsl(var(--border));padding:10px;border-radius:var(--radius-sm)">
+              <span><strong>Missing bill details</strong><br/><span class="muted">Repair only orders missing bills.</span></span>
+              <input type="radio" name="mode" />
+            </label>
+            <div class="banner warn"><span>Time warning: large history may take a while.</span></div>
+            <button class="btn primary">Start sync</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Sync Progress -->
+    <section class="screen" data-screen="syncprogress">
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Sync progress</h2><span class="badge neutral" id="syncBadge">queued</span>
+        </div>
+        <div class="muted" id="syncPhase">Phase: queued</div>
+        <div class="progress" style="margin:12px 0"><div id="syncProg" style="width:5%"></div></div>
+        <div class="grid grid-3">
+          <div class="card"><div class="muted">Pages</div><div class="display-number" id="syncPages">0</div></div>
+          <div class="card"><div class="muted">Orders</div><div class="display-number" id="syncOrders">0</div></div>
+          <div class="card"><div class="muted">Imported</div><div class="display-number" id="syncImported">0</div></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn danger" id="cancelBtn">Cancel</button>
+          <button class="btn" id="codeBtn" style="display:none">Enter code</button>
+          <button class="btn" id="resumeBtn" style="display:none">Resume</button>
+          <button class="btn" id="usePartialBtn" style="display:none">Use partial data</button>
+        </div>
+        <div class="banner info" id="needsCodeBanner" style="display:none;margin-top:12px">
+          <span>Paused: provider asks for a new code.</span><input class="input" style="max-width:160px" placeholder="OTP" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Logout warning dialog -->
+    <section class="screen" data-screen="logoutwarn">
+      <div class="card" style="max-width:600px;margin:0 auto">
+        <h2>Logout warning (dialog)</h2>
+        <p class="muted">Shown when a sync is running.</p>
+      </div>
+      <div class="modal-backdrop" style="position:relative;margin-top:16px;border-radius:var(--radius-lg)">
+        <div class="modal">
+          <h3>Log out now?</h3>
+          <p class="muted">Sync continues in background; a server restart will interrupt it.</p>
+          <div class="row" style="justify-content:flex-end;margin-top:12px">
+            <button class="btn ghost">Cancel</button>
+            <button class="btn danger">Log out</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Owner Settings -->
+    <section class="screen" data-screen="owner">
+      <div class="card">
+        <h2>Owner settings</h2>
+        <div class="section-title">Registration window</div>
+        <div class="row">
+          <button class="btn">15 min</button><button class="btn">1 hour</button><button class="btn">Until closed</button><button class="btn danger">Close</button>
+        </div>
+        <div class="muted" style="margin-top:6px">Time left: 12:34</div>
+        <div class="section-title">Household join code</div>
+        <div class="row"><span class="codebox">ABCD-1234</span><button class="btn">Copy</button><button class="btn">Rotate</button></div>
+        <p class="muted">Rotating invalidates the old code.</p>
+        <div class="section-title">Users</div>
+        <table>
+          <thead><tr><th>User</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr><td>alice</td><td><span class="badge ok">active</span></td><td><button class="btn ghost">Disable</button><button class="btn ghost">Reset password</button></td></tr>
+            <tr><td>bob</td><td><span class="badge neutral">disabled</span></td><td><button class="btn ghost">Enable</button></td></tr>
+          </tbody>
+        </table>
+        <div class="dialog" style="margin-top:12px">
+          <strong>Reset password confirmation</strong>
+          <p class="muted">Asks owner password; wipes that user's provider sessions.</p>
+          <label>Owner password<input class="input" type="password" /></label>
+          <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="btn ghost">Cancel</button><button class="btn danger">Confirm reset</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Dashboard banners -->
+    <section class="screen" data-screen="dashboard">
+      <div class="card">
+        <h2>Dashboard</h2>
+        <div class="col" style="margin-top:12px">
+          <div class="banner info" id="bannerFetch"><span>Data being fetched (first sync, no data yet)</span><button class="btn ghost">…</button></div>
+          <div class="banner warn" id="bannerSync"><span>Syncing in background <span class="chip">24%</span></span><button class="btn ghost">View</button></div>
+          <div class="banner success" id="bannerDone"><span>Finished while you were away: 1,240 imported</span><button class="btn ghost">Dismiss</button></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="card"><div class="muted">Orders</div><div class="display-number">12,480</div></div>
+          <div class="card"><div class="muted">Spend</div><div class="display-number">₹ 4,21,000</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const screens = ["setup","login","register","accounts","link","chooser","syncprogress","logoutwarn","owner","dashboard"];
+const sel = document.getElementById('screenSel');
+screens.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o)});
+const stage = document.getElementById('stage');
+function showScreen(s){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));const el=document.querySelector(`.screen[data-screen="${s}"]`);if(el)el.classList.add('active');sel.value=s;updateStateLabel()}
+sel.addEventListener('change',e=>showScreen(e.target.value));
+
+const vp = document.getElementById('viewportSel');
+vp.addEventListener('change',e=>{const w=e.target.value==='390'?'390px':'1440px';stage.style.width=w;stage.style.setProperty('--vw',w)});
+function setVp(w){stage.style.width=w+'px';stage.style.setProperty('--vw',w+'px');vp.value=w}
+
+const syncStates = {
+ queued:{badge:'queued',text:'Queued…',prog:5,pages:0,orders:0,imported:0,needsCode:false,done:false},
+ running:{badge:'running',text:'Running…',prog:42,pages:12,orders:340,imported:300,needsCode:false,done:false},
+ needs_code:{badge:'needs code',text:'Paused for code',prog:55,pages:18,orders:520,imported:480,needsCode:true,done:false},
+ paused:{badge:'paused',text:'Paused',prog:55,pages:18,orders:520,imported:480,needsCode:false,done:false},
+ interrupted:{badge:'interrupted',text:'Interrupted (restart)',prog:55,pages:18,orders:520,imported:480,needsCode:false,done:false},
+ done:{badge:'done',text:'Done',prog:100,pages:40,orders:1200,imported:1200,needsCode:false,done:true},
+ failed:{badge:'failed',text:'Failed',prog:60,pages:20,orders:600,imported:560,needsCode:false,done:false},
+ cancelled:{badge:'cancelled',text:'Cancelled',prog:30,pages:10,orders:300,imported:260,needsCode:false,done:false}
+};
+const syncSel=document.getElementById('syncSel');
+function applySync(st){
+  const s=syncStates[st];
+  document.querySelectorAll('[data-sync]').forEach(()=>{});
+  const badge=document.getElementById('syncBadge'); if(badge){badge.textContent=s.badge;badge.className='badge neutral'}
+  const phase=document.getElementById('syncPhase'); if(phase)phase.textContent='Phase: '+s.badge;
+  const prog=document.getElementById('syncProg'); if(prog)prog.style.width=s.prog+'%';
+  const homeProg=document.getElementById('homeProg'); if(homeProg)homeProg.style.width=s.prog+'%';
+  const homeBadge=document.getElementById('homeSyncBadge'); if(homeBadge)homeBadge.textContent=s.badge;
+  const homeText=document.getElementById('homeSyncText'); if(homeText)homeText.textContent=s.text;
+  document.getElementById('syncPages').textContent=s.pages;
+  document.getElementById('syncOrders').textContent=s.orders;
+  document.getElementById('syncImported').textContent=s.imported;
+  const codeBtn=document.getElementById('codeBtn'); if(codeBtn)codeBtn.style.display=s.needsCode?'inline-block':'none';
+  const needsBanner=document.getElementById('needsCodeBanner'); if(needsBanner)needsBanner.style.display=s.needsCode?'flex':'none';
+  const cancelBtn=document.getElementById('cancelBtn'); if(cancelBtn)cancelBtn.style.display=s.done?'none':'inline-block';
+  const resumeBtn=document.getElementById('resumeBtn'); if(resumeBtn)resumeBtn.style.display=(st==='interrupted')?'inline-block':'none';
+  const usePartialBtn=document.getElementById('usePartialBtn'); if(usePartialBtn)usePartialBtn.style.display=(st==='failed'||st==='cancelled')?'inline-block':'none';
+  updateStateLabel();
+}
+syncSel.addEventListener('change',e=>applySync(e.target.value));
+
+const themeBtn=document.getElementById('themeBtn');
+themeBtn.addEventListener('click',()=>{document.documentElement.classList.toggle('dark')});
+
+// register checkbox enables button
+const cb=document.getElementById('norecovery'); const regBtn=document.getElementById('regBtn');
+if(cb&&regBtn){cb.addEventListener('change',()=>{regBtn.disabled=!cb.checked})}
+
+function updateStateLabel(){
+  const s=syncSel.value; const scr=sel.value; const vpcur=vp.value;
+  document.getElementById('stateLabel').textContent=`screen=${scr} viewport=${vpcur} sync=${s}`;
+}
+
+// init
+setVp(1440);
+showScreen('setup');
+applySync('queued');
+updateStateLabel();
+</script>
+</body>
+</html>
