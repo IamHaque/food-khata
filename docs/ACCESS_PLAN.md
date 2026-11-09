@@ -596,9 +596,10 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-14 | T2 | gemini-3.8-flash | 1 | running | — |
 | 2026-11-09 | AC-15 | T2 | gemini-3.8-flash | 1 | running | — |
 | 2026-11-09 | AC-16 | T2 | gemini-3.8-flash | 1 | running | — |
-| 2026-11-10 | AC-14 | T2 | beam | 2 | running | resume-AC-14-20261110; isolated T3 worktree |
+| 2026-11-10 | AC-14 | T2 | beam | 2 | review | commit 397d7a6; scenario interaction evidence incomplete; parent verification running |
 | 2026-11-10 | AC-15 | T2 | deepseek | 2 | F1 | Free usage limit reached; failover to Terra Medium |
 | 2026-11-10 | AC-16 | T2 | terra-medium | 2 | F3 | No implementation; reassigned to Terra High |
 | 2026-11-10 | AC-15 | T2 | terra-medium | 3 | F3 | No code or completed checks; reassigned to SOL Medium |
 | 2026-11-10 | AC-16 | T2 | terra-high | 3 | running | resume-AC-16-high-20261110; show/copy code on rotation using existing API |
 | 2026-11-10 | AC-15 | T2 | sol-medium | 4 | running | resume-AC-15-sol-20261110; complete sync UI and local API helpers |
+| 2026-11-10 | AC-14 | T6 | sol-medium | 1 | running | audit-AC-14-20261110; independent scenario and screenshot review before merge |
