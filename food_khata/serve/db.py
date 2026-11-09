@@ -9,11 +9,11 @@ def connect_readonly(path: Path | str) -> sqlite3.Connection:
     # FastAPI may use different workers for request setup, queries, and cleanup.
     # Each call still returns its own connection; nothing is shared across requests.
     conn = sqlite3.connect(
-        Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=2, check_same_thread=False
+        Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=30.0, check_same_thread=False
     )
     try:
         conn.execute("PRAGMA query_only=ON")
-        conn.execute("PRAGMA busy_timeout=2000")
+        conn.execute("PRAGMA busy_timeout=30000")
         conn.row_factory = sqlite3.Row
         return conn
     except Exception:

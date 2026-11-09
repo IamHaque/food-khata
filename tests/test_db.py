@@ -1,5 +1,9 @@
 """Unit tests for the local SQLite analytics database and ingestion pipeline."""
 
+import os
+import threading
+import time
+import uuid
 from pathlib import Path
 
 from food_khata.db import (
@@ -11,6 +15,7 @@ from food_khata.db import (
     normalize_payment,
     parse_date,
 )
+from food_khata.serve.db import connect_readonly
 from food_khata.storage import Storage, save_json
 
 
@@ -370,11 +375,7 @@ def test_zomato_explicit_discounts_tax_and_other_charges(tmp_path):
         assert conn.execute("SELECT city FROM delivery_addresses").fetchone()[0] == "Delivery City"
 
 
-def test_account_import_rolls_back_on_bad_order(tmp_path):
-    import pytest
-
-    from food_khata.contracts import KhataError
-
+def test_account_import_quarantines_bad_order(tmp_path):
     storage = Storage(tmp_path / "storage")
     acc_id = "00000000-0000-0000-0000-000000000001"
     directory = storage.account_path(acc_id)
@@ -384,10 +385,19 @@ def test_account_import_rolls_back_on_bad_order(tmp_path):
         {"orders": {"good": {"details": {"orders": [{"order_total": 10}]}}, "bad": []}},
     )
     db = AnalyticsDB(tmp_path / "analytics.db")
-    with pytest.raises(KhataError, match="rolled back"):
-        db.ingest_account(storage, acc_id)
+    counts = db.ingest_account(storage, acc_id)
+    assert counts["total"] == 1
+    assert counts["quarantined"] == 1
+    assert len(counts["quarantine"]) == 1
+    assert counts["quarantine"][0]["order_id"] == "bad"
+
     with db.connection() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0] == 1
+        q_row = conn.execute("SELECT * FROM quarantine").fetchone()
+        assert q_row["platform_order_id"] == "bad"
+        assert q_row["platform"] == "SWIGGY"
+        assert "Malformed" in q_row["reason"]
 
 
 def test_ambiguous_diet_is_unknown_and_order_owner_is_preserved(tmp_path):
@@ -426,3 +436,317 @@ def test_named_zero_packing_uses_legacy_bill_charge(tmp_path):
         row = conn.execute("SELECT * FROM orders").fetchone()
         assert row["packaging_fee"] == 10
         assert row["financial_verified"] == 1
+
+
+def test_quarantine_one_malformed_order_among_hundred(tmp_path):
+    storage = Storage(tmp_path / "storage")
+    acc_id = str(uuid.uuid4())
+    directory = storage.account_path(acc_id)
+    save_json(directory / "account.json", {"phone": "9999999999"})
+
+    orders_dict = {}
+    for i in range(1, 100):
+        orders_dict[f"order_{i}"] = {
+            "history": {
+                "orderStatus": "Delivered",
+                "orderTotal": 100 + i,
+                "orderedTime": "2026-10-01 12:00:00",
+            },
+            "details": {
+                "orders": [
+                    {
+                        "order_id": f"order_{i}",
+                        "order_status": "Delivered",
+                        "order_total": 100 + i,
+                        "item_total": 100 + i,
+                    }
+                ]
+            },
+        }
+    # 1 malformed order
+    orders_dict["order_bad"] = {"invalid": "payload without details or history"}
+
+    save_json(
+        directory / "swiggy-history.json",
+        {
+            "version": 1,
+            "provider": "swiggy",
+            "provider_id": "sw1",
+            "orders": orders_dict,
+            "history_complete": True,
+            "details_complete": True,
+            "complete": True,
+            "lifetime_complete": True,
+            "pages": 1,
+            "errors": [],
+            "counts": {"orders": 100},
+        },
+    )
+
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    counts = db.ingest_account(storage, acc_id)
+
+    # 99 imported, 1 bad order quarantined
+    assert counts["swiggy"] == 99
+    assert counts["total"] == 99
+    assert counts["quarantined"] == 1
+    assert len(counts["quarantine"]) == 1
+    assert counts["quarantine"][0]["order_id"] == "order_bad"
+    assert counts["quarantine"][0]["platform"] == "SWIGGY"
+    assert counts["quarantine"][0]["reason"]
+    assert counts["quarantine"][0]["error_details"]
+
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 99
+        q_count = conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0]
+        assert q_count == 1
+        q_row = conn.execute("SELECT * FROM quarantine").fetchone()
+        assert q_row["account_id"] == acc_id
+        assert q_row["platform"] == "SWIGGY"
+        assert q_row["platform_order_id"] == "order_bad"
+        assert q_row["reason"]
+        assert q_row["error_details"]
+        assert "invalid" in q_row["raw_payload"]
+        assert q_row["quarantined_at"]
+
+
+def test_incremental_ingest_bounds_reparse_cost(tmp_path, monkeypatch):
+    storage = Storage(tmp_path / "storage")
+    acc_id = str(uuid.uuid4())
+    directory = storage.account_path(acc_id)
+    save_json(directory / "account.json", {"phone": "9999999999"})
+
+    initial_orders = {
+        f"order_{i}": {
+            "history": {"orderStatus": "Delivered", "orderTotal": 50},
+            "details": {
+                "orders": [
+                    {
+                        "order_id": f"order_{i}",
+                        "order_status": "Delivered",
+                        "order_total": 50,
+                        "item_total": 50,
+                    }
+                ]
+            },
+        }
+        for i in range(1, 11)
+    }
+
+    archive = {
+        "version": 1,
+        "provider": "swiggy",
+        "provider_id": "sw1",
+        "orders": initial_orders,
+        "history_complete": True,
+        "details_complete": True,
+        "complete": True,
+        "lifetime_complete": True,
+        "pages": 1,
+        "errors": [],
+        "counts": {"orders": 10},
+    }
+    save_json(directory / "swiggy-history.json", archive)
+
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    c1 = db.ingest_account(storage, acc_id)
+    assert c1["total"] == 10
+
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 10
+
+    # Now 5 new orders arrive
+    for i in range(11, 16):
+        archive["orders"][f"order_{i}"] = {
+            "history": {"orderStatus": "Delivered", "orderTotal": 60},
+            "details": {
+                "orders": [
+                    {
+                        "order_id": f"order_{i}",
+                        "order_status": "Delivered",
+                        "order_total": 60,
+                        "item_total": 60,
+                    }
+                ]
+            },
+        }
+    archive["counts"]["orders"] = 15
+    save_json(directory / "swiggy-history.json", archive)
+
+    parse_call_count = [0]
+    original_ingest = db.ingest_swiggy_order
+
+    def tracked_ingest(cursor, account_id, order_id, order_data):
+        parse_call_count[0] += 1
+        return original_ingest(cursor, account_id, order_id, order_data)
+
+    monkeypatch.setattr(db, "ingest_swiggy_order", tracked_ingest)
+
+    c2 = db.ingest_account(storage, acc_id)
+    # Only the 5 new orders were parsed and inserted!
+    assert parse_call_count[0] == 5
+    assert c2["total"] == 5
+    assert c2["swiggy"] == 5
+
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 15
+
+
+def test_readonly_reader_opens_wal_database_with_wal_and_shm(tmp_path):
+    db_path = tmp_path / "test_wal.db"
+    db = AnalyticsDB(db_path)
+
+    # Insert data and leave uncheckpointed transactions so WAL files (-wal, -shm) exist
+    with db.connection() as conn:
+        order = {
+            "details": {
+                "orders": [
+                    {
+                        "order_id": "wal_order_1",
+                        "order_status": "DELIVERED",
+                        "order_total": 120,
+                        "item_total": 120,
+                    }
+                ]
+            }
+        }
+        db.ingest_swiggy_order(conn.cursor(), "acc-wal", "wal_order_1", order)
+        conn.commit()
+
+    # Ensure WAL mode is active
+    with db.connection() as conn:
+        mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        assert mode.lower() == "wal"
+
+    # Open another writer connection and write more data without closing so WAL files stay active on disk
+    writer_conn = db.connect()
+    try:
+        order2 = {
+            "details": {
+                "orders": [
+                    {
+                        "order_id": "wal_order_2",
+                        "order_status": "DELIVERED",
+                        "order_total": 240,
+                        "item_total": 240,
+                    }
+                ]
+            }
+        }
+        db.ingest_swiggy_order(writer_conn.cursor(), "acc-wal", "wal_order_2", order2)
+        writer_conn.commit()
+
+        wal_file = tmp_path / "test_wal.db-wal"
+        shm_file = tmp_path / "test_wal.db-shm"
+        assert wal_file.exists()
+        assert shm_file.exists()
+
+        # Read-only connection opens database using mode=ro (or uri=True mode=ro)
+        ro_conn = connect_readonly(db_path)
+        try:
+            assert ro_conn.execute("PRAGMA query_only").fetchone()[0] == 1
+            rows = ro_conn.execute(
+                "SELECT id, final_amount_paid FROM orders ORDER BY id"
+            ).fetchall()
+            assert len(rows) == 2
+            assert rows[0]["id"] == "SWIGGY_wal_order_1"
+            assert rows[1]["id"] == "SWIGGY_wal_order_2"
+        finally:
+            ro_conn.close()
+    finally:
+        writer_conn.close()
+
+
+def test_concurrency_no_locked_database(tmp_path):
+    """Scenario: no locked database.
+
+    Given a sync importing while the dashboard reads / When run together for 30 s /
+    Then no request fails with 'database is locked' (WAL mode and busy timeout enabled
+    on write and read connections).
+    """
+    db_path = tmp_path / "concurrency.db"
+    db = AnalyticsDB(db_path)
+
+    duration = float(os.getenv("CONCURRENCY_TEST_DURATION", "30"))
+    stop_event = threading.Event()
+    locked_errors = []
+    other_errors = []
+    writes_completed = [0]
+    reads_completed = [0]
+
+    def writer_worker():
+        counter = 0
+        while not stop_event.is_set():
+            counter += 1
+            try:
+                with db.connection() as conn:
+                    order = {
+                        "details": {
+                            "orders": [
+                                {
+                                    "order_id": f"sync_order_{counter}",
+                                    "order_status": "DELIVERED",
+                                    "order_total": 100 + (counter % 50),
+                                    "item_total": 100 + (counter % 50),
+                                }
+                            ]
+                        }
+                    }
+                    db.ingest_swiggy_order(
+                        conn.cursor(), "sync_acc", f"sync_order_{counter}", order
+                    )
+                    conn.commit()
+                writes_completed[0] += 1
+                time.sleep(0.005)
+            except Exception as exc:
+                if "database is locked" in str(exc).lower():
+                    locked_errors.append(exc)
+                else:
+                    other_errors.append(exc)
+                break
+
+    def reader_worker():
+        while not stop_event.is_set():
+            try:
+                conn = connect_readonly(db_path)
+                try:
+                    conn.execute("SELECT COUNT(*), SUM(final_amount_paid) FROM orders").fetchone()
+                    conn.execute("SELECT * FROM restaurants LIMIT 5").fetchall()
+                    conn.execute("SELECT * FROM delivery_addresses LIMIT 5").fetchall()
+                finally:
+                    conn.close()
+                reads_completed[0] += 1
+                time.sleep(0.002)
+            except Exception as exc:
+                if "database is locked" in str(exc).lower():
+                    locked_errors.append(exc)
+                else:
+                    other_errors.append(exc)
+                break
+
+    writer_thread = threading.Thread(target=writer_worker, name="WriterThread")
+    reader_threads = [
+        threading.Thread(target=reader_worker, name=f"ReaderThread-{i}") for i in range(4)
+    ]
+
+    writer_thread.start()
+    for t in reader_threads:
+        t.start()
+
+    time.sleep(duration)
+    stop_event.set()
+
+    writer_thread.join(timeout=5)
+    for t in reader_threads:
+        t.join(timeout=5)
+
+    assert len(locked_errors) == 0, f"Found 'database is locked' errors: {locked_errors}"
+    assert len(other_errors) == 0, f"Found unexpected errors: {other_errors}"
+    assert writes_completed[0] > 0
+    assert reads_completed[0] > 0
+
+    with db.connection() as conn:
+        mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        assert mode.lower() == "wal"
+        busy_timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
+        assert busy_timeout >= 2000
