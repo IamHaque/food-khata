@@ -476,3 +476,6 @@ class SlimOrder(ResponseModel):
 
 class Slim(Metadata):
     rows: list[SlimOrder]
+
+
+

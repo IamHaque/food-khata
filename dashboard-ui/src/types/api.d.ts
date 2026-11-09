@@ -188,7 +188,10 @@ export interface paths {
         put?: never;
         /**
          * Register
-         * @description Register a new user. The first registered user automatically becomes the owner.
+         * @description Register a new user.
+         *
+         *     The first registered user automatically becomes the owner (via loopback or setup code).
+         *     Subsequent registrations require an open window or valid join code, capped at 8 users.
          */
         post: operations["register_api_auth_register_post"];
         delete?: never;
@@ -277,6 +280,458 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Setup
+         * @description Check setup status. Returns 404 once owner exists.
+         */
+        get: operations["get_setup_api_owner_setup_get"];
+        put?: never;
+        /**
+         * Post Setup
+         * @description First claim endpoint.
+         *
+         *     Must come from loopback or carry the one-time setup code. Returns 404 after claim.
+         */
+        post: operations["post_setup_api_owner_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Owner Status
+         * @description Retrieve owner dashboard status: window, join code, user count.
+         */
+        get: operations["get_owner_status_api_owner_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Registration Window
+         * @description Open or close the timed registration window (15 min, 1 hour, or until closed).
+         */
+        post: operations["set_registration_window_api_owner_window_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/join-code/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Rotate Join Code
+         * @description Rotate the household join code. The new plaintext code is returned once.
+         */
+        post: operations["post_rotate_join_code_api_owner_join_code_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Users
+         * @description List all registered users with status.
+         */
+        get: operations["get_users_api_owner_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/users/{user_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable User Endpoint
+         * @description Disable or enable a user. Disabling terminates active sessions and running jobs.
+         */
+        post: operations["disable_user_endpoint_api_owner_users__user_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/users/{user_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password Endpoint
+         * @description Sensitive action: reset user password.
+         *
+         *     Requires owner's password again. Wipes provider sessions and cancels jobs.
+         */
+        post: operations["reset_password_endpoint_api_owner_users__user_id__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Owner Endpoint
+         * @description Sensitive action: transfer ownership to another user.
+         */
+        post: operations["transfer_owner_endpoint_api_owner_transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Accounts
+         * @description List linked accounts for the current user with status, last sync, and order count.
+         */
+        get: operations["list_accounts_api_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/link/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Start
+         * @description Start provider linking: delegates to LinkingService and returns opaque handle. Never returns OTP code.
+         */
+        post: operations["link_start_api_accounts_link_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/link/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Verify
+         * @description Verify linking OTP, enforce quota and exclusivity across users, and bind account.
+         */
+        post: operations["link_verify_api_accounts_link_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/{account_id}/verify-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Again
+         * @description Start re-verification linking session for an existing account.
+         */
+        post: operations["verify_again_api_accounts__account_id__verify_again_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/{account_id}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disconnect Account
+         * @description Disconnect account. Wipes or preserves data according to wipe_data flag.
+         */
+        post: operations["disconnect_account_api_accounts__account_id__disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Account
+         * @description Disconnect account. Wipes or preserves data according to wipe_data flag.
+         */
+        delete: operations["disconnect_account_api_accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sync Jobs
+         * @description List background sync jobs for the authenticated user.
+         */
+        get: operations["list_sync_jobs_api_sync_jobs_get"];
+        put?: never;
+        /**
+         * Create Sync Job
+         * @description Start a background sync job subject to DEC-010 limits (1 running, 2 queued).
+         */
+        post: operations["create_sync_job_api_sync_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sync Job
+         * @description Get status and progress of a background job. Returns 404 if not found or unauthorized.
+         */
+        get: operations["get_sync_job_api_sync_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sync Job Events
+         * @description Get recent events stream for polling job progress. Returns 404 if not user's job.
+         */
+        get: operations["get_sync_job_events_api_sync_jobs__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Sync Job
+         * @description Cancel a running or queued job within one request.
+         */
+        post: operations["cancel_sync_job_api_sync_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Sync Job
+         * @description Pause an active job.
+         */
+        post: operations["pause_sync_job_api_sync_jobs__job_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Sync Job
+         * @description Resume a paused, interrupted, or failed job.
+         */
+        post: operations["resume_sync_job_api_sync_jobs__job_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Sync Job Code
+         * @description Submit OTP code for a job paused in needs_code state.
+         */
+        post: operations["submit_sync_job_code_api_sync_jobs__job_id__code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/jobs/{job_id}/use-partial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Use Partial Sync
+         * @description Scenario: import once. Ingest partial archive from failed or cancelled job.
+         */
+        post: operations["use_partial_sync_api_sync_jobs__job_id__use_partial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -295,6 +750,62 @@ export interface components {
             date_from: string | null;
             /** Date To */
             date_to: string | null;
+        };
+        /** AccountOut */
+        AccountOut: {
+            /**
+             * Id
+             * @description Account local ID
+             */
+            id: string;
+            /**
+             * Local Id
+             * @description Account local ID
+             */
+            local_id: string;
+            /**
+             * Provider
+             * @description Provider name (zomato, swiggy, fake)
+             */
+            provider: string;
+            /**
+             * Phone
+             * @description Linked phone number
+             */
+            phone?: string | null;
+            /**
+             * Provider Id
+             * @description External provider account ID
+             */
+            provider_id?: string | null;
+            /**
+             * Status
+             * @description Session status: ok, expiring, expired
+             * @default ok
+             */
+            status: string;
+            /**
+             * Last Sync
+             * @description Timestamp of last successful sync
+             */
+            last_sync?: string | null;
+            /**
+             * Order Count
+             * @description Total order count
+             * @default 0
+             */
+            order_count: number;
+            /**
+             * Name
+             * @description Optional friendly account label
+             */
+            name?: string | null;
+            /**
+             * Has Session
+             * @description Whether active session exists
+             * @default false
+             */
+            has_session: boolean;
         };
         /** Behavior */
         Behavior: {
@@ -410,6 +921,21 @@ export interface components {
             kpis: components["schemas"]["KPIs"];
             percent_change: components["schemas"]["KPIDeltas"];
         };
+        /** CreateSyncJobRequest */
+        CreateSyncJobRequest: {
+            /**
+             * Account Id
+             * @description Linked account local ID to sync
+             */
+            account_id: string;
+            /**
+             * Mode
+             * @description Sync mode: 'new' (incremental), 'missing' (repair), or 'all' (full scan)
+             * @default new
+             * @enum {string}
+             */
+            mode: "new" | "missing" | "all" | "incremental" | "repair" | "full";
+        };
         /** CsrfResponse */
         CsrfResponse: {
             /** Csrf Token */
@@ -470,6 +996,43 @@ export interface components {
             quantity: number;
             /** Line Total */
             line_total: number;
+        };
+        /** DisableUserRequest */
+        DisableUserRequest: {
+            /**
+             * Disabled
+             * @default true
+             */
+            disabled: boolean;
+        };
+        /** DisconnectRequest */
+        DisconnectRequest: {
+            /**
+             * Wipe Data
+             * @description Whether to wipe stored orders and history files
+             * @default false
+             */
+            wipe_data: boolean;
+        };
+        /** DisconnectResponse */
+        DisconnectResponse: {
+            /**
+             * Status
+             * @description Disconnection status
+             * @default ok
+             */
+            status: string;
+            /**
+             * Account Id
+             * @description Disconnected account local ID
+             */
+            account_id: string;
+            /**
+             * Wiped
+             * @description Whether account data was wiped
+             * @default false
+             */
+            wiped: boolean;
         };
         /** DiscountItem */
         DiscountItem: {
@@ -724,6 +1287,56 @@ export interface components {
             /** Category */
             category: string | null;
         };
+        /** JobEventOut */
+        JobEventOut: {
+            /**
+             * Id
+             * @description Event sequence number
+             */
+            id?: number | null;
+            /**
+             * Job Id
+             * @description Associated job ID
+             */
+            job_id: string;
+            /**
+             * Status
+             * @description Job status at time of event
+             */
+            status: string;
+            /**
+             * Phase
+             * @description Sync phase
+             */
+            phase?: string | null;
+            /**
+             * Page
+             * @description Page index
+             */
+            page?: number | null;
+            /**
+             * Counts
+             * @description Counts snapshot
+             */
+            counts?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Code
+             * @description Event message or error code
+             */
+            code?: string | null;
+            /**
+             * Message
+             * @description Human-readable event message
+             */
+            message?: string | null;
+            /**
+             * Created At
+             * @description Timestamp event was logged
+             */
+            created_at?: number | null;
+        };
         JsonValue: unknown;
         /** KPIDeltas */
         KPIDeltas: {
@@ -828,6 +1441,89 @@ export interface components {
             /** Page Size */
             page_size: number;
         };
+        /** LinkStartRequest */
+        LinkStartRequest: {
+            /**
+             * Provider
+             * @description Provider name: zomato, swiggy, or fake
+             */
+            provider: string;
+            /**
+             * Phone
+             * @description Phone number to link
+             */
+            phone: string;
+        };
+        /** LinkStartResponse */
+        LinkStartResponse: {
+            /**
+             * Handle
+             * @description Opaque two-step linking handle (never contains OTP code)
+             */
+            handle: string;
+            /**
+             * Expires At
+             * @description Timestamp when the linking handle expires (10m TTL)
+             */
+            expires_at: number;
+        };
+        /** LinkVerifyRequest */
+        LinkVerifyRequest: {
+            /**
+             * Handle
+             * @description Two-step linking handle from start_linking
+             */
+            handle: string;
+            /**
+             * Code
+             * @description Verification OTP code
+             */
+            code: string;
+            /**
+             * Account Name
+             * @description Optional account name
+             */
+            account_name?: string | null;
+        };
+        /** LinkVerifyResponse */
+        LinkVerifyResponse: {
+            /**
+             * Id
+             * @description Bound account local ID
+             */
+            id: string;
+            /**
+             * Local Id
+             * @description Bound account local ID
+             */
+            local_id: string;
+            /**
+             * Provider
+             * @description Provider name
+             */
+            provider: string;
+            /**
+             * Provider Id
+             * @description External provider account ID
+             */
+            provider_id: string;
+            /**
+             * Phone
+             * @description Linked phone number
+             */
+            phone?: string | null;
+            /**
+             * Status
+             * @description Account session status
+             * @default ok
+             */
+            status: string;
+            /**
+             * Name
+             * @description Account name
+             */
+            name?: string | null;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Username */
@@ -837,7 +1533,7 @@ export interface components {
         };
         /** LoginResponse */
         LoginResponse: {
-            user: components["schemas"]["UserResponse"];
+            user: components["schemas"]["food_khata__serve__routes_auth__UserResponse"];
             /** Csrf Token */
             csrf_token: string;
         };
@@ -986,6 +1682,19 @@ export interface components {
             /** Filtered Total Amount */
             filtered_total_amount: number;
         };
+        /** OwnerStatusResponse */
+        OwnerStatusResponse: {
+            window: components["schemas"]["WindowStatusResponse"];
+            /** Has Join Code */
+            has_join_code: boolean;
+            /** User Count */
+            user_count: number;
+            /**
+             * Max Users
+             * @default 8
+             */
+            max_users: number;
+        };
         /** PlaceDistance */
         PlaceDistance: {
             /** Distance Km */
@@ -1050,12 +1759,54 @@ export interface components {
             /** Join Code */
             join_code?: string | null;
         };
+        /** ResetUserPasswordRequest */
+        ResetUserPasswordRequest: {
+            /** Owner Password */
+            owner_password: string;
+            /** New Password */
+            new_password?: string | null;
+        };
+        /** ResetUserPasswordResponse */
+        ResetUserPasswordResponse: {
+            /** Status */
+            status: string;
+            /** User Id */
+            user_id: string;
+            /** Temporary Password */
+            temporary_password?: string | null;
+        };
         /** RestaurantOption */
         RestaurantOption: {
             /** Id */
             id: string;
             /** Name */
             name: string;
+        };
+        /** RotateJoinCodeResponse */
+        RotateJoinCodeResponse: {
+            /** Join Code */
+            join_code: string;
+        };
+        /** SetupCheckResponse */
+        SetupCheckResponse: {
+            /** Has Owner */
+            has_owner: boolean;
+            /** Is Loopback */
+            is_loopback: boolean;
+        };
+        /** SetupRequest */
+        SetupRequest: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
+            /** Setup Code */
+            setup_code?: string | null;
+            /**
+             * Adopt Data
+             * @default true
+             */
+            adopt_data: boolean;
         };
         /** SetupStatusResponse */
         SetupStatusResponse: {
@@ -1069,6 +1820,12 @@ export interface components {
              * @description True if registration is currently open
              */
             registration_open: boolean;
+            /**
+             * Insecure Transport
+             * @description True if running on insecure HTTP transport
+             * @default false
+             */
+            insecure_transport: boolean;
         };
         /** Slim */
         Slim: {
@@ -1115,16 +1872,155 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** UserResponse */
-        UserResponse: {
-            /** Id */
+        /** SubmitCodeRequest */
+        SubmitCodeRequest: {
+            /**
+             * Code
+             * @description Verification code / OTP from provider
+             */
+            code: string;
+        };
+        /** SyncJobResponse */
+        SyncJobResponse: {
+            /**
+             * Id
+             * @description Unique background job identifier
+             */
             id: string;
-            /** Username */
-            username: string;
-            /** Is Owner */
-            is_owner: boolean;
-            /** Created At */
-            created_at: string;
+            /**
+             * User Id
+             * @description Owning user identifier
+             */
+            user_id: string;
+            /**
+             * Account Id
+             * @description Account identifier
+             */
+            account_id: string;
+            /**
+             * Provider
+             * @description Provider name
+             */
+            provider: string;
+            /**
+             * Provider Id
+             * @description External provider account ID
+             */
+            provider_id?: string | null;
+            /**
+             * Mode
+             * @description Sync execution mode
+             * @default new
+             */
+            mode: string;
+            /**
+             * Status
+             * @description Job status (queued, running, done, failed, paused, needs_code, cancelled, interrupted)
+             */
+            status: string;
+            /**
+             * Phase
+             * @description Current sync phase
+             */
+            phase?: string | null;
+            /**
+             * Page
+             * @description Last scanned page
+             */
+            page?: number | null;
+            /**
+             * Counts
+             * @description Order and detail counts
+             */
+            counts?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Progress
+             * @description Current progress summary
+             */
+            progress?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Started At
+             * @description Timestamp job started running
+             */
+            started_at?: number | null;
+            /**
+             * Finished At
+             * @description Timestamp job reached terminal state
+             */
+            finished_at?: number | null;
+            /**
+             * Error Code
+             * @description Error code if job failed/needs_code
+             */
+            error_code?: string | null;
+            /**
+             * Error Message
+             * @description Error message if job failed/needs_code
+             */
+            error_message?: string | null;
+            /**
+             * Error
+             * @description Standard error object if failed
+             */
+            error?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Created At
+             * @description Timestamp job was enqueued
+             */
+            created_at?: number | null;
+            /**
+             * Updated At
+             * @description Timestamp job state was last updated
+             */
+            updated_at?: number | null;
+            /**
+             * Resumable
+             * @description Whether job can be resumed
+             */
+            resumable?: number | boolean | null;
+        };
+        /** TransferOwnershipRequest */
+        TransferOwnershipRequest: {
+            /** Owner Password */
+            owner_password: string;
+            /** To Username */
+            to_username?: string | null;
+            /** To User Id */
+            to_user_id?: string | null;
+        };
+        /** UsePartialResponse */
+        UsePartialResponse: {
+            /**
+             * Status
+             * @description Import status
+             * @default ok
+             */
+            status: string;
+            /**
+             * Total
+             * @description Total records imported into analytics database
+             * @default 0
+             */
+            total: number;
+            /**
+             * Imported
+             * @description Imported count
+             * @default 0
+             */
+            imported: number;
+            /**
+             * Result
+             * @description Full ingest result details
+             */
+            result?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1138,6 +2034,33 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifyAgainRequest */
+        VerifyAgainRequest: {
+            /**
+             * Code
+             * @description Optional OTP code if verifying in one call
+             */
+            code?: string | null;
+        };
+        /** VerifyAgainResponse */
+        VerifyAgainResponse: {
+            /**
+             * Handle
+             * @description Opaque linking handle for re-verification
+             */
+            handle: string;
+            /**
+             * Expires At
+             * @description Handle expiration timestamp
+             */
+            expires_at: number;
+            /**
+             * Status
+             * @description Re-verification status
+             * @default pending
+             */
+            status: string;
         };
         /** VisitMonth */
         VisitMonth: {
@@ -1189,6 +2112,27 @@ export interface components {
              */
             direction: "up" | "down" | "total";
         };
+        /** WindowRequest */
+        WindowRequest: {
+            /** Duration Seconds */
+            duration_seconds?: number | null;
+            /** Duration Minutes */
+            duration_minutes?: number | null;
+            /** Action */
+            action?: string | null;
+        };
+        /** WindowStatusResponse */
+        WindowStatusResponse: {
+            /** Is Open */
+            is_open: boolean;
+            /** Remaining Seconds */
+            remaining_seconds?: number | null;
+            /**
+             * Until Closed
+             * @default false
+             */
+            until_closed: boolean;
+        };
         /** YearSpend */
         YearSpend: {
             /** Year */
@@ -1197,6 +2141,33 @@ export interface components {
             month: number;
             /** Spend */
             spend: number;
+        };
+        /** UserResponse */
+        food_khata__serve__routes_auth__UserResponse: {
+            /** Id */
+            id: string;
+            /** Username */
+            username: string;
+            /** Is Owner */
+            is_owner: boolean;
+            /** Created At */
+            created_at: string;
+        };
+        /** UserResponse */
+        food_khata__serve__routes_owner__UserResponse: {
+            /** Id */
+            id: string;
+            /** Username */
+            username: string;
+            /** Is Owner */
+            is_owner: boolean;
+            /**
+             * Disabled
+             * @default false
+             */
+            disabled: boolean;
+            /** Created At */
+            created_at: string;
         };
     };
     responses: never;
@@ -1667,7 +2638,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["food_khata__serve__routes_auth__UserResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1769,7 +2740,739 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["food_khata__serve__routes_auth__UserResponse"];
+                };
+            };
+        };
+    };
+    get_setup_api_owner_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupCheckResponse"];
+                };
+            };
+        };
+    };
+    post_setup_api_owner_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["food_khata__serve__routes_owner__UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_owner_status_api_owner_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnerStatusResponse"];
+                };
+            };
+        };
+    };
+    set_registration_window_api_owner_window_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WindowRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WindowStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_rotate_join_code_api_owner_join_code_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotateJoinCodeResponse"];
+                };
+            };
+        };
+    };
+    get_users_api_owner_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["food_khata__serve__routes_owner__UserResponse"][];
+                };
+            };
+        };
+    };
+    disable_user_endpoint_api_owner_users__user_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["food_khata__serve__routes_owner__UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_endpoint_api_owner_users__user_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetUserPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetUserPasswordResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_owner_endpoint_api_owner_transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_accounts_api_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"][];
+                };
+            };
+        };
+    };
+    link_start_api_accounts_link_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_verify_api_accounts_link_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkVerifyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_again_api_accounts__account_id__verify_again_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["VerifyAgainRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyAgainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_account_api_accounts__account_id__disconnect_post: {
+        parameters: {
+            query?: {
+                wipe_data?: boolean;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DisconnectRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisconnectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_account_api_accounts__account_id__delete: {
+        parameters: {
+            query?: {
+                wipe_data?: boolean;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DisconnectRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisconnectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sync_jobs_api_sync_jobs_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_sync_job_api_sync_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSyncJobRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sync_job_api_sync_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sync_job_events_api_sync_jobs__job_id__events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_sync_job_api_sync_jobs__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_sync_job_api_sync_jobs__job_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_sync_job_api_sync_jobs__job_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_sync_job_code_api_sync_jobs__job_id__code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    use_partial_sync_api_sync_jobs__job_id__use_partial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsePartialResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
