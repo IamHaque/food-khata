@@ -159,6 +159,18 @@ class Zomato:
             raise KhataError("Zomato did not confirm authentication; check the OTP or try later.")
         return result
 
+    def start_login(self, phone: str) -> None:
+        if not re.fullmatch(r"[6-9][0-9]{9}", phone):
+            raise KhataError("Enter a valid 10-digit Indian mobile number.")
+        self._pending_phone = phone
+
+    def verify_otp(self, code: str) -> str:
+        if not getattr(self, "_pending_phone", None):
+            raise KhataError("No login in progress; start login first.")
+        phone = self._pending_phone
+        del self._pending_phone
+        return self.login(phone, lambda: code)
+
     def login(self, phone: str, get_otp: Callable[[], str]) -> str:
         if not re.fullmatch(r"[6-9][0-9]{9}", phone):
             raise KhataError("Enter a valid 10-digit Indian mobile number.")
