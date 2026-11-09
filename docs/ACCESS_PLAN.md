@@ -415,8 +415,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-09 | commit 6a1ef89; users/<id>/ isolation, DB per-user, cache keying, AEAD encryption at rest, adoption backup, pytest 146 passed | B3 |
-| AC-07 | Owner, setup and registration | B | P0 | TODO | — | — | B4 |
-| AC-09 | Job runner | B | P0 | TODO | — | — | B4 |
+| AC-07 | Owner, setup and registration | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-07-1 to gemini-high | B4 |
+| AC-09 | Job runner | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-09-1 to deepseek | B4 |
 | AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
 | AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
@@ -575,5 +575,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-06 | T8 | gemini-high | 1 | pass | T6 audit deepseek pass |
 | 2026-11-09 | AC-08 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | AC-12 | T2 | beam | 1 | pass | — |
+| 2026-11-09 | AC-07 | T8 | gemini-high | 1 | running | — |
+| 2026-11-09 | AC-09 | T8 | deepseek | 1 | running | — |
 
 
