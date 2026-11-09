@@ -423,7 +423,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
 | AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
-| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-10 | 42efe37 + 9e1c313 merged; parent browser follow-up passed; trunk verify and shared integration pending | B6 |
+| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-10 | 42efe37 + 9e1c313 merged; parent browser follow-up passed; trunk verify passed 89.76s; shared integration/typecheck inclusion pending | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
@@ -541,6 +541,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-11 | `node scripts/verify.mjs . --backend` | all pass (pytest 172 passed, LAN mode, security middleware, TLS options, 979 vitest) | 74 s | 2af129a |
 | 2026-11-09 | AC-13 | `node scripts/verify.mjs . --backend` | all pass (997 vitest passed, welcome/setup/login/register screen tests, 172 pytest) | 74 s | 1fc4ccb |
 | 2026-11-09 | AC-10 | `node scripts/verify.mjs . --backend` | all pass (pytest 188 passed, accounts and sync API, contract freeze C-1, 997 vitest) | 78 s | c7de453 |
+
+| 2026-11-10 | AC-16 | node scripts/verify.mjs . --backend | all six checks pass after merge; owner expiry/error/dialog browser follow-up passed | 89.76 s | bc34ca2 |
 
 ### 5.9 Changelog
 
