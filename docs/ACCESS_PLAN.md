@@ -622,4 +622,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-15 | T6 | sol-medium | 2 | F3 | Reproduced analytics/decision crash mismatch and non-atomic migration; mobile imported capture incorrect |
 | 2026-11-10 | AC-15 | T8 | terra-high | 6 | review | fb01fb2; atomic receipt/migration and lifecycle fixes; parent verify and independent recheck pending |
 | 2026-11-10 | AC-15 | T6 | sol-medium | 3 | pass | Atomic receipt and migration; crash/restart/concurrency/ownership/CSRF plus 1440/390 visuals independently verified |
-| 2026-11-10 | AC-17 | T3 | terra-high | 1 | running | implement-AC-17-20261110; integrated auth/account/sync/cache behavior |
+| 2026-11-10 | AC-17 | T3 | terra-high | 1 | review | ef376c0; parent verification and independent auth/cache/visual review pending |
+| 2026-11-10 | AC-17 | T6 | sol-medium | 1 | running | audit-AC-17-20261110; user isolation, cross-tab, guards and banner semantics |
