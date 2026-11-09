@@ -424,7 +424,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-14 | Accounts and linking screens | B | P0 | DONE | 2026-11-10 | 8c1c276; trunk verify all pass 104.92s; parent synthetic 1440/390 regression and visual review pass; App mounting belongs to AC-17 | B6 |
 | AC-15 | Sync screens and background states | B | P0 | DONE | 2026-11-10 | a917762 + 1d4e11b; trunk verify 94.05s; independent crash/restart/API/1440/390 audit pass | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
-| AC-17 | Dashboard integration | B | P1 | IN_PROGRESS | 2026-11-10 | 09522c9 merged; parent verify 79.48s; independent isolation/API/visual recheck pass; trunk verify pending | B7 |
+| AC-17 | Dashboard integration | B | P1 | DONE | 2026-11-10 | 282a0db; trunk verify 91.10s; parent 6 browser regressions plus independent isolation and visuals pass | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
 
@@ -552,6 +552,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-15 | node scripts/verify.mjs . --backend | all six checks pass on trunk after casing and fixture fixes; independent durability audit passed | 94.05 s | 1d4e11b |
 
+| 2026-11-10 | AC-17 | node scripts/verify.mjs . --backend; Playwright access-integration | all six checks pass on trunk; 6 parent browser tests and 2 independent isolation checks pass | 91.10 s | 282a0db |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
@@ -628,3 +630,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-17 | T6 | sol-medium | 1 | F3 | Cross-tab URL filter leakage; paused/code job banners misleading; stale completion notice |
 | 2026-11-10 | AC-17 | T5 | terra-high | 2 | review | 09522c9; cross-tab/return URL and banner fixes; parent verify and independent recheck pending |
 | 2026-11-10 | AC-17 | T6 | sol-medium | 2 | pass | 6 supplied plus 2 independent synthetic regressions; delayed-response cache/preset isolation and visuals pass |
+| 2026-11-10 | AC-18 | T8 | terra-high | 1 | running | implement-AC-18-20261110; full journey, isolation, route/CSRF/LAN/log acceptance and docs |
