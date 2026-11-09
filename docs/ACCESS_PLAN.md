@@ -414,12 +414,12 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-04 | Sync service | B | P0 | DONE | 2026-11-09 | commit ee28f0d; SyncEvent typed events, error codes, cancel token, 3 modes, thin CLI wrapper, pytest 133 passed | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
-| AC-08 | Per-user data and encrypted sessions | B | P0 | TODO | — | — | B3 |
+| AC-08 | Per-user data and encrypted sessions | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-08-1 to deepseek | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | TODO | — | — | B4 |
 | AC-09 | Job runner | B | P0 | TODO | — | — | B4 |
 | AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
 | AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
-| AC-12 | Frontend foundation | B | P0 | TODO | — | — | B3 |
+| AC-12 | Frontend foundation | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-12-1 to beam | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | TODO | — | — | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | TODO | — | — | B6 |
 | AC-15 | Sync screens and background states | B | P0 | TODO | — | — | B6 |
@@ -568,5 +568,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high pass |
 | 2026-11-09 | AC-04 | T8 | beam | 1 | pass | — |
 | 2026-11-09 | AC-06 | T8 | gemini-high | 1 | pass | T6 audit deepseek pass |
+| 2026-11-09 | AC-08 | T8 | deepseek | 1 | running | — |
+| 2026-11-09 | AC-12 | T2 | beam | 1 | running | — |
 
 
