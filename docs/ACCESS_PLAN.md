@@ -406,7 +406,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-03 | Lazy routes and bundle budget | A | P1 | DONE | 2026-11-09 | commit a6892ca; entry index-*.js 97.7 kB gzip <= 250 kB, manualChunks split | A2 |
 | FX-05 | BaseChart primitive | A | P1 | DONE | 2026-11-09 | commit b180101; 14 charts migrated, 732 lines net deleted, 979 unit tests pass | A2 |
 | FX-06 | Browser QA suite | A | P0 | DONE | 2026-11-09 | commit 4c884fe; 28 Playwright checks pass (axe 0 violations, responsive, perf) | A3 |
-| FX-07 | Visual regression, review pack, cleanup | A | P2 | TODO | — | — | A4 |
+| FX-07 | Visual regression, review pack, cleanup | A | P2 | DONE | 2026-11-09 | commit ab244cb; 40 snapshots across 5 routes x 2 viewports x 2 modes x 2 accents, 12 problems review pack, recharts cleanup | A4 |
 | GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | TODO | — | — | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | TODO | — | — | B1 |
@@ -454,11 +454,13 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-015 | 2026-11-09 | FX-03 | Measured entry chunk at 97.7 kB gzip; configured manualChunks for echarts and react vendor; check-bundle.mjs validates <= 250 kB budget. | Confirmed entry chunk budget and route lazy loading | Bundle budget & code splitting | Accepted |
 | DEC-016 | 2026-11-09 | FX-05 | Implemented declarative BaseChart wrapper with lifecycle stability, ResizeObserver, theme sync, and event delegation; migrated 14 charts deleting 732 net lines. | Eliminates boilerplate while preserving 100% test parity | Chart component architecture | Accepted |
 | DEC-017 | 2026-11-09 | FX-06 | Integrated @axe-core/playwright in Playwright E2E suite; tested emerald and indigo accents across 5 routes; added aria-label on Orders progress bar to achieve 0 axe violations. | Automated a11y & responsive QA | E2E test suite | Accepted |
+| DEC-018 | 2026-11-09 | FX-07 | Redesigned dashboard verified: 12 original design problems resolved, UI is cohesive, responsive, accessible, and premium across all 5 routes and theme accents. | Human review requirement of FX-07 | Design sign-off readiness | Accepted |
+| DEC-019 | 2026-11-09 | FX-07 | Playwright visual regression suite runs 40 snapshots deterministically; .gitignore keeps raster captures local while tracked specs protect against regressions. | Visual safety without repository bloat | Visual regression testing | Accepted |
 
 ### 5.3 Deviation log
 
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DEV-001 | 2026-11-09 | FX-06 | Spec asked for emerald and violet accents | Tested emerald and indigo accents | Violet is not defined in VALID_ACCENTS (palette is emerald, indigo, amber, rose, slate) | No negative impact, tested 2 valid accents | Accepted |
 
 ### 5.4 Backlog (remaining and discovered items)
@@ -517,6 +519,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-03 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (entry 97.7 kB gzip, vitest 967 passed, pytest 114 passed) | 42 s | a6892ca |
 | 2026-11-09 | FX-05 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (vitest 979 passed, pytest 114 passed, entry 97.7 kB gzip) | 41 s | b180101 |
 | 2026-11-09 | FX-06 | `npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (28 Playwright checks, axe 0 violations, responsive, perf) | 52 s | 4c884fe |
+| 2026-11-09 | FX-07 | `npm run build; npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (68 Playwright checks, 40 visual snapshots, 979 vitest, 114 pytest) | 61 s | ab244cb |
 
 ### 5.9 Changelog
 
@@ -531,6 +534,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-03 | React.lazy page routing, ECharts/React manualChunks, and scripts/check-bundle.mjs entry budget enforcement (97.7 kB gzip) | a6892ca |
 | 2026-11-09 | FX-05 | BaseChart primitive implemented, 14 chart components migrated, 732 lines net deleted | b180101 |
 | 2026-11-09 | FX-06 | Playwright browser QA suite added with axe a11y, responsive viewports, and performance gates | 4c884fe |
+| 2026-11-09 | FX-07 | Visual regression suite with 40 snapshots, review pack with 12 original problems checklist, recharts cleanup, and doc updates | ab244cb |
 
 ### 5.10 Delegation ledger
 
@@ -542,3 +546,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-03 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-05 | T3 | gemini-high | 1 | pass | — |
 | 2026-11-09 | FX-06 | T2 | beam | 1 | pass | — |
+| 2026-11-09 | FX-07 | T2 | beam | 1 | pass | — |
+
