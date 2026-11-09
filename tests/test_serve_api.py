@@ -1,13 +1,19 @@
 from fastapi.testclient import TestClient
 
-from food_khata.serve.app import create_app
+from food_khata.serve.app import authenticate_client, create_app
 
 pytest_plugins = ["test_serve_filters"]
 
 
+def make_client(path, *args, **kwargs):
+    client = TestClient(create_app(path, *args, **kwargs), base_url="http://127.0.0.1")
+    authenticate_client(client)
+    return client
+
+
 def test_endpoints(conn):
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     dashboard = client.post("/api/dashboard", json={"account_ids": ["a"], "statuses": []})
     assert dashboard.status_code == 200
     assert dashboard.json()["kpis"]["orders"] == 2
@@ -37,7 +43,7 @@ def test_endpoints(conn):
 
 def test_cache_invalidates(conn):
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     assert client.post("/api/dashboard", json={}).json()["kpis"]["orders"] == 2
     conn.execute("UPDATE orders SET order_status='CANCELLED' WHERE id='1'")
     conn.commit()
@@ -68,7 +74,7 @@ def test_busy_retries_then_503(conn, monkeypatch):
     monkeypatch.setattr(app_module, "connect_readonly", lambda path: Busy(original(path)))
     monkeypatch.setattr(app_module.time, "sleep", lambda _: None)
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    response = TestClient(create_app(path), base_url="http://127.0.0.1").get("/api/orders")
+    response = make_client(path).get("/api/orders")
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "database_unavailable"
     assert len(calls) == 3
@@ -90,7 +96,7 @@ def test_scope_options_health_and_all_statuses(conn):
     conn.execute("UPDATE orders SET reconciliation_difference=2, source_complete=1 WHERE id='1'")
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     health = client.get(
         "/api/meta/data-health",
         params={"account_ids": "b", "platforms": "ZOMATO", "date_from": "2030-01-01"},
@@ -132,7 +138,7 @@ def test_money_grouping_trend_and_json(conn):
     )
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     merged = client.get("/api/restaurants").json()["rows"]
     split = client.get("/api/restaurants?grouping=listing").json()["rows"]
     assert len(merged) == 1 and len(split) == 2 and merged[0]["quantity"] == 2
@@ -161,7 +167,7 @@ def test_connect_and_begin_retries(conn, monkeypatch):
         return original(path)
 
     monkeypatch.setattr(app_module, "connect_readonly", connect)
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     assert client.get("/api/orders").status_code == 200 and len(attempts) == 3
     closed = []
 
@@ -199,7 +205,7 @@ def test_connect_and_begin_retries(conn, monkeypatch):
     assert response.status_code == 503 and "secret" not in response.text
     monkeypatch.setattr(app_module, "connect_readonly", original)
     assert (
-        TestClient(create_app(str(path) + ".missing"), base_url="http://127.0.0.1")
+        make_client(str(path) + ".missing")
         .get("/api/orders")
         .status_code
         == 503
@@ -213,7 +219,7 @@ def test_wal_cache_concurrent_and_commit_during_build(conn, monkeypatch):
 
     conn.execute("PRAGMA journal_mode=WAL")
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     original = app_module.compute_metrics
     calls = []
     # TestClient runs requests in another thread; use a separate WAL writer.
@@ -251,7 +257,7 @@ def test_dashboard_failures_are_not_cached(conn, monkeypatch):
     import food_khata.serve.app as app_module
 
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     original = app_module.compute_metrics
 
     def fail(*args):
@@ -268,7 +274,7 @@ def test_health_duplicate_counts_follow_order_scope(conn):
     conn.execute("UPDATE orders SET account_id='a', platform_order_id='1' WHERE id='3'")
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     assert client.get("/api/meta/data-health").json()["duplicate_orders"] == 1
     assert (
         client.get("/api/meta/data-health", params={"date_to": "2025-01-31"}).json()[
@@ -280,7 +286,7 @@ def test_health_duplicate_counts_follow_order_scope(conn):
 
 def test_nonfinite_dashboard_recovers(conn):
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     conn.execute("UPDATE orders SET final_amount_paid=? WHERE id='1'", (float("inf"),))
     conn.commit()
     response = client.post("/api/dashboard", json={})
@@ -293,7 +299,7 @@ def test_nonfinite_dashboard_recovers(conn):
 
 def test_finite_error_envelopes_and_row_fees(conn, caplog):
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = make_client(path)
     assert client.get("/api/orders/1/bill").json()["order"]["fees"] == 8
     conn.execute("UPDATE orders SET final_amount_paid=? WHERE id='1'", (float("inf"),))
     conn.commit()
@@ -313,7 +319,7 @@ def test_bill_discount_items_and_balance_label(conn):
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
     result = (
-        TestClient(create_app(path), base_url="http://127.0.0.1").get("/api/orders/1/bill").json()
+        make_client(path).get("/api/orders/1/bill").json()
     )
     assert result["discount_items"] == [
         {"label": "food", "amount": 10},

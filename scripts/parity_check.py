@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient  # noqa: E402
 
 from food_khata.dashboard import fetch_analytics  # noqa: E402
-from food_khata.serve.app import create_app  # noqa: E402
+from food_khata.serve.app import authenticate_client, create_app  # noqa: E402
 from food_khata.serve.db import database_version  # noqa: E402
 
 
@@ -53,6 +53,7 @@ def compare(db_path):
         rows.append((label, old, new, difference, match))
 
     with TestClient(create_app(db_path), base_url="http://127.0.0.1") as client:
+        authenticate_client(client)
         scopes = [("All", {}, data["orders"])]
         for field, filter_key, label in (
             ("account_id", "account_ids", "Account"),

@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import food_khata.serve.app as app_module
-from food_khata.serve.app import create_app
+from food_khata.serve.app import authenticate_client, create_app
 from food_khata.serve.db import connect_readonly, database_version
 
 pytest_plugins = ["test_serve_filters"]
@@ -120,6 +120,7 @@ def test_concurrent_requests_use_separate_closed_connections(conn, monkeypatch):
 
     monkeypatch.setattr(app_module, "connect_readonly", connect)
     client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    authenticate_client(client)
     with ThreadPoolExecutor(max_workers=20) as pool:
         responses = list(pool.map(lambda _: client.get("/api/orders/slim"), range(20)))
 
@@ -134,6 +135,7 @@ def test_concurrent_requests_use_separate_closed_connections(conn, monkeypatch):
 def test_missing_database_returns_clear_error(tmp_path):
     path = tmp_path / "missing.db"
     client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    authenticate_client(client)
     responses = (
         client.get("/api/orders"),
         client.get("/api/meta/filters"),

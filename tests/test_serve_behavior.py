@@ -43,12 +43,14 @@ def test_behavior_item_filter_and_fractional_rounding(conn):
 def test_dashboard_malformed_dates_and_unavailable_timing(conn):
     from fastapi.testclient import TestClient
 
-    from food_khata.serve.app import create_app
+    from food_khata.serve.app import authenticate_client, create_app
 
     conn.execute("UPDATE orders SET order_date='invalid', order_time='invalid'")
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    result = TestClient(create_app(path), base_url="http://127.0.0.1").post(
+    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    authenticate_client(client)
+    result = client.post(
         "/api/dashboard", json={"compare": "previous_year"}
     )
     assert result.status_code == 200
