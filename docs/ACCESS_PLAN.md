@@ -413,7 +413,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-03 | Database robustness | B | P0 | DONE | 2026-11-09 | commit 516ca75; WAL mode, busy timeout, order quarantine table, incremental ingest, pytest 133 passed | B1 |
 | AC-04 | Sync service | B | P0 | DONE | 2026-11-09 | commit ee28f0d; SyncEvent typed events, error codes, cancel token, 3 modes, thin CLI wrapper, pytest 133 passed | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
-| AC-06 | Auth core | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-06-1 to gemini-high | B2 |
+| AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | TODO | — | — | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | TODO | — | — | B4 |
 | AC-09 | Job runner | B | P0 | TODO | — | — | B4 |
@@ -526,6 +526,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-02 | `node scripts/verify.mjs . --backend` | all pass (pytest 129 passed, sync checkpoints batched, 979 vitest) | 34 s | cc5cf95 |
 | 2026-11-09 | AC-03 | `node scripts/verify.mjs . --backend` | all pass (pytest 133 passed, WAL concurrency, quarantine, 979 vitest) | 61 s | 516ca75 |
 | 2026-11-09 | AC-04 | `node scripts/verify.mjs . --backend` | all pass (pytest 133 passed, sync service typed events, cancel token, 979 vitest) | 61 s | ee28f0d |
+| 2026-11-09 | AC-06 | `node scripts/verify.mjs . --backend` | all pass (pytest 140 passed, auth core, scrypt, sessions, csrf, throttle, 979 vitest) | 65 s | 79f8dda |
 
 ### 5.9 Changelog
 
@@ -547,6 +548,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-02 | Fixed sync early-stop bug, added lifetime_complete preservation, batched checkpoints (5 pages/50 details), and added MODE_LABELS | cc5cf95 |
 | 2026-11-09 | AC-03 | Enabled WAL mode and busy timeout on AnalyticsDB/readonly connections, added quarantine table and incremental ingest | 516ca75 |
 | 2026-11-09 | AC-04 | Sync service implemented with typed events, error codes, cancel token, mode aliases, and CLI thin wrapper | ee28f0d |
+| 2026-11-09 | AC-06 | Auth core implemented with scrypt password hashing, app.db server sessions, CSRF token validation, login throttling, full route auth sweep, and OpenAPI contract C-0 | 79f8dda |
 
 ### 5.10 Delegation ledger
 
@@ -565,6 +567,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-03 | T8 | gemini-med | 1 | pass | — |
 | 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high pass |
 | 2026-11-09 | AC-04 | T8 | beam | 1 | pass | — |
-| 2026-11-09 | AC-06 | T8 | gemini-high | 1 | running | — |
+| 2026-11-09 | AC-06 | T8 | gemini-high | 1 | pass | T6 audit deepseek running |
 
 
