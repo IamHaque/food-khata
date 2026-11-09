@@ -1,5 +1,6 @@
 """Authentication routes for Food Khata API (AC-06)."""
 
+import ipaddress
 import re
 import sqlite3
 import uuid
@@ -14,15 +15,22 @@ from food_khata.auth import (
     INVALID_CREDENTIALS_MESSAGE,
     SESSION_COOKIE_NAME,
     THROTTLE_ERROR_MESSAGE,
+    can_register,
+    check_registration_throttle,
     check_throttle,
     clear_session_cookies,
+    clear_setup_code,
     connect_app_db,
     delete_session,
     dummy_verify,
     generate_csrf_token,
+    has_owner,
     hash_password,
+    is_registration_window_open,
     record_failed_login,
+    record_registration_attempt,
     reset_failed_logins,
+    reset_registration_throttle,
     rotate_session,
     set_csrf_cookie,
     set_session_cookie,
@@ -85,6 +93,16 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "127.0.0.1"
 
 
+def _is_loopback_client(request: Request) -> bool:
+    host = request.client.host if request.client else "127.0.0.1"
+    if host in {"testclient", "localhost", "127.0.0.1", "::1"}:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def _is_secure_request(request: Request) -> bool:
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
@@ -92,18 +110,53 @@ def _is_secure_request(request: Request) -> bool:
 @router.get("/setup-status", response_model=SetupStatusResponse)
 def setup_status(conn: Annotated[sqlite3.Connection, Depends(get_auth_db)]):
     """Check whether server setup is needed and if registration is open."""
-    row = conn.execute("SELECT COUNT(*) FROM users WHERE is_owner = 1").fetchone()
-    has_owner = bool(row and row[0] > 0)
-    # When no owner exists, registration is open so the first user can claim ownership
-    return SetupStatusResponse(has_owner=has_owner, registration_open=not has_owner or True)
+    has_own = has_owner(conn)
+    if not has_own:
+        reg_open = True
+    else:
+        reg_open = is_registration_window_open(conn)
+    return SetupStatusResponse(has_owner=has_own, registration_open=reg_open)
 
 
 @router.post("/register", response_model=UserResponse)
 def register(
     data: RegisterRequest,
+    request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
 ):
-    """Register a new user. The first registered user automatically becomes the owner."""
+    """Register a new user.
+
+    The first registered user automatically becomes the owner (via loopback or setup code).
+    Subsequent registrations require an open window or valid join code, capped at 8 users.
+    """
+    ip = _get_client_ip(request)
+
+    # 1. Registration rate limit (5 attempts per 10 min per IP)
+    is_throttled, retry_after = check_registration_throttle(conn, ip)
+    if is_throttled:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registration attempts. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    # Record registration attempt
+    record_registration_attempt(conn, ip)
+
+    # 2. Check if registration is allowed (first claim, 8 user cap, window / join code)
+    is_loop = _is_loopback_client(request)
+    allowed, err_msg, status_code = can_register(
+        conn,
+        join_code=data.join_code,
+        is_loopback=is_loop,
+        setup_code=data.join_code,
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status_code,
+            detail=err_msg or "Registration is closed.",
+        )
+
     username = data.username.strip()
     if not re.fullmatch(r"[a-zA-Z0-9_-]+", username):
         raise HTTPException(
@@ -119,10 +172,8 @@ def register(
             detail="Username already exists.",
         )
 
-    # Check if an owner exists; first user is owner
-    owner_row = conn.execute("SELECT COUNT(*) FROM users WHERE is_owner = 1").fetchone()
-    has_owner = bool(owner_row and owner_row[0] > 0)
-    is_owner = 1 if not has_owner else 0
+    has_own = has_owner(conn)
+    is_owner = 1 if not has_own else 0
 
     user_id = str(uuid.uuid4())
     pw_hash = hash_password(data.password)
@@ -133,6 +184,20 @@ def register(
         (user_id, username, pw_hash, is_owner, 0, created_at),
     )
     conn.commit()
+
+    # Successful registration resets attempt counter for this IP
+    reset_registration_throttle(conn, ip)
+
+    if is_owner:
+        clear_setup_code(conn)
+        data_root = getattr(request.app.state, "data_root", None)
+        if data_root:
+            try:
+                from food_khata.users import adopt_legacy_root
+
+                adopt_legacy_root(data_root, user_id)
+            except Exception:
+                pass
 
     return UserResponse(
         id=user_id,
