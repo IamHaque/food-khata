@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { authApi } from "../api";
+import { authApi, setCsrfToken } from "../api";
 import { queryClient } from "../../../app/providers";
+import { clearCrossFilterHistory } from "../../../lib/crossfilter";
 
 export function useAuth() {
   return useQuery({
@@ -41,18 +42,22 @@ export function ProtectedRoute(props: { children: React.ReactNode }) {
   return <RequireAuth {...props} />;
 }
 
+export function notifyAuthChange() {
+  clearCrossFilterHistory();
+  try { localStorage.setItem('food-khata-auth-change', `${Date.now()}-${Math.random()}`); } catch { /* storage may be unavailable */ }
+}
+
 export async function logout() {
-  try {
-    await authApi.logout();
-  } catch {
-    /* ignore */
-  }
+  await authApi.logout();
+  notifyAuthChange();
   try {
     localStorage.removeItem("access_token");
   } catch {
     /* ignore */
   }
+  setCsrfToken(null);
   try {
+    await queryClient.cancelQueries();
     queryClient.clear();
   } catch {
     /* ignore */

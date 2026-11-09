@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { Providers } from './providers';
+import { Providers, queryClient } from './providers';
 import { App } from './App';
 
 function render(path = '/') {
@@ -17,6 +17,7 @@ function render(path = '/') {
 
 describe('App shell (S-010)', () => {
   beforeEach(() => {
+    queryClient.setQueryData(['auth', 'me'], { id: 'test', username: 'test', is_owner: false, created_at: '' });
     // provide a minimal localStorage for persistence tests
     const store: Record<string, string> = {};
     const ls = {

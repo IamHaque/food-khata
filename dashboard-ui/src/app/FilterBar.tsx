@@ -1,3 +1,4 @@
+import { userStorageKey } from '../lib/user-storage';
 import { useEffect, useMemo, useState } from 'react';
 import { useFilters } from './FilterContext';
 import {
@@ -189,7 +190,7 @@ export function FilterBar() {
   function handleSavePreset() {
     clearMessages();
     try {
-      localStorage.setItem('food-khata-preset', JSON.stringify(filters));
+      localStorage.setItem(userStorageKey('food-khata-preset'), JSON.stringify(filters));
       setSaved('Preset saved successfully');
       setError('');
     } catch {
@@ -201,7 +202,7 @@ export function FilterBar() {
   function handleLoadPreset() {
     clearMessages();
     try {
-      const raw = localStorage.getItem('food-khata-preset');
+      const raw = localStorage.getItem(userStorageKey('food-khata-preset'));
       if (raw) {
         const candidate: unknown = JSON.parse(raw);
         const valid = validateFilters(candidate);

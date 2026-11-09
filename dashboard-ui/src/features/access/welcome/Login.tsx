@@ -2,6 +2,8 @@ import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { authApi, ApiError } from "../api";
+import { notifyAuthChange } from "../auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface LoginProps {
   onSuccess?: () => void;
@@ -10,6 +12,7 @@ export interface LoginProps {
 
 export function Login({ onSuccess, hideShell = false }: LoginProps) {
   const navigate = useNavigate();
+  const client = useQueryClient();
   const location = useLocation();
 
   const [username, setUsername] = React.useState("");
@@ -65,7 +68,10 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
 
     setSubmitting(true);
     try {
+      await client.cancelQueries();
+      client.clear();
       await authApi.login(username.trim(), password);
+      notifyAuthChange();
       if (onSuccess) {
         onSuccess();
       } else {

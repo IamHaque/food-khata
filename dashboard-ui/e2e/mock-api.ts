@@ -13,6 +13,9 @@ export async function mockApi(page: Page) {
     const url = new URL(route.request().url());
     const path = url.pathname;
 
+    if (path === '/api/auth/me') return route.fulfill({ json: { id: 'user-a', username: 'alice', is_owner: true, created_at: '' } });
+    if (path === '/api/accounts') return route.fulfill({ json: [{ id: 'a', local_id: 'a', provider: 'SWIGGY', phone: 'Customer A', status: 'ok', order_count: 1 }] });
+    if (path === '/api/sync/jobs') return route.fulfill({ json: [] });
     if (path === '/api/meta/filters') {
       return route.fulfill({
         json: {

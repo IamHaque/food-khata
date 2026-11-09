@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFilters } from './FilterContext';
+import { useAccounts } from '../features/access/api';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Input } from '../components/ui/input';
 import { Users, Search, Check } from 'lucide-react';
@@ -19,8 +20,9 @@ function initials(label: string) {
 
 export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   const { defaultOpen = false } = props;
-  const { filters, update, metadata } = useFilters();
-  const accounts = (metadata.data?.all_accounts ?? []) as Account[];
+  const { filters, update } = useFilters();
+  const linked = useAccounts();
+  const accounts: Account[] = useMemo(() => (linked.data ?? []).map(a => ({ id: a.local_id, label: a.phone ?? a.local_id, platforms: [a.provider], order_count: a.order_count })), [linked.data]);
   const selected = filters.account_ids ?? [];
 
   const [open, setOpen] = useState(defaultOpen);

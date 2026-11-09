@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { useAccounts } from "../api";
+import { SessionControls } from "../banners/SessionControls";
 import { accountsApi, ApiError } from "../api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,8 @@ export function Home() {
   return (
     <AuthShell title="Home" subtitle="Linked accounts">
       <div className="space-y-4">
+        <Link className="underline text-sm" to="/">Dashboard</Link>
+        <SessionControls />
         {message && <StatusBanner variant="info">{message}</StatusBanner>}
 
         <div className="flex items-center justify-between">
@@ -104,6 +107,7 @@ export function Home() {
                 {acc.last_sync ? ` • last sync ${acc.last_sync}` : ""}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
+                <Link className="rounded-md border px-2 py-1 text-xs font-medium" to={`/sync?account=${encodeURIComponent(acc.local_id)}`}>Sync</Link>
                 {acc.status === "expired" && (
                   <button
                     type="button"

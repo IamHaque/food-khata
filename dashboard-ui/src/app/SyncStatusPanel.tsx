@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboard, useMetadata } from '../hooks/api';
 import { useFilters } from './FilterContext';
+import { useAccounts } from '../features/access/api';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { formatExactTimestamp, formatRelativeSync } from './sync-format';
 import type { components } from '../types/api';
@@ -328,10 +329,13 @@ function SyncPanelContainer({
   const { filters } = useFilters();
   const metadata = useMetadata(filters);
   const dashboard = useDashboard(filters);
+  const accounts = useAccounts();
 
   return (
+    <>
+    <div className="space-y-2 pb-4"><h3 className="text-sm font-semibold">Linked accounts</h3>{accounts.data?.map(account => <p className="text-xs" key={account.local_id}>{account.provider} · {account.phone ?? account.local_id} · {account.order_count} orders · {account.status}</p>)}</div>
     <SyncStatusPanelBody
-      health={health}
+      health={health ? { ...health, imports: health.imports?.filter(item => accounts.data?.some(account => account.local_id === item.account_id)) } : health}
       summary={summarize(metadata.data, dashboard.data)}
       loading={healthLoading}
       error={healthError}
@@ -341,6 +345,7 @@ function SyncPanelContainer({
         void dashboard.refetch();
       }}
     />
+    </>
   );
 }
 
