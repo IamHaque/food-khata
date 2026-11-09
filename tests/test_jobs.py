@@ -1,7 +1,10 @@
 """Tests for background job runner, lifecycle, limits, restart, and cancel (AC-09)."""
 
+import sqlite3
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -26,7 +29,7 @@ from food_khata.jobs import (
     JobRunner,
 )
 from food_khata.providers.fake import FakeProvider
-from food_khata.storage import read_json
+from food_khata.storage import read_json, save_json
 from food_khata.users.context import UserContext, user_database
 
 
@@ -554,6 +557,94 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(restarted.discard_partial(job["id"])["partial_decision"], "imported")
         with AnalyticsDB(user_db).connection() as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM orders").fetchone()[0], cnt)
+
+    def test_partial_crash_boundaries(self):
+        from food_khata.jobs.db import create_job
+
+        job = create_job(self.app_db, job_id="crash", user_id=self.alice_id,
+                         account_id=self.alice_account_id, provider="zomato", status=FAILED)
+        save_json(self.alice_storage.account_path(self.alice_account_id) / "swiggy-history.json", {
+            "orders": {"ord1": {"history": {"orderStatus": "Delivered", "orderTotal": 100},
+                "details": {"orders": [{"order_id": "ord1", "order_status": "Delivered",
+                    "order_total": 100, "order_time": "2026-10-10 12:00:00", "restaurant_name": "Test"}]}}}})
+        db = AnalyticsDB(user_database(self.data_root, self.alice_id))
+        with db.connection() as conn:
+            conn.execute("CREATE TRIGGER fail_receipt BEFORE INSERT ON partial_import_receipts BEGIN SELECT RAISE(ABORT, 'failure'); END")
+            conn.commit()
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.control.use_partial(job["id"])
+        with db.connection() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM orders").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT count(*) FROM partial_import_receipts").fetchone()[0], 0)
+            conn.execute("DROP TRIGGER fail_receipt")
+            conn.commit()
+        with closing(connect_app_db(self.app_db)) as conn:
+            conn.execute("CREATE TRIGGER fail_decision BEFORE UPDATE OF partial_decision ON jobs BEGIN SELECT RAISE(ABORT, 'failure'); END")
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.control.use_partial(job["id"])
+        with closing(connect_app_db(self.app_db)) as conn:
+            conn.execute("DROP TRIGGER fail_decision")
+        restarted = JobControl(self.app_db, data_root=self.data_root)
+        self.assertEqual(restarted.discard_partial(job["id"])["partial_decision"], "imported")
+        self.assertEqual(restarted.use_partial(job["id"])["imported"], 0)
+        with db.connection() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM orders").fetchone()[0], 1)
+            self.assertEqual(conn.execute("SELECT count(*) FROM partial_import_receipts").fetchone()[0], 1)
+
+    def test_concurrent_partial_decisions_agree(self):
+        from threading import Barrier
+
+        from food_khata.jobs.db import create_job
+
+        job = create_job(self.app_db, job_id="race", user_id=self.alice_id,
+                         account_id=self.alice_account_id, provider="zomato", status=FAILED)
+        barrier = Barrier(2)
+        def decide(action):
+            barrier.wait()
+            try:
+                return action(job["id"])
+            except KhataError:
+                return None
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            imported = pool.submit(decide, self.control.use_partial)
+            discarded = pool.submit(decide, self.control.discard_partial)
+            imported_result, discarded_result = imported.result(), discarded.result()
+        decision = self.control.get_job(job["id"])["partial_decision"]
+        self.assertEqual(discarded_result["partial_decision"], decision)
+        self.assertEqual(imported_result is not None, decision == "imported")
+
+    def test_partial_actions_reject_other_lifecycle_states(self):
+        from food_khata.jobs.db import create_job
+
+        for status in (QUEUED, RUNNING, DONE, INTERRUPTED):
+            job = create_job(self.app_db, job_id="state-" + status, user_id=self.alice_id,
+                             account_id=self.alice_account_id, provider="zomato", status=status)
+            for action in (self.control.use_partial, self.control.discard_partial):
+                with self.subTest(status=status, action=action.__name__), self.assertRaises(KhataError):
+                    action(job["id"])
+
+    def test_interrupted_legacy_migration_rolls_back(self):
+        from food_khata.jobs.db import add_job_event, create_job, init_jobs_tables
+
+        create_job(self.app_db, job_id="interrupted-migration", user_id=self.alice_id,
+                   account_id=self.alice_account_id, provider="zomato", status=FAILED)
+        add_job_event(self.app_db, "interrupted-migration", FAILED, code="IMPORTED_PARTIAL")
+        conn = connect_app_db(self.app_db)
+        conn.execute("ALTER TABLE jobs DROP COLUMN partial_decision")
+        conn.commit()
+        conn.set_authorizer(lambda action, arg1, arg2, db, source:
+                            sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_UPDATE and arg1 == "jobs" else sqlite3.SQLITE_OK)
+        with self.assertRaises(sqlite3.DatabaseError):
+            init_jobs_tables(conn)
+        conn.close()
+        init_jobs_tables(self.app_db)
+        self.assertEqual(self.control.discard_partial("interrupted-migration")["partial_decision"], "imported")
+        conn = connect_app_db(self.app_db)
+        conn.execute("UPDATE jobs SET partial_decision = 'pending' WHERE id = ?", ("interrupted-migration",))
+        conn.commit()
+        conn.close()
+        init_jobs_tables(self.app_db)
+        self.assertEqual(self.control.get_job("interrupted-migration")["partial_decision"], "imported")
 
     def test_discard_partial_persists_and_blocks_import(self):
         from food_khata.jobs.db import create_job

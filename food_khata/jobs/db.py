@@ -79,11 +79,12 @@ def init_jobs_tables(conn_or_path: sqlite3.Connection | Path | str) -> None:
     """Initialize jobs and job_events tables in app.db."""
     with get_db_conn(conn_or_path) as conn:
         conn.executescript(JOBS_SCHEMA_SQL)
+        conn.execute("BEGIN IMMEDIATE")
         columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
         if "partial_decision" not in columns:
             conn.execute("ALTER TABLE jobs ADD COLUMN partial_decision TEXT NOT NULL DEFAULT 'pending'")
-            conn.execute("""UPDATE jobs SET partial_decision = 'imported' WHERE EXISTS
-                (SELECT 1 FROM job_events WHERE job_id = jobs.id AND code = 'IMPORTED_PARTIAL')""")
+        conn.execute("""UPDATE jobs SET partial_decision = 'imported' WHERE partial_decision = 'pending' AND EXISTS
+            (SELECT 1 FROM job_events WHERE job_id = jobs.id AND code = 'IMPORTED_PARTIAL')""")
         conn.commit()
 
 

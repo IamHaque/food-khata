@@ -86,6 +86,8 @@ try {
       assert.equal(await page.getByRole("button", { name: "Discard", exact: true }).count(), 0);
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 1000 });
+        await page.reload();
+        await page.getByText(/Partial data was imported/).waitFor();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: join(output, `imported-${width}.png`), fullPage: true });
         decision = "discarded";
