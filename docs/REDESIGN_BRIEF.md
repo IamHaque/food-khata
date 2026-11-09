@@ -2,7 +2,7 @@
 
 Version 1.0. Target: `dashboard-ui/`. Save this file in the repo as `docs/REDESIGN_BRIEF.md`. It is both the specification and the live tracker. The agent keeps it current in the same commits as the code.
 
-**Overall progress:** 56 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: P4 Quality · Last updated: 2026-11-09
+**Overall progress:** 62 / 62 stories DONE · 0 IN_PROGRESS · 0 BLOCKED · 0 DEFERRED · Current phase: Complete · Last updated: 2026-11-09
 
 ---
 
@@ -1218,12 +1218,13 @@ Columns: Story, Title, Priority, Status, Updated, Evidence (commit, tests, scree
 | S-065 | Distance vs fee | P2 | DONE | 2026-11-08 | DistanceVsFeeChart with scatter plot (type: 'scatter') of delivery distance against net fee, ordinary least squares (OLS) linear trendline (type: 'line', dashed), rich tooltips with restaurant name, distance (km), and fee (₹), distance_unavailable_reason empty state (>80% missing coordinates), accessible table alternative (Distance (km), Delivery fee), and computeDistanceVsFeeTakeaway caption |
 | S-066 | Streak timeline | P2 | DONE | 2026-11-08 | StreakTimelineChart wrapping ECharts vertical bar series on daily date timeline (type: 'bar', xAxis category with MMM d, yyyy formatting, yAxis value). Sourced from charts.calendar and charts.behavior.longest_streak. Longest ordering streak highlighted with shaded markArea accent fill (theme.colors[1] at 0.18 opacity) and labelled in days, with streak bars highlighted in theme.colors[1]. Rich tooltips show date (dd MMM yyyy), order count, INR spend, and streak indicator (Day X of Y). Screen-reader accessible table view (tableHeaders: Date, Orders, Spend, Streak and tableRows), friendly empty state, 600ms cubicOut animation with prefers-reduced-motion bypass, pure computeStreakTimelineTakeaway caption, and integration in AnalyticsPages.tsx verified |
 | S-067 | Orders per week | P2 | DONE | 2026-11-08 | OrdersPerWeekChart wrapping ECharts dual line series on weekly timeline (type: 'line', xAxis category with week start MMM d labels, yAxis value). Sourced from charts.calendar and charts.behavior.orders_per_week. Pure aggregateOrdersByWeek grouping into consecutive Monday-Sunday ISO weeks with trailing 4-week moving average (SMA). Weekly orders line in theme.colors[0] with circular symbols; 4-week moving average line in theme.colors[1] (smooth: true, dashed line). Horizontal markLine reference line at overall orders_per_week benchmark (e.g. 'Overall avg: 4.2/wk'). Interactive legend, rich tooltips with benchmark comparison, screen-reader table alternative (tableHeaders: Week, Orders, 4-Week Moving Avg), friendly empty state, 600ms cubicOut animation with prefers-reduced-motion bypass, pure computeOrdersPerWeekTakeaway caption, and integration in AnalyticsPages.tsx under Habits page view |
-| S-080 | Accessibility audit | P1 | TODO | | |
-| S-081 | Visual regression | P2 | TODO | | |
-| S-082 | Performance | P1 | TODO | | |
-| S-083 | Responsive | P1 | TODO | | |
-| S-084 | Cleanup and docs | P2 | TODO | | |
-| S-085 | Final acceptance | P0 | TODO | | |
+| S-080 | Accessibility audit | P1 | DONE | 2026-11-09 | commit 4c884fe (FX-06); axe-core automated audit across 5 routes x 2 modes x 2 accents with 0 violations |
+| S-081 | Visual regression | P2 | DONE | 2026-11-09 | commit ab244cb (FX-07); 40 baseline snapshots across 5 routes x 2 viewports x 2 modes x 2 accents |
+| S-082 | Performance | P1 | DONE | 2026-11-09 | commit a6892ca / 4c884fe; entry chunk 97.8 kB gzip <= 250 kB, route load < 1.5s, cross-filter < 300ms |
+| S-083 | Responsive | P1 | DONE | 2026-11-09 | commit 4c884fe (FX-06); responsive viewports 390x844, 768x1024, 1440x900 pass with 0 horizontal overflow |
+| S-084 | Cleanup and docs | P2 | DONE | 2026-11-09 | commit ab244cb (FX-07); recharts purged, dead code cleaned, dashboard-ui README and architecture.md updated |
+| S-085 | Final acceptance | P0 | DONE | 2026-11-09 | commit 45ea729; 62/62 stories complete, SUMMARY.md created, full test suites green |
+
 
 ### 8.2 Decision log
 | ID | Date | Story | Context | Options considered | Decision | Consequence |
