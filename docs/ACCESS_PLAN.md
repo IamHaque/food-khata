@@ -419,7 +419,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-09 | Job runner | B | P0 | TODO | — | — | B4 |
 | AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
 | AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
-| AC-12 | Frontend foundation | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-12-1 to beam | B3 |
+| AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | TODO | — | — | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | TODO | — | — | B6 |
 | AC-15 | Sync screens and background states | B | P0 | TODO | — | — | B6 |
@@ -527,6 +527,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-03 | `node scripts/verify.mjs . --backend` | all pass (pytest 133 passed, WAL concurrency, quarantine, 979 vitest) | 61 s | 516ca75 |
 | 2026-11-09 | AC-04 | `node scripts/verify.mjs . --backend` | all pass (pytest 133 passed, sync service typed events, cancel token, 979 vitest) | 61 s | ee28f0d |
 | 2026-11-09 | AC-06 | `node scripts/verify.mjs . --backend; audit-AC-06-1` | all pass (pytest 140 passed, auth core, scrypt, sessions, csrf, throttle, 979 vitest; audit pass) | 65 s | 79f8dda |
+| 2026-11-09 | AC-12 | `node scripts/verify.mjs . --backend` | all pass (979 vitest passed, typed client, declarative primitives, 140 pytest) | 64 s | 9ad3ffa |
 
 ### 5.9 Changelog
 
@@ -549,6 +550,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-03 | Enabled WAL mode and busy timeout on AnalyticsDB/readonly connections, added quarantine table and incremental ingest | 516ca75 |
 | 2026-11-09 | AC-04 | Sync service implemented with typed events, error codes, cancel token, mode aliases, and CLI thin wrapper | ee28f0d |
 | 2026-11-09 | AC-06 | Auth core implemented with scrypt password hashing, app.db server sessions, CSRF token validation, login throttling, full route auth sweep, and OpenAPI contract C-0 | 79f8dda |
+| 2026-11-09 | AC-12 | Frontend access foundation: typed API client from OpenAPI C-0, AuthShell, defineForm, StatusBanner primitives, and route composition root | 9ad3ffa |
 
 ### 5.10 Delegation ledger
 
@@ -569,6 +571,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-04 | T8 | beam | 1 | pass | — |
 | 2026-11-09 | AC-06 | T8 | gemini-high | 1 | pass | T6 audit deepseek pass |
 | 2026-11-09 | AC-08 | T8 | deepseek | 1 | running | — |
-| 2026-11-09 | AC-12 | T2 | beam | 1 | running | — |
+| 2026-11-09 | AC-12 | T2 | beam | 1 | pass | — |
 
 
