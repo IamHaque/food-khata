@@ -8,6 +8,19 @@ from typing import Any
 from .contracts import KhataError, Provider
 from .storage import read_json, save_json
 
+# Checkpoint after this many history pages and detail downloads. Each checkpoint
+# uses storage.save_json, which writes atomically and fsyncs before replacing.
+# Batching keeps a 1,000-order sync near a few dozen writes instead of one write
+# per page and per detail (see tests/test_sync.py benchmark note).
+CHECKPOINT_PAGES = 5
+CHECKPOINT_DETAILS = 50
+
+MODE_LABELS = {
+    "incremental": "Sync new orders (also repairs missing bill details)",
+    "repair": "Check and repair missing bill details only",
+    "full": "Full history scan",
+}
+
 
 def sync(
     provider: Provider,
@@ -17,7 +30,7 @@ def sync(
     checkpoint_session: Callable[[], None] = lambda: None,
     mode: str = "incremental",
 ) -> dict[str, Any]:
-    if mode not in ("incremental", "repair", "full"):
+    if mode not in MODE_LABELS:
         raise KhataError(f"Invalid sync mode: {mode}")
     if provider.profile() != provider_id:
         raise KhataError("Provider account identity mismatch")
@@ -63,19 +76,17 @@ def sync(
             "counts": {},
         }
     prior_history_complete = archive.get("history_complete", False)
-    prior_orders = set(archive["orders"].keys())
+    prior_lifetime_complete = archive.get("lifetime_complete", False)
     archive.update(
         history_complete=False,
         details_complete=False,
         complete=False,
-        lifetime_complete=False,
         pages=0,
         errors=[],
         last_sync=datetime.now(UTC).isoformat(),
     )
 
     new_orders = 0
-    new_order_ids: set[str] = set()
     details_downloaded = 0
 
     def persist() -> None:
@@ -89,9 +100,15 @@ def sync(
         }
         save_json(path, archive)
 
+    def checkpoint() -> None:
+        persist()
+        checkpoint_session()
+
+    # Make the reset flags durable before any network work starts.
     persist()
     try:
         if mode != "repair":
+            pages_since_checkpoint = 0
             for page in provider.pages():
                 if not isinstance(page, list):
                     raise KhataError("Invalid history page")
@@ -103,32 +120,28 @@ def sync(
                         or not isinstance(record.get("history"), dict)
                     ):
                         raise KhataError("Invalid history record")
-                hit_existing = False
                 for record in page:
                     oid = record["order_id"]
                     if oid not in archive["orders"]:
                         archive["orders"][oid] = {"history": record["history"]}
-                        new_order_ids.add(oid)
                         new_orders += 1
-                    elif mode == "incremental" and prior_orders:
-                        hit_existing = True
                 archive["pages"] += 1
-                persist()
-                checkpoint_session()
+                pages_since_checkpoint += 1
                 progress(f"Fetched page {archive['pages']}")
-                if hit_existing:
-                    # In incremental mode, reaching previously saved orders completes discovery
-                    progress("Reached previously saved orders; incremental discovery complete.")
-                    archive["history_complete"] = True
-                    break
-            else:
-                archive["history_complete"] = True
-            persist()
+                if pages_since_checkpoint >= CHECKPOINT_PAGES:
+                    checkpoint()
+                    pages_since_checkpoint = 0
+            # Reaching the end of pagination is the only proof that the oldest
+            # order was seen. Hitting known orders is not; keep scanning older
+            # pages so an interrupted first sync cannot hide history.
+            archive["history_complete"] = True
+            checkpoint()
         else:
             # In repair mode, preserve previous history completeness without fetching pages
             archive["history_complete"] = prior_history_complete
 
-        # Check all orders for missing/invalid details
+        # Every non-repair mode also repairs missing/invalid bill details (DEC-P3).
+        details_since_checkpoint = 0
         for order_id in sorted(archive["orders"].keys()):
             order = archive["orders"][order_id]
             if not provider.valid_details(order_id, order.get("details")):
@@ -137,9 +150,11 @@ def sync(
                     raise KhataError("Invalid order details")
                 order["details"] = details
                 details_downloaded += 1
-                persist()
-                checkpoint_session()
+                details_since_checkpoint += 1
                 progress(f"Saved details for order {order_id}")
+                if details_since_checkpoint >= CHECKPOINT_DETAILS:
+                    checkpoint()
+                    details_since_checkpoint = 0
 
         if provider.profile() != provider_id:
             raise KhataError("Provider account identity mismatch")
@@ -149,9 +164,17 @@ def sync(
         )
         archive["details_complete"] = all_details_valid
         archive["complete"] = archive["history_complete"] and archive["details_complete"]
+        # lifetime_complete records that a full scan once reached the oldest
+        # order. It survives later New syncs, but an interrupted full scan or a
+        # New sync alone cannot set it.
+        if mode == "full" and archive["history_complete"]:
+            archive["lifetime_complete"] = True
+        else:
+            archive["lifetime_complete"] = prior_lifetime_complete
         persist()
     except BaseException as exc:
         archive["complete"] = False
+        archive["lifetime_complete"] = prior_lifetime_complete
         archive["errors"].append(
             str(exc) if isinstance(exc, KhataError) else "Sync interrupted or failed"
         )
