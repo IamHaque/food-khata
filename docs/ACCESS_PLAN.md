@@ -522,7 +522,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-07 | `npm run build; npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (68 Playwright checks, 40 visual snapshots, 979 vitest, 114 pytest) | 61 s | ab244cb |
 | 2026-11-09 | GA | `node scripts/verify.mjs . --backend --browser; audit-Gate-GA-1` | all pass (T9 audit pass, 68 browser tests, 40 visual snapshots) | 61 s | 7adba9b |
 | 2026-11-09 | AC-01 | `node scripts/verify.mjs . --backend` | all pass (wireframes.html verified; user approval obtained) | 32 s | ebdaba7 |
-| 2026-11-09 | AC-05 | `node scripts/verify.mjs . --backend` | all pass (pytest 124 passed, FakeProvider tests, 979 vitest) | 33 s | 35c74bb |
+| 2026-11-09 | AC-05 | `node scripts/verify.mjs . --backend; audit-AC-05-1` | all pass (pytest 124 passed, FakeProvider tests, 979 vitest; audit pass) | 33 s | 35c74bb |
 
 ### 5.9 Changelog
 
@@ -557,6 +557,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-01 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | AC-02 | T8 | deepseek | 1 | running | — |
 | 2026-11-09 | AC-03 | T8 | gemini-med | 1 | running | — |
-| 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high running |
+| 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high pass |
 
 
