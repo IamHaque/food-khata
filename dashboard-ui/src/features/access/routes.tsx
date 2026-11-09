@@ -1,6 +1,7 @@
 import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
+
 function RouteSkeleton() {
   return <div className="space-y-3 p-4" aria-busy="true" />;
 }
@@ -9,10 +10,11 @@ function Placeholder() {
   return <div className="p-8 text-center text-muted-foreground">Coming soon</div>;
 }
 
-const Welcome = lazy(() => Promise.resolve({ default: Placeholder }));
-const Setup = lazy(() => Promise.resolve({ default: Placeholder }));
-const Login = lazy(() => Promise.resolve({ default: Placeholder }));
-const Register = lazy(() => Promise.resolve({ default: Placeholder }));
+const Welcome = lazy(() => import("./welcome/Welcome"));
+const Setup = lazy(() => import("./welcome/Setup"));
+const Login = lazy(() => import("./welcome/Login"));
+const Register = lazy(() => import("./welcome/Register"));
+
 const Home = lazy(() => Promise.resolve({ default: Placeholder }));
 const Accounts = lazy(() => Promise.resolve({ default: Placeholder }));
 const LinkAccount = lazy(() => Promise.resolve({ default: Placeholder }));

@@ -4,11 +4,13 @@ import { z } from "zod";
 export class ApiError extends Error {
   public readonly status: number;
   public readonly code?: string;
-  constructor(status: number, message: string, code?: string) {
+  public readonly retryAfter?: number;
+  constructor(status: number, message: string, code?: string, retryAfter?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -62,9 +64,16 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
     signal: opts.signal,
   });
 
-  if (res.status === 401) {
-    const returnPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
-    if (typeof window !== "undefined") {
+  if (res.status === 401 && path !== "/api/auth/login") {
+    const isAccessPage =
+      typeof window !== "undefined" &&
+      (window.location.pathname.startsWith("/login") ||
+        window.location.pathname.startsWith("/welcome") ||
+        window.location.pathname.startsWith("/setup") ||
+        window.location.pathname.startsWith("/register"));
+
+    if (typeof window !== "undefined" && !isAccessPage) {
+      const returnPath = window.location.pathname + window.location.search;
       window.location.href = `/login?return=${encodeURIComponent(returnPath)}`;
     }
     throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
@@ -81,9 +90,28 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
   }
 
   if (!res.ok) {
-    const code = (data as any)?.code ?? (data as any)?.detail?.code ?? (data as any)?.error_code;
-    const message = (data as any)?.message ?? (data as any)?.detail ?? res.statusText;
-    throw new ApiError(res.status, String(message), code ? String(code) : undefined);
+    const errObj = (data as any)?.error;
+    const code =
+      errObj?.code ??
+      (data as any)?.code ??
+      (data as any)?.detail?.code ??
+      (data as any)?.error_code;
+    const message =
+      errObj?.message ??
+      (data as any)?.detail ??
+      (data as any)?.message ??
+      res.statusText;
+
+    const retryHeader = res.headers.get("retry-after") ?? res.headers.get("Retry-After");
+    const parsedRetry = retryHeader ? parseInt(retryHeader, 10) : undefined;
+    const retryAfter = Number.isFinite(parsedRetry) ? parsedRetry : undefined;
+
+    throw new ApiError(
+      res.status,
+      typeof message === "string" ? message : JSON.stringify(message),
+      code ? String(code) : undefined,
+      retryAfter,
+    );
   }
 
   return data as T;
@@ -110,10 +138,33 @@ export const authApi = {
   async me() {
     return request<components["schemas"]["UserResponse"]>("/api/auth/me");
   },
+  async setupStatus() {
+    return request<components["schemas"]["SetupStatusResponse"]>("/api/auth/setup-status");
+  },
+  async register(username: string, password: string, join_code?: string) {
+    return request<components["schemas"]["UserResponse"]>("/api/auth/register", {
+      method: "POST",
+      body: { username, password, join_code: join_code || undefined },
+    });
+  },
+};
+
+export const ownerApi = {
+  async getSetup() {
+    return request<{ has_owner: boolean; is_loopback: boolean }>("/api/owner/setup");
+  },
+  async setup(data: { username: string; password: string; setup_code?: string; adopt_data?: boolean }) {
+    return request<components["schemas"]["UserResponse"]>("/api/owner/setup", {
+      method: "POST",
+      body: data,
+    });
+  },
 };
 
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type LoginResponse = components["schemas"]["LoginResponse"];
+export type RegisterRequest = components["schemas"]["RegisterRequest"];
+export type SetupStatusResponse = components["schemas"]["SetupStatusResponse"];
 export type UserResponse = components["schemas"]["UserResponse"];
 export type CsrfResponse = components["schemas"]["CsrfResponse"];
 export type StatusResponse = components["schemas"]["StatusResponse"];
