@@ -24,6 +24,7 @@ ALLOW_LIST = {
     "/api/auth/register",
     "/api/auth/setup-status",
     "/api/auth/csrf",
+    "/api/owner/setup",
 }
 
 

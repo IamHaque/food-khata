@@ -49,10 +49,22 @@ def init_app_db(db_path: Path | str) -> None:
             attempted_at REAL NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS server_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS registration_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT NOT NULL,
+            attempted_at REAL NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_sessions_last_active ON sessions(last_active);
         CREATE INDEX IF NOT EXISTS idx_failed_logins ON failed_logins(username, ip, attempted_at);
+        CREATE INDEX IF NOT EXISTS idx_registration_attempts ON registration_attempts(ip, attempted_at);
         """)
         conn.commit()
     finally:

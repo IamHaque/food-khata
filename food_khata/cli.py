@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import sys
 from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
@@ -228,15 +229,21 @@ def run(
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    if raw_args and raw_args[0] == "owner":
+        from .cli_owner import main as owner_main
+
+        return owner_main(raw_args[1:])
+
     parser = argparse.ArgumentParser(
         description="Log in, sync, and visualize Zomato or Swiggy food order history."
     )
     parser.add_argument(
         "action",
         nargs="?",
-        choices=["sync", "ingest", "export", "dashboard", "serve"],
+        choices=["sync", "ingest", "export", "dashboard", "serve", "owner"],
         default="sync",
-        help="Action: sync, ingest (update local DB), or export (React dashboard JSON; dashboard is an alias)",
+        help="Action: sync, ingest (update local DB), export, or owner recovery",
     )
     parser.add_argument(
         "--data-dir",

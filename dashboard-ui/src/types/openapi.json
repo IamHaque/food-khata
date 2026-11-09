@@ -2324,7 +2324,7 @@
           "auth"
         ],
         "summary": "Register",
-        "description": "Register a new user. The first registered user automatically becomes the owner.",
+        "description": "Register a new user.\n\nThe first registered user automatically becomes the owner (via loopback or setup code).\nSubsequent registrations require an open window or valid join code, capped at 8 users.",
         "operationId": "register_api_auth_register_post",
         "requestBody": {
           "content": {
@@ -2342,7 +2342,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
+                  "$ref": "#/components/schemas/food_khata__serve__routes_auth__UserResponse"
                 }
               }
             }
@@ -2460,7 +2460,329 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
+                  "$ref": "#/components/schemas/food_khata__serve__routes_auth__UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/setup": {
+      "get": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Get Setup",
+        "description": "Check setup status. Returns 404 once owner exists.",
+        "operationId": "get_setup_api_owner_setup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupCheckResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Post Setup",
+        "description": "First claim endpoint.\n\nMust come from loopback or carry the one-time setup code. Returns 404 after claim.",
+        "operationId": "post_setup_api_owner_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/food_khata__serve__routes_owner__UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/status": {
+      "get": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Get Owner Status",
+        "description": "Retrieve owner dashboard status: window, join code, user count.",
+        "operationId": "get_owner_status_api_owner_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/window": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Set Registration Window",
+        "description": "Open or close the timed registration window (15 min, 1 hour, or until closed).",
+        "operationId": "set_registration_window_api_owner_window_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WindowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WindowStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/join-code/rotate": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Post Rotate Join Code",
+        "description": "Rotate the household join code. The new plaintext code is returned once.",
+        "operationId": "post_rotate_join_code_api_owner_join_code_rotate_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateJoinCodeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/users": {
+      "get": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Get Users",
+        "description": "List all registered users with status.",
+        "operationId": "get_users_api_owner_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/food_khata__serve__routes_owner__UserResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Users Api Owner Users Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/users/{user_id}/disable": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Disable User Endpoint",
+        "description": "Disable or enable a user. Disabling terminates active sessions and running jobs.",
+        "operationId": "disable_user_endpoint_api_owner_users__user_id__disable_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/food_khata__serve__routes_owner__UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/users/{user_id}/reset-password": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Reset Password Endpoint",
+        "description": "Sensitive action: reset user password.\n\nRequires owner's password again. Wipes provider sessions and cancels jobs.",
+        "operationId": "reset_password_endpoint_api_owner_users__user_id__reset_password_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetUserPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetUserPasswordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/transfer": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Transfer Owner Endpoint",
+        "description": "Sensitive action: transfer ownership to another user.",
+        "operationId": "transfer_owner_endpoint_api_owner_transfer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3077,6 +3399,17 @@
           "line_total"
         ],
         "title": "DietRow"
+      },
+      "DisableUserRequest": {
+        "properties": {
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "DisableUserRequest"
       },
       "DiscountItem": {
         "properties": {
@@ -4273,7 +4606,7 @@
       "LoginResponse": {
         "properties": {
           "user": {
-            "$ref": "#/components/schemas/UserResponse"
+            "$ref": "#/components/schemas/food_khata__serve__routes_auth__UserResponse"
           },
           "csrf_token": {
             "type": "string",
@@ -4825,6 +5158,33 @@
         ],
         "title": "Orders"
       },
+      "OwnerStatusResponse": {
+        "properties": {
+          "window": {
+            "$ref": "#/components/schemas/WindowStatusResponse"
+          },
+          "has_join_code": {
+            "type": "boolean",
+            "title": "Has Join Code"
+          },
+          "user_count": {
+            "type": "integer",
+            "title": "User Count"
+          },
+          "max_users": {
+            "type": "integer",
+            "title": "Max Users",
+            "default": 8
+          }
+        },
+        "type": "object",
+        "required": [
+          "window",
+          "has_join_code",
+          "user_count"
+        ],
+        "title": "OwnerStatusResponse"
+      },
       "PlaceDistance": {
         "properties": {
           "distance_km": {
@@ -5031,6 +5391,59 @@
         ],
         "title": "RegisterRequest"
       },
+      "ResetUserPasswordRequest": {
+        "properties": {
+          "owner_password": {
+            "type": "string",
+            "title": "Owner Password"
+          },
+          "new_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_password"
+        ],
+        "title": "ResetUserPasswordRequest"
+      },
+      "ResetUserPasswordResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "temporary_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temporary Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "user_id"
+        ],
+        "title": "ResetUserPasswordResponse"
+      },
       "RestaurantOption": {
         "properties": {
           "id": {
@@ -5048,6 +5461,74 @@
           "name"
         ],
         "title": "RestaurantOption"
+      },
+      "RotateJoinCodeResponse": {
+        "properties": {
+          "join_code": {
+            "type": "string",
+            "title": "Join Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "join_code"
+        ],
+        "title": "RotateJoinCodeResponse"
+      },
+      "SetupCheckResponse": {
+        "properties": {
+          "has_owner": {
+            "type": "boolean",
+            "title": "Has Owner"
+          },
+          "is_loopback": {
+            "type": "boolean",
+            "title": "Is Loopback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_owner",
+          "is_loopback"
+        ],
+        "title": "SetupCheckResponse"
+      },
+      "SetupRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 3,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "setup_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Setup Code"
+          },
+          "adopt_data": {
+            "type": "boolean",
+            "title": "Adopt Data",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "SetupRequest"
       },
       "SetupStatusResponse": {
         "properties": {
@@ -5186,33 +5667,40 @@
         ],
         "title": "StatusResponse"
       },
-      "UserResponse": {
+      "TransferOwnershipRequest": {
         "properties": {
-          "id": {
+          "owner_password": {
             "type": "string",
-            "title": "Id"
+            "title": "Owner Password"
           },
-          "username": {
-            "type": "string",
-            "title": "Username"
+          "to_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Username"
           },
-          "is_owner": {
-            "type": "boolean",
-            "title": "Is Owner"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
+          "to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To User Id"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "username",
-          "is_owner",
-          "created_at"
+          "owner_password"
         ],
-        "title": "UserResponse"
+        "title": "TransferOwnershipRequest"
       },
       "ValidationError": {
         "properties": {
@@ -5378,6 +5866,74 @@
         ],
         "title": "WaterfallStep"
       },
+      "WindowRequest": {
+        "properties": {
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "title": "WindowRequest"
+      },
+      "WindowStatusResponse": {
+        "properties": {
+          "is_open": {
+            "type": "boolean",
+            "title": "Is Open"
+          },
+          "remaining_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Seconds"
+          },
+          "until_closed": {
+            "type": "boolean",
+            "title": "Until Closed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_open"
+        ],
+        "title": "WindowStatusResponse"
+      },
       "YearSpend": {
         "properties": {
           "year": {
@@ -5400,6 +5956,67 @@
           "spend"
         ],
         "title": "YearSpend"
+      },
+      "food_khata__serve__routes_auth__UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "is_owner",
+          "created_at"
+        ],
+        "title": "UserResponse"
+      },
+      "food_khata__serve__routes_owner__UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner"
+          },
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "is_owner",
+          "created_at"
+        ],
+        "title": "UserResponse"
       }
     }
   }

@@ -52,6 +52,7 @@ def create_app(
     dist_path: Path | str | None = None,
     app_db_path: Path | str | None = None,
     data_root: Path | str | None = None,
+    lan: bool = False,
 ) -> FastAPI:
     app = FastAPI(title="Food Khata API")
     db_path = Path(db_path)
@@ -87,6 +88,7 @@ def create_app(
     app.state.app_db_path = resolved_app_db
     app.state.data_root = resolved_data_root
     app.state.legacy_db_path = legacy_db
+    app.state.lan = lan
     init_app_db(resolved_app_db)
     cache = {}
     cache_lock = threading.Lock()
@@ -101,13 +103,16 @@ def create_app(
         except ValueError:
             local_host = False
         origin = request.headers.get("origin")
-        if not local_host or (
-            origin
-            and origin
-            not in {
-                f"http://{request.headers.get('host')}",
-                f"https://{request.headers.get('host')}",
-            }
+        if not lan and (
+            not local_host
+            or (
+                origin
+                and origin
+                not in {
+                    f"http://{request.headers.get('host')}",
+                    f"https://{request.headers.get('host')}",
+                }
+            )
         ):
             return JSONResponse(
                 {"error": {"code": "forbidden", "message": "Local requests only."}}, status_code=403
@@ -135,6 +140,7 @@ def create_app(
         "/api/auth/register",
         "/api/auth/setup-status",
         "/api/auth/csrf",
+        "/api/owner/setup",
     })
 
     @app.middleware("http")
