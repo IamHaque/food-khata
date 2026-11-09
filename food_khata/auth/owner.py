@@ -31,7 +31,7 @@ class JobControl:
             from food_khata.jobs import JobControl as RealJobControl  # type: ignore
 
             RealJobControl.cancel_user(user_id)
-        except (ImportError, AttributeError):
+        except Exception:
             pass
 
 

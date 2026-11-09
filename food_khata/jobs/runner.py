@@ -528,6 +528,8 @@ class JobRunner:
 class JobControl:
     """High-level control API for background jobs (AC-09)."""
 
+    _instances: list[JobControl] = []
+
     def __init__(
         self,
         app_db_path: Path | str,
@@ -538,6 +540,7 @@ class JobControl:
         self.data_root = Path(data_root) if data_root is not None else None
         init_jobs_tables(self.app_db_path)
         self.runner = runner or JobRunner(self.app_db_path, self.data_root)
+        JobControl._instances.append(self)
 
     def submit_sync(
         self,
@@ -664,8 +667,18 @@ class JobControl:
 
         return self.get_job(job_id)
 
-    def cancel_user(self, user_id: str) -> int:
+    def cancel_user(self_or_user_id: Any, user_id: str | None = None) -> int:
         """Cancel all active (running/queued/paused/needs_code) jobs for a user."""
+        if user_id is None:
+            actual_user_id = str(self_or_user_id)
+            total = 0
+            for inst in list(JobControl._instances):
+                try:
+                    total += inst.cancel_user(actual_user_id)
+                except Exception:
+                    pass
+            return total
+        self = self_or_user_id
         all_user_jobs = list_jobs(self.app_db_path, user_id=user_id, limit=200)
         cancelled = 0
         for j in all_user_jobs:
