@@ -408,7 +408,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-06 | Browser QA suite | A | P0 | DONE | 2026-11-09 | commit 4c884fe; 28 Playwright checks pass (axe 0 violations, responsive, perf) | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | DONE | 2026-11-09 | commit ab244cb; 40 snapshots across 5 routes x 2 viewports x 2 modes x 2 accents, 12 problems review pack, recharts cleanup | A4 |
 | GA | Redesign final acceptance | A | P0 | DONE | 2026-11-09 | commit 7adba9b; T9 audit pass (gemini-high); all 62 redesign + FX-01..FX-07 DONE; full verify.mjs pass | A4 |
-| AC-01 | Wireframes v2 and flow freeze | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-01-1 to beam | B0 |
+| AC-01 | Wireframes v2 and flow freeze | B | P0 | DONE | 2026-11-09 | commit ebdaba7; interactive wireframes.html with 10 screens x 2 viewports (1440/390), 8 sync states, user approved (Wave B0 freeze) | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | TODO | — | — | B1 |
 | AC-03 | Database robustness | B | P0 | TODO | — | — | B1 |
 | AC-04 | Sync service | B | P0 | TODO | — | — | B2 |
@@ -521,6 +521,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-06 | `npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (28 Playwright checks, axe 0 violations, responsive, perf) | 52 s | 4c884fe |
 | 2026-11-09 | FX-07 | `npm run build; npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (68 Playwright checks, 40 visual snapshots, 979 vitest, 114 pytest) | 61 s | ab244cb |
 | 2026-11-09 | GA | `node scripts/verify.mjs . --backend --browser; audit-Gate-GA-1` | all pass (T9 audit pass, 68 browser tests, 40 visual snapshots) | 61 s | 7adba9b |
+| 2026-11-09 | AC-01 | `node scripts/verify.mjs . --backend` | all pass (wireframes.html verified; user approval obtained) | 32 s | ebdaba7 |
 
 ### 5.9 Changelog
 
@@ -537,6 +538,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-06 | Playwright browser QA suite added with axe a11y, responsive viewports, and performance gates | 4c884fe |
 | 2026-11-09 | FX-07 | Visual regression suite with 40 snapshots, review pack with 12 original problems checklist, recharts cleanup, and doc updates | ab244cb |
 | 2026-11-09 | GA | Redesign final acceptance audit pass (T9 gemini-high); Phase A complete | 7adba9b |
+| 2026-11-09 | AC-01 | Interactive access wireframes v2 created at docs/access/wireframes.html and approved by user | ebdaba7 |
 
 ### 5.10 Delegation ledger
 
@@ -550,6 +552,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-06 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-07 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | GA | T9 | gemini-high | 1 | pass | — |
-| 2026-11-09 | AC-01 | T2 | beam | 1 | running | — |
+| 2026-11-09 | AC-01 | T2 | beam | 1 | pass | — |
 
 
