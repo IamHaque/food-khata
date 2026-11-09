@@ -407,7 +407,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-05 | BaseChart primitive | A | P1 | DONE | 2026-11-09 | commit b180101; 14 charts migrated, 732 lines net deleted, 979 unit tests pass | A2 |
 | FX-06 | Browser QA suite | A | P0 | DONE | 2026-11-09 | commit 4c884fe; 28 Playwright checks pass (axe 0 violations, responsive, perf) | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | DONE | 2026-11-09 | commit ab244cb; 40 snapshots across 5 routes x 2 viewports x 2 modes x 2 accents, 12 problems review pack, recharts cleanup | A4 |
-| GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
+| GA | Redesign final acceptance | A | P0 | DONE | 2026-11-09 | commit 7adba9b; T9 audit pass (gemini-high); all 62 redesign + FX-01..FX-07 DONE; full verify.mjs pass | A4 |
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | TODO | — | — | B0 |
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | TODO | — | — | B1 |
 | AC-03 | Database robustness | B | P0 | TODO | — | — | B1 |
@@ -520,6 +520,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-05 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (vitest 979 passed, pytest 114 passed, entry 97.7 kB gzip) | 41 s | b180101 |
 | 2026-11-09 | FX-06 | `npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (28 Playwright checks, axe 0 violations, responsive, perf) | 52 s | 4c884fe |
 | 2026-11-09 | FX-07 | `npm run build; npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (68 Playwright checks, 40 visual snapshots, 979 vitest, 114 pytest) | 61 s | ab244cb |
+| 2026-11-09 | GA | `node scripts/verify.mjs . --backend --browser; audit-Gate-GA-1` | all pass (T9 audit pass, 68 browser tests, 40 visual snapshots) | 61 s | 7adba9b |
 
 ### 5.9 Changelog
 
@@ -535,6 +536,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-05 | BaseChart primitive implemented, 14 chart components migrated, 732 lines net deleted | b180101 |
 | 2026-11-09 | FX-06 | Playwright browser QA suite added with axe a11y, responsive viewports, and performance gates | 4c884fe |
 | 2026-11-09 | FX-07 | Visual regression suite with 40 snapshots, review pack with 12 original problems checklist, recharts cleanup, and doc updates | ab244cb |
+| 2026-11-09 | GA | Redesign final acceptance audit pass (T9 gemini-high); Phase A complete | 7adba9b |
 
 ### 5.10 Delegation ledger
 
@@ -547,4 +549,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-05 | T3 | gemini-high | 1 | pass | — |
 | 2026-11-09 | FX-06 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-07 | T2 | beam | 1 | pass | — |
+| 2026-11-09 | GA | T9 | gemini-high | 1 | pass | — |
+
 
