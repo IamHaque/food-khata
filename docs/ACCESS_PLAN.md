@@ -401,7 +401,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | ID | Title | Phase | Pri | Status | Date | Evidence | Wave |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | FX-01 | Tracker and hygiene | A | P0 | DONE | 2026-11-09 | commit 565e6ea; brief.mjs lint passes (29 tables / 457 rows), clean venv pytest passes | A1 |
-| FX-02 | Fast verify harness | A | P0 | IN_PROGRESS | — | — | A1 |
+| FX-02 | Fast verify harness | A | P0 | DONE | 2026-11-09 | commit 66a393a; fast verify ~20s, vitest pool 11.4s, audit pass | A1 |
 | FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | TODO | — | — | A2 |
 | FX-05 | BaseChart primitive | A | P1 | TODO | — | — | A2 |
@@ -450,6 +450,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-011 | 2026-11-09 | Plan | The orchestrator chooses models; the plan only gives weight, risk and needs per story (2.4). Phase B waves reordered: AC-05 to B1, AC-12 starts from the auth contract (B3), AC-07 off the critical path (B4). max\_parallel raised to 4, L stories get larger packets and timeouts. | Your instruction; shortens the longest dependency chain from 9 stories to 7 | Waves, tags, models.json settings | Accepted |
 | DEC-012 | 2026-11-09 | FX-04 | Kept check_same_thread=False for readonly connections because FastAPI dependency cleanup may execute in another worker thread; missing DB returns HTTP 503 database_not_found. | Concurrency & clear error contract | DB connection handling | Accepted |
 | DEC-013 | 2026-11-09 | FX-01 | Declared httpx in pyproject.toml extras; brief.mjs lint validates exact column counts across all markdown tables in both briefs. | Clean install and table guardrails | Environment and tracker hygiene | Accepted |
+| DEC-014 | 2026-11-09 | FX-02 | vitest isolate:false breaks fullscreen tests; adopted worker threads pool + disableConsoleIntercept bringing unit tests to 11.4s and fast path to ~20s. | Performance without test breakage | Fast verify test configuration | Accepted |
 
 ### 5.3 Deviation log
 
@@ -509,6 +510,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | Baseline | `npm run test:browser` | not run (BLK-01) | — | 2fcacf4 |
 | 2026-11-09 | FX-04 | `node scripts/verify.mjs . --backend` | all pass (pytest 114 passed, ruff clean, typecheck, lint, vitest 967 passed) | 50 s | e2012b9 |
 | 2026-11-09 | FX-01 | `node scripts/brief.mjs lint; node scripts/verify.mjs . --backend` | all pass (29 tables checked, pytest 114 passed, ruff clean, typecheck, lint, vitest 967 passed) | 42 s | 565e6ea |
+| 2026-11-09 | FX-02 | `node scripts/verify.mjs . --backend; audit-FX-02-1` | all pass (guardrails, typecheck, lint, unit 11.98s, ruff, pytest 114 passed; audit pass) | 33 s | 66a393a |
 
 ### 5.9 Changelog
 
@@ -519,11 +521,12 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | Plan | Added 2.4 orchestrator guidance (story weights, risk, parallelism settings); Phase B waves reordered (DEC-011) | — |
 | 2026-11-09 | FX-04 | Per-request readonly connection safety verified under 20-thread concurrency; missing database returns HTTP 503 JSON | e2012b9 |
 | 2026-11-09 | FX-01 | Fixed table column alignment in brief, added brief.mjs lint, reconciled S-024, logged 2fcacf4 work, added httpx dependency | 565e6ea |
+| 2026-11-09 | FX-02 | Vitest pool configuration (unit ~11s), stage order early exit in verify.mjs, and instant worktree bootstrap | 66a393a |
 
 ### 5.10 Delegation ledger
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-09 | FX-01 | T1 | glm | 1 | pass | — |
-| 2026-11-09 | FX-02 | T3 | gemini-high | 1 | in_progress | — |
+| 2026-11-09 | FX-02 | T3 | gemini-high | 1 | pass | T6 audit gemini-med pass |
 | 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
