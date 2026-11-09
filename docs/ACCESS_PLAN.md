@@ -421,9 +421,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-11 | LAN mode and transport | B | P1 | DONE | 2026-11-09 | commit 2af129a; loopback default, --lan opt-in, host allow-list (400 on unknown), TLS cert/key and HTTPS secure cookies, provider traffic host-isolated, pytest 172 passed | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
 | AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
-| AC-14 | Accounts and linking screens | B | P0 | IN_PROGRESS | 2026-11-10 | f2d4a44 merged; parent verify 99.65s and interactive 1440/390 pass; trunk verify and app mounting pending | B6 |
+| AC-14 | Accounts and linking screens | B | P0 | DONE | 2026-11-10 | 8c1c276; trunk verify all pass 104.92s; parent synthetic 1440/390 regression and visual review pass; App mounting belongs to AC-17 | B6 |
 | AC-15 | Sync screens and background states | B | P0 | IN_PROGRESS | 2026-11-09 | implementing Wave B6 | B6 |
-| AC-16 | Owner settings | B | P1 | IN_PROGRESS | 2026-11-10 | 42efe37 + 9e1c313 merged; parent browser follow-up passed; trunk verify passed 89.76s; shared integration/typecheck inclusion pending | B6 |
+| AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | TODO | — | — | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
 | GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
@@ -479,7 +479,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-105 | 2026-11-08 | Handoff | HTTPS as the default for `--lan` | P2 | Decide in AC-11 |
 | BL-106 | 2026-11-09 | Review | Run the browser suite in an environment that can install Chromium | P2 | Resolved by DEC-010: the executing agent has a preview browser |
 
-| BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Resolved by f2d4a44; trunk check pending |
+| BL-008 | 2026-11-10 | AC-17 | Include access screens in TypeScript checks and correct obsolete shared-client UserResponse types; found by AC-16 separate check | P0 | Resolved by f2d4a44; trunk 8c1c276 typecheck passes |
 
 ### 5.5 Blockers
 
@@ -543,6 +543,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-10 | `node scripts/verify.mjs . --backend` | all pass (pytest 188 passed, accounts and sync API, contract freeze C-1, 997 vitest) | 78 s | c7de453 |
 
 | 2026-11-10 | AC-16 | node scripts/verify.mjs . --backend | all six checks pass after merge; owner expiry/error/dialog browser follow-up passed | 89.76 s | bc34ca2 |
+
+| 2026-11-10 | AC-14, AC-16 | node scripts/verify.mjs . --backend | all six checks pass on trunk with access screens included in typecheck; AC-14 parent interactive checks passed at 1440/390 | 104.92 s | 8c1c276 |
 
 ### 5.9 Changelog
 
