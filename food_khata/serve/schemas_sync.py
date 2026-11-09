@@ -23,6 +23,7 @@ class SyncJobResponse(BaseModel):
     provider_id: str | None = Field(default=None, description="External provider account ID")
     mode: str = Field(default="new", description="Sync execution mode")
     status: str = Field(..., description="Job status (queued, running, done, failed, paused, needs_code, cancelled, interrupted)")
+    partial_decision: Literal["pending", "imported", "discarded"] = Field(default="pending", description="Decision for partial history")
     phase: str | None = Field(default=None, description="Current sync phase")
     page: int | None = Field(default=None, description="Last scanned page")
     counts: dict[str, Any] | None = Field(default=None, description="Order and detail counts")

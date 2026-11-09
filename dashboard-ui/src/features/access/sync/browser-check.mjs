@@ -35,6 +35,7 @@ try {
   page.on("pageerror", error => console.error(error));
   const base = server.resolvedUrls.local[0];
   let status = "running";
+  let decision = "pending";
   const calls = [];
   await page.route("**/api/**", async route => {
     const url = new URL(route.request().url());
@@ -43,7 +44,9 @@ try {
     if (url.pathname.endsWith("/csrf")) return route.fulfill({ json: { csrf_token: "synthetic" } });
     if (url.pathname.endsWith("/cancel")) status = "cancelled";
     if (url.pathname.endsWith("/resume") || url.pathname.endsWith("/code")) status = "running";
-    return route.fulfill({ json: url.pathname.endsWith("/use-partial") ? { imported: 12, total: 12 } : { id: "synthetic", user_id: "synthetic", account_id: "synthetic", provider: "swiggy", mode: "new", status, phase: "bills", counts: { orders: 12 } } });
+    if (url.pathname.endsWith("/discard-partial")) decision = "discarded";
+    if (url.pathname.endsWith("/use-partial")) decision = "imported";
+    return route.fulfill({ json: url.pathname.endsWith("/use-partial") ? { imported: 12, total: 12 } : { id: "synthetic", user_id: "synthetic", account_id: "synthetic", provider: "swiggy", mode: "new", status, partial_decision: decision, phase: "bills", counts: { orders: 12 } } });
   });
   const output = join(tmpdir(), "food-khata-ac15");
   await mkdir(output, { recursive: true });
@@ -59,10 +62,14 @@ try {
   await page.getByRole("button", { name: "Start sync" }).click();
   await page.getByRole("button", { name: "Cancel sync" }).click();
   await page.getByRole("button", { name: "Discard", exact: true }).click();
-  await page.getByText(/server archive is retained/).waitFor();
+  await page.getByText(/Previously imported orders remain/).waitFor();
+  await page.reload();
+  await page.getByText(/Previously imported orders remain/).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Use partial data" }).count(), 0);
   assert(calls.some(([path, body]) => path === "/api/sync/jobs" && body?.mode === "all"));
   for (const next of ["needs_code", "interrupted", "failed"]) {
     status = next;
+    decision = "pending";
     await page.goto(`${base}__sync_check?job=synthetic`);
     if (next === "needs_code") {
       await page.getByLabel("Provider verification code").fill("123456");
@@ -73,7 +80,20 @@ try {
       await page.getByText("swiggy · running").waitFor();
     } else {
       await page.getByRole("button", { name: "Use partial data" }).click();
-      await page.getByText(/12 orders imported/).waitFor();
+      await page.getByText(/Partial data was imported/).waitFor();
+      await page.reload();
+      await page.getByText(/Partial data was imported/).waitFor();
+      assert.equal(await page.getByRole("button", { name: "Discard", exact: true }).count(), 0);
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.screenshot({ path: join(output, `imported-${width}.png`), fullPage: true });
+        decision = "discarded";
+        await page.reload();
+        await page.getByText(/Previously imported orders remain/).waitFor();
+        await page.screenshot({ path: join(output, `discarded-${width}.png`), fullPage: true });
+        decision = "imported";
+      }
     }
   }
   console.log(`Synthetic browser interactions passed; screenshots: ${output}`);

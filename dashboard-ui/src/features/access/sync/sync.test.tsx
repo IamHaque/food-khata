@@ -55,6 +55,13 @@ describe("sync screens", () => {
     expect(output).toContain("Use partial data"); expect(output).toContain("Discard");
     await state.mutation.mutationFn("partial"); expect(partial).toHaveBeenCalledWith("synthetic-job");
   });
+  it.each(["imported", "discarded"] as const)("shows persisted %s decision after reload", decision => {
+    state.data = { ...job("failed"), partial_decision: decision };
+    const output = html(<SyncJobScreen jobId="synthetic-job" />);
+    expect(output).toContain(decision === "imported" ? "Partial data was imported" : "Previously imported orders remain");
+    expect(output).not.toContain("Use partial data");
+    expect(output).not.toContain(">Discard</button>");
+  });
   it("warns only for active jobs and surfaces API errors", () => {
     expect(html(<SyncLogoutWarning jobs={[job("running")]} />)).toContain("server restart");
     expect(html(<SyncLogoutWarning jobs={[job("done")]} />)).toBe("");
@@ -68,8 +75,8 @@ describe("local sync client", () => {
   it("uses authenticated client endpoints and trimmed code", async () => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(job("running")))));
     vi.stubGlobal("fetch", fetch);
-    await syncApi.list(); await syncApi.get("job/id"); await syncApi.create("synthetic-account", "all"); await syncApi.code("job/id", " 123456 "); await syncApi.cancel("job/id"); await syncApi.resume("job/id"); await syncApi.usePartial("job/id");
-    expect(fetch.mock.calls.map(c => c[0])).toEqual(["/api/sync/jobs", "/api/sync/jobs/job%2Fid", "/api/sync/jobs", "/api/sync/jobs/job%2Fid/code", "/api/sync/jobs/job%2Fid/cancel", "/api/sync/jobs/job%2Fid/resume", "/api/sync/jobs/job%2Fid/use-partial"]);
+    await syncApi.list(); await syncApi.get("job/id"); await syncApi.create("synthetic-account", "all"); await syncApi.code("job/id", " 123456 "); await syncApi.cancel("job/id"); await syncApi.resume("job/id"); await syncApi.usePartial("job/id"); await syncApi.discardPartial("job/id");
+    expect(fetch.mock.calls.map(c => c[0])).toEqual(["/api/sync/jobs", "/api/sync/jobs/job%2Fid", "/api/sync/jobs", "/api/sync/jobs/job%2Fid/code", "/api/sync/jobs/job%2Fid/cancel", "/api/sync/jobs/job%2Fid/resume", "/api/sync/jobs/job%2Fid/use-partial", "/api/sync/jobs/job%2Fid/discard-partial"]);
     expect(JSON.parse(fetch.mock.calls[3][1].body)).toEqual({ code: "123456" });
     expect(fetch.mock.calls[3][1].headers["x-csrf-token"]).toBe("synthetic-csrf");
     vi.unstubAllGlobals();

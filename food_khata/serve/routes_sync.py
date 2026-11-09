@@ -278,3 +278,18 @@ def use_partial_sync(
         imported=result.get("imported", 0),
         result=result,
     )
+
+
+@router.post("/jobs/{job_id}/discard-partial", response_model=SyncJobResponse)
+def discard_partial_sync(
+    job_id: str,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    control: Annotated[JobControl, Depends(get_job_control)],
+):
+    """Record the decision to leave partial history out of the dashboard."""
+    try:
+        return SyncJobResponse(**control.discard_partial(job_id, user_id=user_id))
+    except JobNotFoundError as err:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": f"Job '{job_id}' not found."}) from err
+    except KhataError as exc:
+        raise HTTPException(status_code=400, detail={"code": "DISCARD_FAILED", "message": str(exc)}) from exc

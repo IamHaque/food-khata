@@ -548,6 +548,37 @@ class JobRunnerTests(unittest.TestCase):
             cnt = conn.execute("SELECT count(*) FROM orders").fetchone()[0]
             self.assertEqual(cnt, res["total"])
 
+        restarted = JobControl(self.app_db, data_root=self.data_root)
+        self.assertEqual(restarted.get_job(job["id"])["partial_decision"], "imported")
+        self.assertEqual(restarted.use_partial(job["id"])["imported"], 0)
+        self.assertEqual(restarted.discard_partial(job["id"])["partial_decision"], "imported")
+        with AnalyticsDB(user_db).connection() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM orders").fetchone()[0], cnt)
+
+    def test_discard_partial_persists_and_blocks_import(self):
+        from food_khata.jobs.db import create_job
+
+        job = create_job(self.app_db, job_id="discard-test", user_id=self.alice_id,
+                         account_id=self.alice_account_id, provider="zomato", status=FAILED)
+        self.assertEqual(self.control.discard_partial(job["id"])["partial_decision"], "discarded")
+        restarted = JobControl(self.app_db, data_root=self.data_root)
+        self.assertEqual(restarted.discard_partial(job["id"])["partial_decision"], "discarded")
+        with self.assertRaises(KhataError):
+            restarted.use_partial(job["id"])
+
+    def test_legacy_import_event_is_migrated(self):
+        from food_khata.jobs.db import add_job_event, create_job, init_jobs_tables
+
+        create_job(self.app_db, job_id="legacy", user_id=self.alice_id,
+                   account_id=self.alice_account_id, provider="zomato", status=FAILED)
+        add_job_event(self.app_db, "legacy", FAILED, code="IMPORTED_PARTIAL")
+        conn = connect_app_db(self.app_db)
+        conn.execute("ALTER TABLE jobs DROP COLUMN partial_decision")
+        conn.commit()
+        conn.close()
+        init_jobs_tables(self.app_db)
+        self.assertEqual(self.control.discard_partial("legacy")["partial_decision"], "imported")
+
     # --- Scenario: needs code key dropped after timeout ---
     def test_needs_code_key_dropped_after_timeout_marks_interrupted(self):
         """Scenario: needs code key dropped after ~24h, job becomes interrupted."""

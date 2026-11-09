@@ -732,6 +732,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sync/jobs/{job_id}/discard-partial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discard Partial Sync
+         * @description Record the decision to leave partial history out of the dashboard.
+         */
+        post: operations["discard_partial_sync_api_sync_jobs__job_id__discard_partial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1918,6 +1938,13 @@ export interface components {
              * @description Job status (queued, running, done, failed, paused, needs_code, cancelled, interrupted)
              */
             status: string;
+            /**
+             * Partial Decision
+             * @description Decision for partial history
+             * @default pending
+             * @enum {string}
+             */
+            partial_decision: "pending" | "imported" | "discarded";
             /**
              * Phase
              * @description Current sync phase
@@ -3464,6 +3491,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsePartialResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_partial_sync_api_sync_jobs__job_id__discard_partial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
                 };
             };
             /** @description Validation Error */

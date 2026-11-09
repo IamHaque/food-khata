@@ -3528,6 +3528,49 @@
           }
         }
       }
+    },
+    "/api/sync/jobs/{job_id}/discard-partial": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Discard Partial Sync",
+        "description": "Record the decision to leave partial history out of the dashboard.",
+        "operationId": "discard_partial_sync_api_sync_jobs__job_id__discard_partial_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6867,6 +6910,17 @@
             "type": "string",
             "title": "Status",
             "description": "Job status (queued, running, done, failed, paused, needs_code, cancelled, interrupted)"
+          },
+          "partial_decision": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "imported",
+              "discarded"
+            ],
+            "title": "Partial Decision",
+            "description": "Decision for partial history",
+            "default": "pending"
           },
           "phase": {
             "anyOf": [
