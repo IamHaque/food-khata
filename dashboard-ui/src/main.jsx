@@ -820,7 +820,7 @@ function App() {
                     <div className="h-72 w-full pt-2">
                       {series.length ? (
                         <div className="relative h-full w-full">
-                          <svg className="recharts-surface h-full w-full" viewBox="0 0 500 200" preserveAspectRatio="none">
+                          <svg className="chart-surface h-full w-full" viewBox="0 0 500 200" preserveAspectRatio="none">
                             <defs>
                               <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor={tokenColor("--primary")} stopOpacity={0.3} />
@@ -861,7 +861,7 @@ function App() {
                   title="By platform"
                   description="Orders include all statuses; monetary measures include delivered orders only."
                 >
-                  <div className="recharts-surface h-72 w-full space-y-3 py-2 overflow-auto">
+                  <div className="chart-surface h-72 w-full space-y-3 py-2 overflow-auto">
                     {platforms.map((p) => {
                       const val = p[measure] || 0;
                       const maxVal = Math.max(...platforms.map((x) => x[measure] || 1), 1);
@@ -891,7 +891,7 @@ function App() {
                 >
                   <div className="flex h-60 items-center">
                     <div className="flex h-full w-1/2 items-center justify-center">
-                        <svg className="recharts-surface h-40 w-40" viewBox="-20 -20 40 40">
+                        <svg className="chart-surface h-40 w-40" viewBox="-20 -20 40 40">
                           {(() => {
                             const total = fees.reduce((acc, curr) => acc + (curr.value || 0), 0) || 1;
                             let cumulative = 0;
@@ -947,7 +947,7 @@ function App() {
                   title="Order value"
                   description="Distribution of final paid amounts for delivered orders."
                 >
-                  <div className="recharts-surface flex h-60 w-full items-end justify-between gap-2 pt-6 pb-2">
+                  <div className="chart-surface flex h-60 w-full items-end justify-between gap-2 pt-6 pb-2">
                     {distribution.map((d) => {
                       const maxVal = Math.max(...distribution.map((x) => x.value || 1), 1);
                       const pct = Math.max(Math.round(((d.value || 0) / maxVal) * 100), 4);
@@ -1052,7 +1052,7 @@ function App() {
                   title="Dietary mix"
                   description="Item quantities across all matching orders, grouped by recorded dietary classification."
                 >
-                  <div className="recharts-surface space-y-4 py-3">
+                  <div className="chart-surface space-y-4 py-3">
                     <div className="flex h-5 w-full overflow-hidden rounded-full bg-muted">
                       {diet.map((item, i) => {
                         const total = diet.reduce((acc, curr) => acc + (curr.value || 0), 0) || 1;

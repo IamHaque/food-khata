@@ -102,7 +102,7 @@ try {
   await page.goto(new URL("legacy", url).href);
   await page.getByRole("combobox", { name: "Customer", exact: true }).waitFor();
   assert.equal(await page.locator('[role="tab"]').count(), 0);
-  assert.equal((await page.locator(".recharts-surface").count()) > 0, true);
+  assert.equal((await page.locator(".chart-surface").count()) > 0, true);
   assert.equal(await page.evaluate(() => window.injected), undefined);
   assert.match(await page.locator("main").innerText(), /₹/);
   assert.equal(await page.locator("tbody tr").count(), 20);
