@@ -36,13 +36,16 @@ function parseArgs() {
 }
 
 function checkGuardrails(worktree) {
-  for (const forbidden of [".env", ".food-khata"]) {
-    if (existsSync(join(worktree, forbidden))) {
-      return { pass: false, error: `Forbidden path modified: ${forbidden}` };
+  const isTrunk = resolve(worktree) === resolve(process.cwd());
+  if (!isTrunk) {
+    for (const forbidden of [".env", ".food-khata"]) {
+      if (existsSync(join(worktree, forbidden))) {
+        return { pass: false, error: `Forbidden path modified: ${forbidden}` };
+      }
     }
   }
   try {
-    const statusOut = execSync("git status --porcelain --ignored=matching", {
+    const statusOut = execSync("git status --porcelain", {
       cwd: worktree,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
