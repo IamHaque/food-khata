@@ -466,6 +466,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-001 | 2026-11-09 | FX-06 | Spec asked for emerald and violet accents | Tested emerald and indigo accents | Violet is not defined in VALID_ACCENTS (palette is emerald, indigo, amber, rose, slate) | No negative impact, tested 2 valid accents | Accepted |
 | DEV-002 | 2026-11-09 | AC-08 | Planned split if over 450 lines | Kept as single coherent story (~1200 diff lines including crypto & tests) | Splitting would create complex partial abstractions across AEAD and context | Clean single atomic commit | Accepted |
 
+| DEV-003 | 2026-11-10 | AC-15 | C-1 lacks durable partial discard decision | Add persisted partial decision and additive API support | Independent audit reproduced reload and import/discard inconsistency | Preserve import idempotence and user isolation; no deletion of imported orders | In progress |
+
 ### 5.4 Backlog (remaining and discovered items)
 
 | ID | Date | Origin | Description | Priority | Reason deferred |
@@ -607,4 +609,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-14 | T6 | sol-medium | 1 | F3 | OTP handle, stale cache, JSON errors and dialog accessibility defects; fix dispatched |
 | 2026-11-10 | AC-16 | T6 | sol-medium | 1 | pass | API and static visuals pass; countdown announcement fixed; expiry/error/dialog follow-up passed |
 | 2026-11-10 | AC-14 | T5 | terra-high | 3 | running | fix-AC-14-audit-20261110; four findings plus access typechecking |
-| 2026-11-10 | AC-15 | T6 | terra-medium | 1 | running | audit-AC-15-20261110; independent API/scenario/visual review |
+| 2026-11-10 | AC-15 | T6 | terra-medium | 1 | F3 | Discard not durable; imported partial can be misreported as unimported; fix dispatched |
+| 2026-11-10 | AC-15 | T8 | terra-high | 5 | running | fix-AC-15-partials-20261110; durable partial decisions with backend and UI regression tests |
