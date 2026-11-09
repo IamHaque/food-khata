@@ -416,7 +416,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-09 | commit 6a1ef89; users/<id>/ isolation, DB per-user, cache keying, AEAD encryption at rest, adoption backup, pytest 146 passed | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
-| AC-09 | Job runner | B | P0 | IN_PROGRESS | 2026-11-09 | failover dispatch-AC-09-2 to gemini-med | B4 |
+| AC-09 | Job runner | B | P0 | DONE | 2026-11-09 | commit 40a4f00; JobRunner and JobControl, 1 running 2 queued limits, restart recovery, cancel checkpoint, pytest 165 passed | B4 |
 | AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
 | AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
@@ -531,6 +531,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-12 | `node scripts/verify.mjs . --backend` | all pass (979 vitest passed, typed client, declarative primitives, 140 pytest) | 64 s | 9ad3ffa |
 | 2026-11-09 | AC-08 | `node scripts/verify.mjs . --backend` | all pass (pytest 146 passed, per-user isolation, AEAD encryption, 979 vitest) | 64 s | 6a1ef89 |
 | 2026-11-09 | AC-07 | `node scripts/verify.mjs . --backend` | all pass (pytest 152 passed, owner setup, registration, 979 vitest) | 68 s | 911b751 |
+| 2026-11-09 | AC-09 | `node scripts/verify.mjs . --backend` | all pass (pytest 165 passed, job runner lifecycle, limits, restart, cancel, 979 vitest) | 73 s | 40a4f00 |
 
 ### 5.9 Changelog
 
@@ -556,6 +557,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-12 | Frontend access foundation: typed API client from OpenAPI C-0, AuthShell, defineForm, StatusBanner primitives, and route composition root | 9ad3ffa |
 | 2026-11-09 | AC-08 | Per-user data folder isolation (users/<id>/), per-user DB and cache keying, AEAD encrypted sessions/phones, and adoption | 6a1ef89 |
 | 2026-11-09 | AC-07 | Owner setup and registration management: loopback/setup code claim, hashed join code windows, 8 user cap, admin actions, and CLI recovery | 911b751 |
+| 2026-11-09 | AC-09 | Background job runner, queue runner, JobControl API, fair scheduling, provider pacing, restart recovery, and cancellation | 40a4f00 |
 
 ### 5.10 Delegation ledger
 
@@ -579,6 +581,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-12 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | AC-07 | T8 | gemini-high | 1 | pass | — |
 | 2026-11-09 | AC-09 | T8 | deepseek | 1 | fail (quota) | failover to gemini-med |
-| 2026-11-09 | AC-09 | T8 | gemini-med | 2 | running | — |
+| 2026-11-09 | AC-09 | T8 | gemini-med | 2 | pass | — |
 
 
