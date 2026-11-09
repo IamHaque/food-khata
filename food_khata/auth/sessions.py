@@ -55,6 +55,9 @@ def init_app_db(db_path: Path | str) -> None:
         CREATE INDEX IF NOT EXISTS idx_failed_logins ON failed_logins(username, ip, attempted_at);
         """)
         conn.commit()
+        from ..jobs.db import init_jobs_tables
+
+        init_jobs_tables(conn)
     finally:
         conn.close()
 
