@@ -1,10 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { CommandPalette } from './CommandPalette';
-import { DesignSystem } from './DesignSystem';
-import { AnalyticsPage } from './AnalyticsPages';
-import { Overview } from './Overview';
-import { Orders } from './Orders';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Skeleton } from '../components/ui/skeleton';
+
+const Overview = lazy(() => import('./Overview'));
+const AnalyticsPage = lazy(() =>
+  import('./AnalyticsPages').then((m) => ({ default: m.AnalyticsPage })),
+);
+const Orders = lazy(() => import('./Orders').then((m) => ({ default: m.Orders })));
+const DesignSystem = lazy(() =>
+  import('./DesignSystem').then((m) => ({ default: m.DesignSystem })),
+);
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-3 p-4" aria-busy="true" aria-live="polite">
+      <Skeleton className="h-8 w-40" />
+      <Skeleton className="h-4 w-64" />
+      <Skeleton className="h-48 w-full" />
+    </div>
+  );
+}
 import { useHealth } from '../hooks/api';
 import { FilterProvider, useFilters } from './FilterContext';
 import { AccountSelector } from './AccountSelector';
@@ -293,19 +309,21 @@ function Shell() {
 
           {/* Routes */}
           <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
-            <Routes>
-              <Route path="/" element={<Overview />} />
-              <Route path="/spending" element={<AnalyticsPage page="Spending" />} />
-              <Route path="/food" element={<AnalyticsPage page="Food" />} />
-              <Route path="/habits" element={<AnalyticsPage page="Habits" />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
-              <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
-              <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
-              <Route path="/data-health" element={<Navigate to={`/?sync=open`} replace />} />
-              {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+            <Suspense fallback={<PageSkeleton />}>
+              <Routes>
+                <Route path="/" element={<Overview />} />
+                <Route path="/spending" element={<AnalyticsPage page="Spending" />} />
+                <Route path="/food" element={<AnalyticsPage page="Food" />} />
+                <Route path="/habits" element={<AnalyticsPage page="Habits" />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
+                <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
+                <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
+                <Route path="/data-health" element={<Navigate to={`/?sync=open`} replace />} />
+                {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
           </main>
 
           <footer className="border-t pt-3 text-center text-xs text-muted-foreground">
