@@ -1,4 +1,68 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  BadgePercent,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Moon,
+  Search,
+  SlidersHorizontal,
+  Sun,
+  Upload,
+  Utensils,
+  Wallet,
+  ShoppingBag,
+  TrendingUp,
+} from "lucide-react";
+import { Button } from "./components/ui/button.tsx";
+import { Card } from "./components/ui/card.tsx";
+import { Input } from "./components/ui/input.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select.tsx";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "./components/ui/popover.tsx";
+import { Calendar } from "./components/ui/calendar.tsx";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "./components/ui/sheet.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/ui/table.tsx";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "./components/ui/tooltip.tsx";
+import { tokenColor } from "./lib/tokens.ts";
+const CHART_TOKENS = [
+  "--chart-1",
+  "--chart-2",
+  "--chart-3",
+  "--chart-4",
+  "--chart-5",
+  "--chart-6",
+  "--chart-7",
+  "--chart-8",
+];
 import {
   money,
   restaurant,
