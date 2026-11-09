@@ -42,35 +42,58 @@ The `dashboard-ui/` frontend is a React + Vite SPA with 5 routes (`/`, `/spendin
 
 ## Account Identity and Sessions
 
-Each saved account folder corresponds to a single human user. It is identified by:
-- A random local UUID (`local_id`)
-- A normalized 10-digit Indian phone number
-- A mapping from provider names (`zomato`, `swiggy`) to provider-specific customer IDs
+Each saved provider account belongs to exactly one logged-in user. A user is
+identified by the server-side session (`users.id`); no API route accepts a user
+id, data path, or database path from the client. The user's analytics database
+and account files live under a folder derived only from that session:
 
 ```text
-food-khata/.food-khata/
-  food_analytics.db     <-- Relational SQLite database
-  dashboard.json       <-- Optional legacy export file
-  accounts/
-    <local-account-id>/
-      account.json
-      zomato-history.json
-      swiggy-history.json
-      sessions/
-        zomato.json     <-- Access & refresh tokens
-        swiggy.json     <-- Authenticated cookies & headers
+.food-khata/
+  app.db                  <-- Users, server-side sessions, throttling
+  users/
+    <user-id>/            <-- Mode 0700
+      vault.json          <-- Password-wrapped random data key
+      food_analytics.db   <-- Relational SQLite database
+      accounts/
+        <local-account-id>/
+          account.json    <-- phone_encrypted (AEAD)
+          zomato-history.json
+          swiggy-history.json
+          sessions/
+            zomato.json   <-- Encrypted access & refresh tokens
+            swiggy.json   <-- Encrypted cookies & headers
 ```
 
-`account.json` (schema version 1):
+Before multi-user migration, data lived directly under `.food-khata/`. Calling
+`Storage.adopt_legacy_root(user)` (also exposed as
+`food_khata.users.adopt_legacy_root`) copies that data into `users/<user-id>/`
+and moves the originals into a sibling `legacy-backup/` folder. An adoption
+marker makes a second run a no-op.
 
-```json
-{
-  "version": 1,
-  "local_id": "00000000-0000-0000-0000-000000000001",
-  "phone": "9876543210",
-  "providers": {"zomato": "12345678", "swiggy": "87654321"}
-}
-```
+### Encryption at rest
+
+Provider sessions and phone numbers are sealed with ChaCha20-Poly1305 (AEAD).
+Each user gets a random 32-byte data key, stored in `vault.json` wrapped by a
+key derived from the user's password with scrypt (DEC-P2). The plaintext data
+key exists only in memory while the user is logged in. Plaintext sessions and
+phone fields are re-encrypted on first unlock and the plaintext files are
+atomically replaced.
+
+- A wrong password fails closed: AEAD authentication rejects the unwrap and no
+  plaintext fallback is attempted.
+- A password change re-wraps the same data key, so provider sessions survive.
+- An owner password reset cannot unwrap the key and therefore wipes that user's
+  provider sessions (the user must re-link). With no key rotation, existing
+  account metadata remains readable; a reset that also rotates the key loses
+  that metadata by design.
+
+### Honest limit
+
+Encryption protects data at rest and separates users of the application, but it
+does **not** protect against the host administrator. Whoever controls the
+machine, the `.venv`, the running process, or the OS account can read decrypted
+data and capture the data key from memory while a user is logged in. Backups of
+`.food-khata/` must be protected with the same care as the original data.
 
 Credentials in `sessions/*.json` are excluded from saved history files through recursive redaction of sensitive auth keys.
 The `.food-khata/` folder is gitignored and must remain private on the host machine.

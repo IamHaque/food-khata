@@ -33,7 +33,7 @@ from food_khata.auth import (
 
 from .behavior import behavior
 from .charts import kpi_history, overview, remaining
-from .db import connect_readonly, database_version
+from .db import connect_readonly, database_version, resolve_user_database
 from .filters import build_where
 from .food import food
 from .metrics import FEES_SQL, compute_metrics, monthly_totals
@@ -51,9 +51,24 @@ def create_app(
     dev: bool = False,
     dist_path: Path | str | None = None,
     app_db_path: Path | str | None = None,
+    data_root: Path | str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Food Khata API")
     db_path = Path(db_path)
+    explicit_data_root = data_root is not None
+    if explicit_data_root:
+        resolved_data_root = Path(data_root).expanduser().resolve()
+        legacy_db: Path | None = None
+    elif db_path.exists() and db_path.is_dir():
+        # A directory is the per-user data root; no client-controlled selection.
+        resolved_data_root = db_path.expanduser().resolve()
+        legacy_db = None
+    else:
+        # Backwards-compatible single-database mode used by the existing CLI
+        # and tests until the legacy root is adopted by its owner.
+        resolved_data_root = (db_path.parent or Path(".")).expanduser().resolve()
+        legacy_db = db_path
+    allow_legacy_fallback = not explicit_data_root and legacy_db is not None
     dist = (
         Path(dist_path)
         if dist_path is not None
@@ -61,6 +76,8 @@ def create_app(
     )
     if app_db_path is not None:
         resolved_app_db = Path(app_db_path)
+    elif explicit_data_root:
+        resolved_app_db = resolved_data_root / "app.db"
     else:
         p = Path(db_path)
         if str(db_path) != ":memory:" and not str(db_path).startswith("file:"):
@@ -68,6 +85,8 @@ def create_app(
         else:
             resolved_app_db = Path("app.db")
     app.state.app_db_path = resolved_app_db
+    app.state.data_root = resolved_data_root
+    app.state.legacy_db_path = legacy_db
     init_app_db(resolved_app_db)
     cache = {}
     cache_lock = threading.Lock()
@@ -224,14 +243,25 @@ def create_app(
         def execute(self, sql, params=()):
             return retry(lambda: self.conn.execute(sql, params))
 
-    def connection():
+    def connection(request: Request):
+        # Each request selects only its own authenticated user's database; the
+        # client never supplies a path or a user id.
+        session = getattr(request.state, "user", None)
+        if session is None:
+            raise HTTPException(401, "Authentication required.")
+        db_file = resolve_user_database(
+            resolved_data_root,
+            session["user_id"],
+            legacy_db,
+            allow_legacy_fallback=allow_legacy_fallback,
+        )
         # Each request gets its own connection; never share one across requests.
-        if not db_path.is_file():
+        if not db_file.is_file():
             raise HTTPException(503, "Database not found.")
-        version = database_version(db_path)
+        version = database_version(db_file)
 
         def begin():
-            conn = connect_readonly(db_path)
+            conn = connect_readonly(db_file)
             try:
                 conn.execute("BEGIN")
                 return conn
@@ -249,6 +279,7 @@ def create_app(
         try:
             wrapped = RetryingConnection(conn)
             wrapped.version = version
+            wrapped.db_path = db_file
             yield wrapped
         finally:
             conn.close()
@@ -413,12 +444,18 @@ def create_app(
         }
 
     @app.post("/api/dashboard", response_model=Dashboard)
-    def dashboard(filters: Filters, conn: Annotated[object, Depends(connection)]):
+    def dashboard(
+        request: Request,
+        filters: Filters,
+        conn: Annotated[object, Depends(connection)],
+    ):
+        user_id = request.state.user["user_id"]
+        database = conn.db_path
         for attempt in range(3):
-            key = (filters.model_dump_json(), conn.version)
+            key = (user_id, filters.model_dump_json(), conn.version)
             with cache_lock:
                 cached = cache.get(key)
-            if cached is not None and key[1] == database_version(db_path):
+            if cached is not None and key[2] == database_version(database):
                 return cached
             h = health(conn, filters)
             kpis = compute_metrics(conn, filters)
@@ -452,13 +489,14 @@ def create_app(
                     422, "Dashboard data contains invalid numeric values."
                 ) from None
             with cache_lock:
-                if key[1] == database_version(db_path):
-                    cache.clear()
+                if key[2] == database_version(database):
+                    for stale in [k for k in cache if k[0] == user_id and k != key]:
+                        cache.pop(stale, None)
                     cache[key] = result
                     return result
             if attempt < 2:
                 conn.execute("ROLLBACK")
-                conn.version = database_version(db_path)
+                conn.version = database_version(database)
                 conn.execute("BEGIN")
         raise sqlite3.OperationalError("database busy")
 

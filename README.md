@@ -126,10 +126,18 @@ to merge conflicting identities automatically.
 
 Sessions contain reusable credentials. Metadata contains your phone number, and
 order payloads can contain addresses and other personal information. Keep this
-directory private and out of Git, cloud sharing, and public bug reports. Files
-are stored locally in plain JSON; this application does not encrypt them. On
-Windows they inherit your directory's ACLs; keep the checkout private or use
-`--data-dir` to select another private location.
+directory private and out of Git, cloud sharing, and public bug reports. Per-user
+provider sessions and phone numbers are encrypted at rest with a random data key
+wrapped by the user's password (ChaCha20-Poly1305, DEC-P2). Order archives and
+the analytics SQLite database remain plain files. On Windows the data directory
+inherits your ACLs; keep the checkout private or use `--data-dir` to select
+another private location.
+
+**Honest limit:** host administrators can still read everything. Whoever controls
+the machine, the Python environment, or the running process can read decrypted
+data and capture the in-memory data key while a user is logged in. Encryption
+separates users of the application and protects data at rest; it is not a
+defence against the host owner.
 
 ## Sync and recovery
 
