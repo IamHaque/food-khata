@@ -211,11 +211,18 @@ def create_app(
             429: "too_many_requests",
             503: "database_not_found",
         }
+        code = getattr(exc, "code", None)
+        message = str(exc.detail)
+        if isinstance(exc.detail, dict):
+            code = exc.detail.get("code", code)
+            message = exc.detail.get("message", message)
+        if not code:
+            code = codes.get(exc.status_code, "request_error")
         return JSONResponse(
             {
                 "error": {
-                    "code": codes.get(exc.status_code, "request_error"),
-                    "message": str(exc.detail),
+                    "code": code,
+                    "message": message,
                 }
             },
             status_code=exc.status_code,

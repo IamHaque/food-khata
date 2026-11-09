@@ -82,7 +82,7 @@ def lock(path: Path) -> Iterator[None]:
 
 
 def _provider(value: str) -> str:
-    if value not in ("zomato", "swiggy"):
+    if value not in ("zomato", "swiggy", "fake"):
         raise KhataError("Invalid provider")
     return value
 
@@ -185,7 +185,7 @@ class Storage:
                 or not re.fullmatch(r"[6-9][0-9]{9}", data["phone"])
                 or not isinstance(data.get("providers"), dict)
                 or any(
-                    k not in ("zomato", "swiggy") or not isinstance(v, str) or not v
+                    k not in ("zomato", "swiggy", "fake") or not isinstance(v, str) or not v
                     for k, v in data["providers"].items()
                 )
             ):

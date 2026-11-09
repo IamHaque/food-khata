@@ -95,7 +95,9 @@ class LinkingService:
         )
         return handle
 
-    def verify_otp(self, handle: str, code: str, *, user: Any = None) -> dict[str, Any]:
+    start_linking = start_login
+
+    def verify_otp(self, handle: str, code: str, *, user: Any = None, storage: Any = None) -> dict[str, Any]:
         entry = self._handles.get(handle)
         if entry is None:
             raise KhataError("Invalid or unknown login handle.")
@@ -124,9 +126,10 @@ class LinkingService:
         entry.used = True
         del self._handles[handle]
 
-        account = self.storage.bind(entry.phone, entry.provider, provider_id)
+        target_storage = storage if storage is not None else self.storage
+        account = target_storage.bind(entry.phone, entry.provider, provider_id)
         session_value = entry.provider_instance.dump_session()
-        self.storage.save_session(account["local_id"], entry.provider, session_value)
+        target_storage.save_session(account["local_id"], entry.provider, session_value)
         return {
             "local_id": account["local_id"],
             "provider": entry.provider,
@@ -134,6 +137,8 @@ class LinkingService:
             "account": account,
             "phone": entry.phone,
         }
+
+    verify_linking = verify_otp
 
     # ---------- status / listing ----------
     def _cached_status(self, session: dict[str, Any] | None) -> str:
@@ -151,7 +156,7 @@ class LinkingService:
         return "ok"
 
     def list_accounts(self, provider: str | None = None, *, user: Any = None) -> list[dict[str, Any]]:
-        providers = [provider] if provider else ["zomato", "swiggy"]
+        providers = [provider] if provider else ["zomato", "swiggy", "fake"]
         result: list[dict[str, Any]] = []
         for prov in providers:
             try:

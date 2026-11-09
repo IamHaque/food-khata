@@ -1,5 +1,504 @@
-"""Accounts and provider linking routes router stub (AC-10)."""
+"""Accounts and provider linking routes (AC-10)."""
 
-from fastapi import APIRouter
+from __future__ import annotations
+
+import re
+import shutil
+import sqlite3
+import time
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
+
+from food_khata.contracts import KhataError
+from food_khata.services.linking import LinkingService
+from food_khata.storage import Storage, read_json, save_json
+from food_khata.users.context import ensure_private_dir, user_database, user_root
+
+from .schemas_accounts import (
+    AccountOut,
+    DisconnectRequest,
+    DisconnectResponse,
+    LinkStartRequest,
+    LinkStartResponse,
+    LinkVerifyRequest,
+    LinkVerifyResponse,
+    VerifyAgainRequest,
+    VerifyAgainResponse,
+)
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
+
+DEC_010_MAX_ACCOUNTS = 5
+
+
+def get_current_user_id(request: Request) -> str:
+    """Retrieve authenticated user ID from request state."""
+    session = getattr(request.state, "session", None) or getattr(request.state, "user", None)
+    if not session or not session.get("user_id"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "unauthorized", "message": "Authentication required."},
+        )
+    return str(session["user_id"])
+
+
+def get_user_cipher(request: Request, user_id: str) -> Any | None:
+    """Locate user encryption cipher in memory if unlocked."""
+    if hasattr(request.state, "cipher") and request.state.cipher is not None:
+        return request.state.cipher
+    user_ciphers = getattr(request.app.state, "user_ciphers", None)
+    if isinstance(user_ciphers, dict) and user_id in user_ciphers:
+        return user_ciphers[user_id]
+    user_contexts = getattr(request.app.state, "user_contexts", None)
+    if isinstance(user_contexts, dict) and user_id in user_contexts:
+        ctx = user_contexts[user_id]
+        if hasattr(ctx, "cipher"):
+            return ctx.cipher
+    return None
+
+
+def get_user_storage(request: Request, user_id: str) -> Storage:
+    """Instantiate Storage bound to the authenticated user's private data folder."""
+    data_root = getattr(request.app.state, "data_root", None)
+    cipher = get_user_cipher(request, user_id)
+    if data_root is not None:
+        u_root = user_root(data_root, user_id)
+        ensure_private_dir(u_root)
+        return Storage(u_root, cipher=cipher)
+    return Storage(cipher=cipher)
+
+
+def get_linking_service(request: Request) -> LinkingService:
+    """Shared LinkingService stored on app.state to retain handles across requests."""
+    svc = getattr(request.app.state, "linking_service", None)
+    if svc is None:
+        svc = LinkingService()
+        request.app.state.linking_service = svc
+    if not hasattr(request.app.state, "reverify_handles"):
+        request.app.state.reverify_handles = {}
+    return svc
+
+
+def _cached_status(session: dict[str, Any] | None) -> str:
+    """Check session expiry status: ok, expiring (within 24h), or expired."""
+    if not isinstance(session, dict):
+        return "expired"
+    now = time.time()
+    expires = session.get("expires_at") or session.get("expiry") or session.get("exp")
+    if isinstance(expires, (int, float)):
+        if now > float(expires):
+            return "expired"
+        if now > float(expires) - 86400:
+            return "expiring"
+        return "ok"
+    return "ok"
+
+
+def _count_orders(account_path: Path, provider: str) -> int:
+    """Count orders from stored provider history archive if present."""
+    history_file = account_path / f"{provider}-history.json"
+    if history_file.is_file():
+        try:
+            data = read_json(history_file)
+            if isinstance(data, list):
+                return len(data)
+            if isinstance(data, dict):
+                orders = data.get("orders") or data.get("items") or []
+                if isinstance(orders, list):
+                    return len(orders)
+        except Exception:
+            pass
+    return 0
+
+
+def _get_account_meta(storage: Storage, account_id: str) -> dict[str, Any] | None:
+    """Look up an account by ID from the given storage."""
+    acc_path = storage.accounts_dir / account_id
+    acc_file = acc_path / "account.json"
+    if not acc_file.is_file():
+        return None
+    try:
+        data = read_json(acc_file)
+        if isinstance(data, dict):
+            return storage._decrypt_phone(data, rewrite=False)
+    except Exception:
+        pass
+    return None
+
+
+@router.get("", response_model=list[AccountOut])
+def list_accounts(
+    request: Request,
+    user_id: str = Depends(get_current_user_id),
+):
+    """List linked accounts for the current user with status, last sync, and order count."""
+    storage = get_user_storage(request, user_id)
+    if not storage.accounts_dir.exists():
+        return []
+
+    accounts_out: list[AccountOut] = []
+    for acc_path in sorted(storage.accounts_dir.iterdir()):
+        if not acc_path.is_dir():
+            continue
+        account_id = acc_path.name
+        acc = _get_account_meta(storage, account_id)
+        if not acc:
+            continue
+
+        providers = acc.get("providers", {})
+        provider = next(iter(providers.keys()), "zomato")
+        provider_id = providers.get(provider)
+        session = storage.session(account_id, provider)
+        stat = _cached_status(session)
+        orders = acc.get("order_count") or _count_orders(acc_path, provider)
+        last_sync = acc.get("last_sync")
+
+        accounts_out.append(
+            AccountOut(
+                id=account_id,
+                local_id=account_id,
+                provider=provider,
+                phone=acc.get("phone"),
+                provider_id=provider_id,
+                status=stat,
+                last_sync=last_sync,
+                order_count=orders,
+                name=acc.get("name") or acc.get("account_name"),
+                has_session=session is not None,
+            )
+        )
+    return accounts_out
+
+
+@router.post("/link/start", response_model=LinkStartResponse)
+def link_start(
+    data: LinkStartRequest,
+    request: Request,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Start provider linking: delegates to LinkingService and returns opaque handle. Never returns OTP code."""
+    provider_name = data.provider.strip().lower()
+    if provider_name not in ("zomato", "swiggy", "fake"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PROVIDER", "message": f"Unsupported provider: {data.provider}"},
+        )
+
+    phone = data.phone.strip()
+    if not re.fullmatch(r"[6-9][0-9]{9}", phone):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_PHONE", "message": "Enter a valid 10-digit Indian phone number."},
+        )
+
+    svc = get_linking_service(request)
+    # Check if a custom fake provider instance was attached to app.state
+    factory = getattr(request.app.state, "provider_factory", None)
+    provider_inst = factory(provider_name) if factory else None
+
+    try:
+        handle = svc.start_linking(provider_inst or provider_name, phone, user=user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "LINK_START_FAILED", "message": str(exc)},
+        ) from exc
+
+    entry = svc._handles[handle]
+    return LinkStartResponse(handle=handle, expires_at=entry.expires_at)
+
+
+@router.post("/link/verify", response_model=LinkVerifyResponse)
+def link_verify(
+    data: LinkVerifyRequest,
+    request: Request,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Verify linking OTP, enforce quota and exclusivity across users, and bind account."""
+    svc = get_linking_service(request)
+    handle = data.handle.strip()
+    entry = svc._handles.get(handle)
+
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_HANDLE", "message": "Invalid or expired linking handle."},
+        )
+    if entry.used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "HANDLE_USED", "message": "Login handle already used."},
+        )
+    if time.time() > entry.expires_at:
+        svc._handles.pop(handle, None)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "HANDLE_EXPIRED", "message": "Login handle has expired."},
+        )
+    if entry.user is not None and entry.user != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "FORBIDDEN", "message": "Linking handle belongs to another user."},
+        )
+
+    user_storage = get_user_storage(request, user_id)
+
+    # 1. Quota Check: DEC-010 limit is 5 accounts per user
+    existing_accounts = []
+    if user_storage.accounts_dir.exists():
+        for p in user_storage.accounts_dir.iterdir():
+            if p.is_dir() and (p / "account.json").is_file():
+                meta = _get_account_meta(user_storage, p.name)
+                if meta:
+                    existing_accounts.append(meta)
+
+    # Allow re-linking if matching phone already exists among user's accounts
+    is_existing = any(a.get("phone") == entry.phone for a in existing_accounts)
+    if len(existing_accounts) >= DEC_010_MAX_ACCOUNTS and not is_existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "QUOTA",
+                "message": f"Account quota exceeded (maximum {DEC_010_MAX_ACCOUNTS} accounts allowed).",
+            },
+        )
+
+    # 2. Verify OTP with provider
+    try:
+        provider_id = entry.provider_instance.verify_otp(data.code.strip())
+        if not provider_id or not str(provider_id).strip():
+            provider_id = entry.provider_instance.profile()
+        provider_id = str(provider_id).strip()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_OTP", "message": str(exc)},
+        ) from exc
+
+    # 3. Check reverify mismatch if this handle was initiated via verify-again
+    reverify_info = getattr(request.app.state, "reverify_handles", {}).pop(handle, None)
+    if reverify_info:
+        expected_id = reverify_info.get("expected_provider_id")
+        if expected_id and provider_id != str(expected_id).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "PROVIDER_MISMATCH",
+                    "message": "Provider account identity mismatch; link failed.",
+                },
+            )
+
+    # 4. Exclusivity Check: "one owner per provider account"
+    # Search all other users in <data_root>/users/
+    data_root = getattr(request.app.state, "data_root", None)
+    if data_root is not None:
+        users_dir = Path(data_root) / "users"
+        if users_dir.is_dir():
+            for other_u_dir in users_dir.iterdir():
+                if not other_u_dir.is_dir() or other_u_dir.name == user_id:
+                    continue
+                other_accounts = other_u_dir / "accounts"
+                if not other_accounts.is_dir():
+                    continue
+                for other_acc in other_accounts.iterdir():
+                    acc_json_file = other_acc / "account.json"
+                    if not acc_json_file.is_file():
+                        continue
+                    try:
+                        other_data = read_json(acc_json_file)
+                        if isinstance(other_data, dict):
+                            other_provs = other_data.get("providers", {})
+                            if other_provs.get(entry.provider) == provider_id:
+                                raise HTTPException(
+                                    status_code=status.HTTP_409_CONFLICT,
+                                    detail={
+                                        "code": "PROVIDER_ACCOUNT_TAKEN",
+                                        "message": "This provider account is already linked to another user.",
+                                    },
+                                )
+                            # Plaintext phone check if present
+                            if (
+                                other_data.get("phone") == entry.phone
+                                and entry.provider in other_provs
+                            ):
+                                raise HTTPException(
+                                    status_code=status.HTTP_409_CONFLICT,
+                                    detail={
+                                        "code": "PROVIDER_ACCOUNT_TAKEN",
+                                        "message": "This provider account is already linked to another user.",
+                                    },
+                                )
+                    except HTTPException:
+                        raise
+                    except Exception:
+                        pass
+
+    # 5. Bind account and save encrypted session
+    try:
+        account = user_storage.bind(entry.phone, entry.provider, provider_id)
+        session_value = entry.provider_instance.dump_session()
+        user_storage.save_session(account["local_id"], entry.provider, session_value)
+
+        # Set friendly account name if provided
+        if data.account_name:
+            account["name"] = data.account_name.strip()
+            user_storage._write_account(account)
+
+        entry.used = True
+        svc._handles.pop(handle, None)
+
+        return LinkVerifyResponse(
+            id=account["local_id"],
+            local_id=account["local_id"],
+            provider=entry.provider,
+            provider_id=provider_id,
+            phone=entry.phone,
+            status="ok",
+            name=account.get("name"),
+        )
+    except KhataError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "BIND_FAILED", "message": str(exc)},
+        ) from exc
+
+
+@router.post("/{account_id}/verify-again", response_model=VerifyAgainResponse)
+def verify_again(
+    account_id: str,
+    request: Request,
+    data: VerifyAgainRequest = Body(default_factory=VerifyAgainRequest),
+    user_id: str = Depends(get_current_user_id),
+):
+    """Start re-verification linking session for an existing account."""
+    user_storage = get_user_storage(request, user_id)
+    acc = _get_account_meta(user_storage, account_id)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": "Account not found."},
+        )
+
+    phone = acc.get("phone")
+    providers = acc.get("providers", {})
+    provider = next(iter(providers.keys()), "zomato")
+    expected_id = providers.get(provider)
+
+    if not phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "NO_PHONE", "message": "Account has no stored phone number."},
+        )
+
+    svc = get_linking_service(request)
+    factory = getattr(request.app.state, "provider_factory", None)
+    provider_inst = factory(provider) if factory else None
+
+    try:
+        handle = svc.start_linking(provider_inst or provider, phone, user=user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "VERIFY_AGAIN_FAILED", "message": str(exc)},
+        ) from exc
+
+    # Track expected provider account id for re-verification matching
+    if not hasattr(request.app.state, "reverify_handles"):
+        request.app.state.reverify_handles = {}
+    request.app.state.reverify_handles[handle] = {
+        "account_id": account_id,
+        "expected_provider_id": expected_id,
+    }
+
+    entry = svc._handles[handle]
+
+    # If code was supplied inline, verify immediately
+    if data and data.code:
+        try:
+            ver_id = entry.provider_instance.verify_otp(data.code.strip())
+            if not ver_id:
+                ver_id = entry.provider_instance.profile()
+            if str(ver_id).strip() != str(expected_id).strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "PROVIDER_MISMATCH",
+                        "message": "Provider account identity mismatch; link failed.",
+                    },
+                )
+            user_storage.save_session(account_id, provider, entry.provider_instance.dump_session())
+            entry.used = True
+            svc._handles.pop(handle, None)
+            request.app.state.reverify_handles.pop(handle, None)
+            return VerifyAgainResponse(
+                handle=handle,
+                expires_at=entry.expires_at,
+                status="ok",
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "INVALID_OTP", "message": str(exc)},
+            ) from exc
+
+    return VerifyAgainResponse(
+        handle=handle,
+        expires_at=entry.expires_at,
+        status="pending",
+    )
+
+
+@router.delete("/{account_id}", response_model=DisconnectResponse)
+@router.post("/{account_id}/disconnect", response_model=DisconnectResponse)
+def disconnect_account(
+    account_id: str,
+    request: Request,
+    wipe_data: bool = Query(default=False),
+    body: DisconnectRequest | None = None,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Disconnect account. Wipes or preserves data according to wipe_data flag."""
+    effective_wipe = wipe_data or (body.wipe_data if body else False)
+    user_storage = get_user_storage(request, user_id)
+    acc = _get_account_meta(user_storage, account_id)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": "Account not found."},
+        )
+
+    acc_path = user_storage.accounts_dir / account_id
+    if effective_wipe:
+        if acc_path.exists():
+            shutil.rmtree(acc_path, ignore_errors=True)
+        # Also clean up orders from user database if analytics db exists
+        data_root = getattr(request.app.state, "data_root", None)
+        if data_root:
+            user_db = user_database(data_root, user_id)
+            if user_db.is_file():
+                try:
+                    with sqlite3.connect(user_db) as conn:
+                        conn.execute("DELETE FROM orders WHERE account_id = ?", (account_id,))
+                        conn.execute(
+                            "DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders)"
+                        )
+                        conn.commit()
+                except Exception:
+                    pass
+    else:
+        # Preserves data: remove sessions only
+        for prov in acc.get("providers", {}).keys():
+            user_storage.remove_session(account_id, prov)
+        acc["has_session"] = False
+        user_storage._write_account(acc)
+
+    return DisconnectResponse(
+        status="ok",
+        account_id=account_id,
+        wiped=effective_wipe,
+    )
