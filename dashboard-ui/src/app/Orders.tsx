@@ -173,6 +173,7 @@ export function OrderAmountCell({
           style={{ width: `${pct}%` }}
           data-testid="amount-bar"
           role="progressbar"
+          aria-label="Order amount"
           aria-valuenow={val}
           aria-valuemin={0}
           aria-valuemax={safeMax}
@@ -188,7 +189,7 @@ export function PlatformBadge({ platform }: { platform: string }) {
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase border ${
         isSwiggy
-          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+          ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20'
           : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
       }`}
       data-platform={platform}
