@@ -404,7 +404,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-02 | Fast verify harness | A | P0 | DONE | 2026-11-09 | commit 66a393a; fast verify ~20s, vitest pool 11.4s, audit pass | A1 |
 | FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | DONE | 2026-11-09 | commit a6892ca; entry index-*.js 97.7 kB gzip <= 250 kB, manualChunks split | A2 |
-| FX-05 | BaseChart primitive | A | P1 | IN_PROGRESS | — | — | A2 |
+| FX-05 | BaseChart primitive | A | P1 | DONE | 2026-11-09 | commit b180101; 14 charts migrated, 732 lines net deleted, 979 unit tests pass | A2 |
 | FX-06 | Browser QA suite | A | P0 | TODO | — | — | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | TODO | — | — | A4 |
 | GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
@@ -452,6 +452,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-013 | 2026-11-09 | FX-01 | Declared httpx in pyproject.toml extras; brief.mjs lint validates exact column counts across all markdown tables in both briefs. | Clean install and table guardrails | Environment and tracker hygiene | Accepted |
 | DEC-014 | 2026-11-09 | FX-02 | vitest isolate:false breaks fullscreen tests; adopted worker threads pool + disableConsoleIntercept bringing unit tests to 11.4s and fast path to ~20s. | Performance without test breakage | Fast verify test configuration | Accepted |
 | DEC-015 | 2026-11-09 | FX-03 | Measured entry chunk at 97.7 kB gzip; configured manualChunks for echarts and react vendor; check-bundle.mjs validates <= 250 kB budget. | Confirmed entry chunk budget and route lazy loading | Bundle budget & code splitting | Accepted |
+| DEC-016 | 2026-11-09 | FX-05 | Implemented declarative BaseChart wrapper with lifecycle stability, ResizeObserver, theme sync, and event delegation; migrated 14 charts deleting 732 net lines. | Eliminates boilerplate while preserving 100% test parity | Chart component architecture | Accepted |
 
 ### 5.3 Deviation log
 
@@ -513,6 +514,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-01 | `node scripts/brief.mjs lint; node scripts/verify.mjs . --backend` | all pass (29 tables checked, pytest 114 passed, ruff clean, typecheck, lint, vitest 967 passed) | 42 s | 565e6ea |
 | 2026-11-09 | FX-02 | `node scripts/verify.mjs . --backend; audit-FX-02-1` | all pass (guardrails, typecheck, lint, unit 11.98s, ruff, pytest 114 passed; audit pass) | 33 s | 66a393a |
 | 2026-11-09 | FX-03 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (entry 97.7 kB gzip, vitest 967 passed, pytest 114 passed) | 42 s | a6892ca |
+| 2026-11-09 | FX-05 | `npm run build; node scripts/check-bundle.mjs; node scripts/verify.mjs . --backend` | all pass (vitest 979 passed, pytest 114 passed, entry 97.7 kB gzip) | 41 s | b180101 |
 
 ### 5.9 Changelog
 
@@ -525,6 +527,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-01 | Fixed table column alignment in brief, added brief.mjs lint, reconciled S-024, logged 2fcacf4 work, added httpx dependency | 565e6ea |
 | 2026-11-09 | FX-02 | Vitest pool configuration (unit ~11s), stage order early exit in verify.mjs, and instant worktree bootstrap | 66a393a |
 | 2026-11-09 | FX-03 | React.lazy page routing, ECharts/React manualChunks, and scripts/check-bundle.mjs entry budget enforcement (97.7 kB gzip) | a6892ca |
+| 2026-11-09 | FX-05 | BaseChart primitive implemented, 14 chart components migrated, 732 lines net deleted | b180101 |
 
 ### 5.10 Delegation ledger
 
@@ -534,4 +537,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-02 | T3 | gemini-high | 1 | pass | T6 audit gemini-med pass |
 | 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | FX-03 | T2 | beam | 1 | pass | — |
-| 2026-11-09 | FX-05 | T3 | gemini-high | 1 | in_progress | — |
+| 2026-11-09 | FX-05 | T3 | gemini-high | 1 | pass | — |
