@@ -612,4 +612,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-16 | T6 | sol-medium | 1 | pass | API and static visuals pass; countdown announcement fixed; expiry/error/dialog follow-up passed |
 | 2026-11-10 | AC-14 | T5 | terra-high | 3 | review | f2d4a44; parent interactive checks 1440/390 pass; parent verify running |
 | 2026-11-10 | AC-15 | T6 | terra-medium | 1 | F3 | Discard not durable; imported partial can be misreported as unimported; fix dispatched |
-| 2026-11-10 | AC-15 | T8 | terra-high | 5 | running | fix-AC-15-partials-20261110; durable partial decisions with backend and UI regression tests |
+| 2026-11-10 | AC-15 | T8 | terra-high | 5 | review | a46fb9a; durable decisions implemented; parent verify and independent persistence audit pending |
+| 2026-11-10 | AC-15 | T6 | sol-medium | 2 | running | audit-AC-15-durable-20261110; migration/order/crash/isolation review |
