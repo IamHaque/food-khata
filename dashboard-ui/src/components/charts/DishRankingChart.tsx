@@ -10,7 +10,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
@@ -25,9 +25,6 @@ import {
   type DishRankingDatumLike,
   type DishRankingMetric,
 } from "../../lib/captions";
-import { subscribeTheme } from "../../app/theme";
-import { useFilters } from "../../app/FilterContext";
-import { registerChart } from "../../lib/highlight-bus";
 
 export interface DishRankingDatum extends DishRankingDatumLike {
   key?: string | null;
@@ -98,13 +95,6 @@ function registerDishRankingModules() {
 }
 registerDishRankingModules();
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Normalizes, aggregates duplicate dishes by name/key, calculates average price,
@@ -490,10 +480,6 @@ export function DishRankingChart({
     isEmpty ||
     (!isLoading && !error && displayedItems.length === 0);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartInstanceRef = React.useRef<echarts.ECharts | null>(null);
-  const chartIdRef = React.useRef(`dish-ranking-${Math.random().toString(36).slice(2, 9)}`);
-
   const tableData = React.useMemo(() => {
     if (displayedItems.length === 0) return undefined;
     return displayedItems.map((d, i) => ({
@@ -516,93 +502,6 @@ export function DishRankingChart({
         : `${top.quantity} orders`;
     return `Horizontal bar chart showing top ${displayedItems.length} dishes ranked by ${activeMetric === "amount" ? "expenditure" : "order volume"}. Top dish is ${top.name} with ${topMetricDesc}.`;
   }, [displayedItems, activeMetric]);
-
-  const callbacksRef = React.useRef({ onDishClick, filters, displayedItems });
-  callbacksRef.current = { onDishClick, filters, displayedItems };
-
-  const dataRef = React.useRef({ displayedItems, activeMetric, maxItems });
-  dataRef.current = { displayedItems, activeMetric, maxItems };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
-      chartInstanceRef.current = echarts.init(node);
-    }
-    const chart = chartInstanceRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const option = buildDishRankingOption({
-      data: dataRef.current.displayedItems,
-      metric: dataRef.current.activeMetric,
-      theme,
-      prefersReducedMotion,
-      maxItems: dataRef.current.maxItems,
-    });
-
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  // Chart initialization & resize handling
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerDishRankingModules();
-
-    if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
-      chartInstanceRef.current = echarts.init(node);
-    }
-    const chart = chartInstanceRef.current;
-    const unregister = registerChart(chartIdRef.current, chart, () => undefined);
-
-    const onChartClick = (params: unknown) => {
-      handleDishClick(
-        params,
-        callbacksRef.current.displayedItems,
-        callbacksRef.current.filters,
-        callbacksRef.current.onDishClick,
-      );
-    };
-
-    chart.on("click", onChartClick);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", onChartClick);
-      unregister();
-      ro.disconnect();
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-        chartInstanceRef.current = null;
-      }
-    };
-  }, [empty, isLoading, error, applyUpdate]);
-
-  // Option application & theme updates
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [displayedItems, activeMetric, empty, isLoading, error, maxItems, applyUpdate]);
 
   const infoPopover = (
     <Popover>
@@ -642,7 +541,7 @@ export function DishRankingChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={resolvedCaption}
@@ -658,27 +557,39 @@ export function DishRankingChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <SegmentedControl
-            options={[
-              { value: "quantity", label: "Quantity" },
-              { value: "amount", label: "Amount" },
-            ]}
-            value={activeMetric}
-            onChange={(v) => handleMetricToggle(v as DishRankingMetric)}
-          />
-        </div>
-        <div
-          ref={containerRef}
-          role="img"
-          aria-label={title}
-          aria-description={ariaDescription}
-          style={{ height: 420, width: "100%" }}
+      chartHeight={420}
+      headerControls={
+        <SegmentedControl
+          options={[
+            { value: "quantity", label: "Quantity" },
+            { value: "amount", label: "Amount" },
+          ]}
+          value={activeMetric}
+          onChange={(v) => handleMetricToggle(v as DishRankingMetric)}
         />
-      </div>
-    </ChartCard>
+      }
+      data={displayedItems}
+      spec={(currentItems, theme, { prefersReducedMotion }) =>
+        buildDishRankingOption({
+          data: currentItems,
+          metric: activeMetric,
+          theme,
+          prefersReducedMotion,
+          maxItems,
+        })
+      }
+      onClick={(params) => {
+        handleDishClick(
+          params,
+          displayedItems,
+          filters,
+          onDishClick,
+        );
+      }}
+      registerModules={registerDishRankingModules}
+      ariaLabel={title}
+      ariaDescription={ariaDescription}
+    />
   );
 }
 

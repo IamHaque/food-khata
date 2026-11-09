@@ -11,7 +11,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import {
   Popover,
   PopoverContent,
@@ -24,13 +24,6 @@ import {
   resolveChartTheme,
   type ChartTheme,
 } from "@/lib/chart-theme";
-import { useFilters } from "@/app/FilterContext";
-import { subscribeTheme } from "@/app/theme";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 import {
   computeWeekdayTakeaway,
   formatRupees,
@@ -521,13 +514,6 @@ export function buildWeekdayBarsOption(
   return option;
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export interface WeekdayBarsChartProps {
   data?: readonly WeekdayBarDatum[] | readonly NormalizedWeekdayBar[] | null;
@@ -612,109 +598,6 @@ export function WeekdayBarsChart({
     emptyReason ||
     "No weekday order data available";
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(
-    `weekday-bars-${Math.random().toString(36).slice(2, 9)}`,
-  );
-  const chartId = idRef.current;
-
-  const callbacksRef = React.useRef({ filters, onBarClick, normalized });
-  callbacksRef.current = { filters, onBarClick, normalized };
-
-  const dataRef = React.useRef({ normalized, activeDayType, metricMode });
-  dataRef.current = { normalized, activeDayType, metricMode };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const current = dataRef.current;
-    const option = buildWeekdayBarsOption(current.normalized, {
-      theme,
-      activeDayType: current.activeDayType,
-      metricMode: current.metricMode,
-      reducedMotion: prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, { dimension: "weekday" });
-
-    const handleClick = (params: unknown) => {
-      handleWeekdayBarClick(
-        params,
-        callbacksRef.current.filters,
-        callbacksRef.current.onBarClick,
-        callbacksRef.current.normalized,
-      );
-    };
-
-    const handleOver = (params: any) => {
-      const dayIdx = Number(params?.dataIndex ?? -1);
-      if (dayIdx >= 0 && dayIdx < WEEKDAY_SHORT_NAMES.length) {
-        emitHighlight(chartId, "weekday", WEEKDAY_SHORT_NAMES[dayIdx]);
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [empty, isLoading, error, normalized, activeDayType, metricMode, applyUpdate]);
-
   const infoPopover = (
     <Popover>
       <PopoverTrigger asChild>
@@ -753,7 +636,7 @@ export function WeekdayBarsChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={caption ?? undefined}
@@ -771,33 +654,50 @@ export function WeekdayBarsChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div className="flex items-center justify-between pb-2">
-        <div className="text-xs text-muted-foreground">
-          {activeDayType !== "all" && (
-            <span className="inline-flex items-center gap-1 font-medium text-foreground bg-muted/60 px-2 py-0.5 rounded">
-              Filtered: {activeDayType === "weekend" ? "Weekends only" : "Weekdays only"}
-            </span>
-          )}
+      chartHeight={280}
+      headerControls={
+        <div className="flex items-center justify-between pb-2 w-full">
+          <div className="text-xs text-muted-foreground">
+            {activeDayType !== "all" && (
+              <span className="inline-flex items-center gap-1 font-medium text-foreground bg-muted/60 px-2 py-0.5 rounded">
+                Filtered: {activeDayType === "weekend" ? "Weekends only" : "Weekdays only"}
+              </span>
+            )}
+          </div>
+          <SegmentedControl
+            value={metricMode}
+            onChange={(val) => setMetricMode(val as WeekdayMetricMode)}
+            options={[
+              { value: "both", label: "Both" },
+              { value: "orders", label: "Orders" },
+              { value: "spend", label: "Spend" },
+            ]}
+          />
         </div>
-        <SegmentedControl
-          value={metricMode}
-          onChange={(val) => setMetricMode(val as WeekdayMetricMode)}
-          options={[
-            { value: "both", label: "Both" },
-            { value: "orders", label: "Orders" },
-            { value: "spend", label: "Spend" },
-          ]}
-        />
-      </div>
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={title}
-        className="cursor-pointer"
-        style={{ height: 280, width: "100%" }}
-      />
-    </ChartCard>
+      }
+      data={normalized}
+      spec={(currentNormalized, theme, { prefersReducedMotion }) =>
+        buildWeekdayBarsOption(currentNormalized, {
+          theme,
+          activeDayType,
+          metricMode,
+          reducedMotion: prefersReducedMotion,
+        })
+      }
+      onClick={(params) => {
+        handleWeekdayBarClick(params, filters, onBarClick, normalized);
+      }}
+      highlightDimension="weekday"
+      getHighlightValue={(params) => {
+        const dayIdx = Number(params?.dataIndex ?? -1);
+        if (dayIdx >= 0 && dayIdx < WEEKDAY_SHORT_NAMES.length) {
+          return WEEKDAY_SHORT_NAMES[dayIdx];
+        }
+        return undefined;
+      }}
+      registerModules={registerOnce}
+      ariaLabel={title}
+    />
   );
 }
 

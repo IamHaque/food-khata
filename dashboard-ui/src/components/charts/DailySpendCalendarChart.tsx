@@ -11,7 +11,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -26,13 +26,6 @@ import {
   type DailySpendDatumLike,
 } from "@/lib/captions";
 import { tokenAlpha } from "@/lib/tokens";
-import { useFilters } from "@/app/FilterContext";
-import { subscribeTheme } from "@/app/theme";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -365,13 +358,6 @@ export function buildDailySpendCalendarOption(
   return option;
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export interface DailySpendCalendarChartProps {
   data?: readonly DailySpendDatumLike[] | null;
@@ -462,114 +448,26 @@ export function DailySpendCalendarChart({
 
   const empty = isEmpty || (allRows.length === 0 && !isLoading && !error);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(`daily-spend-calendar-${Math.random().toString(36).slice(2, 9)}`);
-  const chartId = idRef.current;
-
-  const callbacksRef = React.useRef({ filters, onDayClick });
-  callbacksRef.current = { filters, onDayClick };
-
-  const dataRef = React.useRef({ data, calendar, selectedYear });
-  dataRef.current = { data, calendar, selectedYear };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const current = dataRef.current;
-    const option = buildDailySpendCalendarOption({
-      data: current.data,
-      calendar: current.calendar,
-      year: current.selectedYear,
-      theme,
-      reducedMotion: prefersReducedMotion,
-    });
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) chartRef.current = echarts.init(node);
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, () => undefined);
-
-    const handleClick = (params: unknown) => {
+  const handleClick = React.useCallback(
+    (params: unknown) => {
       handleDailySpendDayClick(
         params,
-        callbacksRef.current.filters,
-        callbacksRef.current.onDayClick,
+        filters,
+        onDayClick,
       );
-    };
+    },
+    [filters, onDayClick]
+  );
 
-    const handleOver = (params: any) => {
-      let dateStr: string | null = null;
-      if (Array.isArray(params?.value)) dateStr = String(params.value[0]);
-      else if (params?.name) dateStr = String(params.name);
-      if (dateStr && dateStr.length >= 7) {
-        emitHighlight(chartId, "month", dateStr.slice(0, 7));
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) chart.resize();
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    if (empty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    const observer = new MutationObserver(() => {
-      applyUpdate();
-    });
-    if (typeof document !== "undefined" && document.documentElement) {
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-accent"],
-      });
+  const handleHover = React.useCallback((params: any) => {
+    let dateStr: string | null = null;
+    if (Array.isArray(params?.value)) dateStr = String(params.value[0]);
+    else if (params?.name) dateStr = String(params.name);
+    if (dateStr && dateStr.length >= 7) {
+      return dateStr.slice(0, 7);
     }
-
-    return () => {
-      unsubscribe();
-      observer.disconnect();
-    };
-  }, [data, calendar, selectedYear, empty, isLoading, error, applyUpdate]);
+    return undefined;
+  }, []);
 
   const infoPopover = (
     <Popover>
@@ -617,7 +515,7 @@ export function DailySpendCalendarChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={effectiveCaption ?? undefined}
@@ -633,8 +531,31 @@ export function DailySpendCalendarChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div className="space-y-3">
+      data={{ data, calendar, selectedYear }}
+      spec={(_d, theme, { prefersReducedMotion }) =>
+        buildDailySpendCalendarOption({
+          data,
+          calendar,
+          year: selectedYear,
+          theme,
+          reducedMotion: prefersReducedMotion,
+        })
+      }
+      onClick={handleClick}
+      highlightDimension="month"
+      getHighlightValue={handleHover}
+      chartHeight={210}
+      chartWrapper={(chartNode) => (
+        <div className="overflow-x-auto select-custom-scroll pb-2">
+          <div className="min-w-[750px]">{chartNode}</div>
+        </div>
+      )}
+      registerModules={registerOnce}
+      ariaLabel={`${title}: ${subtitle} for ${selectedYear}`}
+      ariaDescription={
+        effectiveCaption || `Daily spend calendar heatmap for ${selectedYear}`
+      }
+      headerControls={
         <div className="flex flex-wrap items-center justify-between gap-2">
           {yearSelectorVariant === "segmented" ? (
             <div className="flex items-center gap-2">
@@ -663,33 +584,18 @@ export function DailySpendCalendarChart({
             </label>
           )}
         </div>
-
-        <div className="sr-only" aria-live="polite">
-          {effectiveCaption || `Daily spend calendar heatmap for ${selectedYear}`}
-        </div>
-
-        <div className="overflow-x-auto select-custom-scroll pb-2">
-          <div className="min-w-[750px]">
-            <div
-              ref={containerRef}
-              role="img"
-              aria-label={`${title}: ${subtitle} for ${selectedYear}`}
-              className="cursor-pointer"
-              style={{ height: 210, width: "100%" }}
-            />
-          </div>
-        </div>
-
-        {unallocatedSpend != null && (
+      }
+      footerControls={
+        unallocatedSpend != null ? (
           <p
             data-testid="unallocated-spend-note"
             className="text-xs text-muted-foreground pt-1 border-t border-border/40"
           >
             {`Spend without a valid recorded date: ${formatRupees(unallocatedSpend)} (orders without a parseable date are excluded from the calendar heatmap).`}
           </p>
-        )}
-      </div>
-    </ChartCard>
+        ) : undefined
+      }
+    />
   );
 }
 

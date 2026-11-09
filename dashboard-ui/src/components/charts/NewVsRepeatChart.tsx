@@ -11,10 +11,9 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
-  getCurrentChartTheme,
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
@@ -23,14 +22,7 @@ import {
   computeNewVsRepeatTakeaway,
   type NewVsRepeatDatumLike,
 } from "../../lib/captions";
-import { subscribeTheme } from "../../app/theme";
-import { useFilters } from "../../app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-  isDimensionMatch,
-} from "../../lib/highlight-bus";
+import { isDimensionMatch } from "../../lib/highlight-bus";
 import { monthToDateRange } from "../../lib/crossfilter";
 
 export interface NewVsRepeatDatum extends NewVsRepeatDatumLike {
@@ -87,13 +79,6 @@ function registerNewVsRepeatModules() {
 }
 registerNewVsRepeatModules();
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 function isSeriesSelected(
   seriesName: string,
@@ -347,15 +332,7 @@ export function NewVsRepeatChart({
   fullscreen,
   onFullscreenChange,
 }: NewVsRepeatChartProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
   const filterContext = useOptionalFilters();
-
-  const idRef = React.useRef<string | null>(null);
-  if (!idRef.current) {
-    idRef.current = `new-repeat-chart-${Math.random().toString(36).slice(2, 9)}`;
-  }
-  const chartId = idRef.current;
 
   const { totalOrdersSum, totalRepeatSum } = React.useMemo(() => {
     let orderSum = 0;
@@ -410,134 +387,51 @@ export function NewVsRepeatChart({
     return `New vs repeat restaurants stacked area chart showing monthly order counts for first-time discoveries and repeat visits across ${data.length} months with repeat share of ${overallRepeatPct}%.`;
   }, [data, totalOrdersSum, totalRepeatSum]);
 
-  const callbacksRef = React.useRef({ onMonthClick, filterContext, data });
-  React.useEffect(() => {
-    callbacksRef.current = { onMonthClick, filterContext, data };
-  });
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-    registerNewVsRepeatModules();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opt = buildNewVsRepeatOption({
-      data,
-      theme,
-      prefersReducedMotion,
-      selectedSeries,
-    });
-
-    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-  }, [data, selectedSeries, isEmpty, isLoading, error]);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-
-    registerNewVsRepeatModules();
-
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const months = (data ?? []).map((d) => d.month ?? "Unknown");
-
-    const unregister = registerChart(chartId, chart, {
+  const highlightMatcher = React.useMemo(
+    () => ({
       dimension: "month",
-      matcher: (dim, val) => {
+      matcher: (dim: string, val: string) => {
         if (dim !== "month") return false;
+        const months = (data ?? []).map((d) => d.month ?? "Unknown");
         const matchIdx = months.findIndex((m) => isDimensionMatch("month", m, val));
         if (matchIdx >= 0) {
           return { type: "highlight", dataIndex: matchIdx };
         }
         return undefined;
       },
-    });
+    }),
+    [data]
+  );
 
-    const handleOver = (params: any) => {
+  const getMonthFromParams = React.useCallback(
+    (params: any) => {
+      const months = (data ?? []).map((d) => d.month ?? "Unknown");
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
         month = months[params.dataIndex];
       }
-      if (month) {
-        emitHighlight(chartId, "month", String(month));
-      }
-    };
-    const handleOut = () => emitClear(chartId);
+      return month ? String(month) : undefined;
+    },
+    [data]
+  );
 
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const handleMouseLeave = () => emitClear(chartId);
-    node.addEventListener("mouseleave", handleMouseLeave);
-
-    const handleClick = (params: any) => {
-      let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
-      if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
-        month = months[params.dataIndex];
-      }
-      if (month) {
-        const { onMonthClick: cbClick, filterContext: fc } = callbacksRef.current;
-        if (cbClick) {
-          cbClick(String(month));
-        } else if (fc?.applyCrossFilter) {
-          fc.applyCrossFilter("month", String(month));
-        } else if (fc?.update) {
-          try {
-            const range = monthToDateRange(String(month));
-            fc.update(range);
-          } catch {
-            // ignore invalid format
-          }
+  const handleSelect = React.useCallback(
+    (month: string) => {
+      if (onMonthClick) {
+        onMonthClick(month);
+      } else if (filterContext?.applyCrossFilter) {
+        filterContext.applyCrossFilter("month", month);
+      } else if (filterContext?.update) {
+        try {
+          const range = monthToDateRange(month);
+          filterContext.update(range);
+        } catch {
+          // ignore invalid format
         }
       }
-    };
-    chart.on("click", handleClick);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    resizeObserver.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      node.removeEventListener("mouseleave", handleMouseLeave);
-      unregister();
-      resizeObserver.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, isEmpty, isLoading, error, data, applyUpdate]);
-
-  React.useEffect(() => {
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [applyUpdate]);
+    },
+    [onMonthClick, filterContext]
+  );
 
   const infoPopover = (
     <Popover>
@@ -577,7 +471,7 @@ export function NewVsRepeatChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={computedCaption}
@@ -593,15 +487,25 @@ export function NewVsRepeatChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={title}
-        aria-description={ariaDescription}
-        style={{ height: 320, width: "100%" }}
-      />
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildNewVsRepeatOption({
+          data: currentData,
+          theme,
+          prefersReducedMotion,
+          selectedSeries,
+        })
+      }
+      onSelect={handleSelect}
+      crossFilterDimension="month"
+      getCrossFilterValue={getMonthFromParams}
+      highlightDimension="month"
+      getHighlightValue={getMonthFromParams}
+      highlightMatcher={highlightMatcher}
+      registerModules={registerNewVsRepeatModules}
+      ariaLabel={title}
+      ariaDescription={ariaDescription}
+    />
   );
 }
 

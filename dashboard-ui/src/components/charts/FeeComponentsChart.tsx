@@ -11,10 +11,9 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "../dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
-  getCurrentChartTheme,
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
@@ -24,14 +23,7 @@ import {
   formatRupees,
   type FeeComponentItemLike,
 } from "../../lib/captions";
-import { subscribeTheme } from "../../app/theme";
-import { useFilters } from "../../app/FilterContext";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-  isDimensionMatch,
-} from "../../lib/highlight-bus";
+import { isDimensionMatch } from "../../lib/highlight-bus";
 
 export interface FeeComponentsDatum extends FeeComponentItemLike {
   month?: string | null;
@@ -92,13 +84,6 @@ function registerFeeComponentsModules() {
 }
 registerFeeComponentsModules();
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 function isSeriesSelected(
   seriesName: string,
@@ -343,15 +328,7 @@ export function FeeComponentsChart({
   fullscreen,
   onFullscreenChange,
 }: FeeComponentsChartProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
   const filterContext = useOptionalFilters();
-
-  const idRef = React.useRef<string | null>(null);
-  if (!idRef.current) {
-    idRef.current = `fee-components-chart-${Math.random().toString(36).slice(2, 9)}`;
-  }
-  const chartId = idRef.current;
 
   const totalFeeSum = React.useMemo(() => {
     return (data ?? []).reduce((sum, d) => {
@@ -405,51 +382,12 @@ export function FeeComponentsChart({
     return `Monthly fee components stacked area chart showing breakdown of delivery, packaging, platform, and tax charges across ${data.length} months with total fees of ${formatRupees(totalFeeSum)}.`;
   }, [data, totalFeeSum]);
 
-  const callbacksRef = React.useRef({ onMonthClick, filterContext, data });
-  callbacksRef.current = { onMonthClick, filterContext, data };
-
-  const dataRef = React.useRef({ data, selectedSeries });
-  dataRef.current = { data, selectedSeries };
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opt = buildFeeComponentsOption({
-      data: dataRef.current.data,
-      theme,
-      prefersReducedMotion,
-      selectedSeries: dataRef.current.selectedSeries,
-    });
-
-    chart.setOption(opt, { notMerge: true, lazyUpdate: true });
-  }, []);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || isEmpty || isLoading || error) return;
-
-    registerFeeComponentsModules();
-
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-
-    const unregister = registerChart(chartId, chart, {
+  const highlightMatcher = React.useMemo(
+    () => ({
       dimension: "month",
-      matcher: (dim, val) => {
+      matcher: (dim: string, val: string) => {
         if (dim !== "month") return false;
-        const currentData = callbacksRef.current.data ?? [];
+        const currentData = data ?? [];
         const months = currentData.map((d) => d.month ?? "Unknown");
         const matchIdx = months.findIndex((m) => isDimensionMatch("month", m, val));
         if (matchIdx >= 0) {
@@ -457,79 +395,22 @@ export function FeeComponentsChart({
         }
         return undefined;
       },
-    });
+    }),
+    [data]
+  );
 
-    const handleOver = (params: any) => {
-      const currentData = callbacksRef.current.data ?? [];
+  const getMonthFromParams = React.useCallback(
+    (params: any) => {
+      const currentData = data ?? [];
       const months = currentData.map((d) => d.month ?? "Unknown");
       let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
       if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
         month = months[params.dataIndex];
       }
-      if (month) {
-        emitHighlight(chartId, "month", String(month));
-      }
-    };
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const handleMouseLeave = () => emitClear(chartId);
-    node.addEventListener("mouseleave", handleMouseLeave);
-
-    const handleClick = (params: any) => {
-      const currentData = callbacksRef.current.data ?? [];
-      const months = currentData.map((d) => d.month ?? "Unknown");
-      let month = params?.name ?? params?.axisValueLabel ?? params?.axisValue;
-      if (!month && typeof params?.dataIndex === "number" && months[params.dataIndex]) {
-        month = months[params.dataIndex];
-      }
-      if (month) {
-        if (callbacksRef.current.onMonthClick) {
-          callbacksRef.current.onMonthClick(String(month));
-        } else if (callbacksRef.current.filterContext?.applyCrossFilter) {
-          callbacksRef.current.filterContext.applyCrossFilter("month", String(month));
-        }
-      }
-    };
-    chart.on("click", handleClick);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) {
-        chart.resize();
-      }
-    });
-    resizeObserver.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      node.removeEventListener("mouseleave", handleMouseLeave);
-      unregister();
-      resizeObserver.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [isEmpty, isLoading, error, chartId, applyUpdate]);
-
-  React.useEffect(() => {
-    if (isEmpty || isLoading || error) return;
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [isEmpty, isLoading, error, data, selectedSeries, applyUpdate]);
+      return month ? String(month) : undefined;
+    },
+    [data]
+  );
 
   const infoPopover = (
     <Popover>
@@ -569,7 +450,7 @@ export function FeeComponentsChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={computedCaption}
@@ -585,15 +466,31 @@ export function FeeComponentsChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
-    >
-      <div
-        ref={containerRef}
-        role="img"
-        aria-label={title}
-        aria-description={ariaDescription}
-        style={{ height: 320, width: "100%" }}
-      />
-    </ChartCard>
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) =>
+        buildFeeComponentsOption({
+          data: currentData,
+          theme,
+          prefersReducedMotion,
+          selectedSeries,
+        })
+      }
+      onSelect={(month) => {
+        if (onMonthClick) {
+          onMonthClick(String(month));
+        } else if (filterContext?.applyCrossFilter) {
+          filterContext.applyCrossFilter("month", String(month));
+        }
+      }}
+      crossFilterDimension="month"
+      getCrossFilterValue={getMonthFromParams}
+      highlightDimension="month"
+      getHighlightValue={getMonthFromParams}
+      highlightMatcher={highlightMatcher}
+      registerModules={registerFeeComponentsModules}
+      ariaLabel={title}
+      ariaDescription={ariaDescription}
+    />
   );
 }
 

@@ -12,16 +12,14 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { getCurrentChartTheme, buildBaseChartOption, resolveChartTheme } from "@/lib/chart-theme";
-import { computeSpendTrendTakeaway } from "@/lib/captions";
-import { useFilters } from "@/app/FilterContext";
 import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
+  getCurrentChartTheme,
+  buildBaseChartOption,
+  resolveChartTheme,
+} from "@/lib/chart-theme";
+import { computeSpendTrendTakeaway } from "@/lib/captions";
 
 // Ensure ECharts modules registered (side-effect import of Chart also does this)
 let registered = false;
@@ -106,13 +104,6 @@ function extractCompareRows(
   return [];
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export function buildMonthlyTrendOption(
   data: readonly MonthlyTrendDatum[] | null | undefined,
@@ -354,94 +345,8 @@ export function MonthlyTrendChart({
   const caption = computeSpendTrendTakeaway(rows.map((r) => ({ date: r.label, amount: r.spend })));
   const empty = isEmpty || (rows.length === 0 && !isLoading && !error);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(`monthly-trend-${Math.random().toString(36).slice(2, 9)}`);
-  const chartId = idRef.current;
-
-  const filtersRef = React.useRef(filters);
-  React.useEffect(() => {
-    filtersRef.current = filters;
-  });
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const option = buildMonthlyTrendOption(data ?? [], {
-      metric,
-      theme,
-      reducedMotion: prefersReducedMotion,
-      compareData,
-      compareMonthlySpend,
-      compareMode,
-    });
-    // merge base theme
-    const base = buildBaseChartOption(theme, prefersReducedMotion);
-    chart.setOption({ ...base, ...option }, { notMerge: true, lazyUpdate: true });
-  }, [data, metric, compareData, compareMonthlySpend, compareMode]);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    registerOnce();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, () => undefined);
-
-    const handleClick = (params: any) => {
-      const month = params?.name ?? params?.value;
-      if (month != null && filtersRef.current) {
-        filtersRef.current.applyCrossFilter("month", String(month));
-      }
-    };
-    const handleOver = (params: any) => {
-      const month = params?.name;
-      if (month != null) emitHighlight(chartId, "month", String(month));
-    };
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) chart.resize();
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, applyUpdate]);
-
-  React.useEffect(() => {
-    applyUpdate();
-  }, [applyUpdate]);
-
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={caption ?? undefined}
@@ -451,8 +356,7 @@ export function MonthlyTrendChart({
       error={error}
       onRetry={onRetry}
       tableData={tableData}
-    >
-      <div className="space-y-2">
+      headerControls={
         <SegmentedControl
           options={[
             { value: "spend", label: "Spend" },
@@ -462,9 +366,25 @@ export function MonthlyTrendChart({
           value={metric}
           onChange={(v) => setMetric(v as MonthlyTrendMetric)}
         />
-        <div ref={containerRef} role="img" aria-label={title} style={{ height: 320, width: "100%" }} />
-      </div>
-    </ChartCard>
+      }
+      data={data}
+      spec={(currentData, theme, { prefersReducedMotion }) => {
+        const option = buildMonthlyTrendOption(currentData ?? [], {
+          metric,
+          theme,
+          reducedMotion: prefersReducedMotion,
+          compareData,
+          compareMonthlySpend,
+          compareMode,
+        });
+        const base = buildBaseChartOption(theme, prefersReducedMotion);
+        return { ...base, ...option };
+      }}
+      crossFilterDimension="month"
+      highlightDimension="month"
+      registerModules={registerOnce}
+      ariaLabel={title}
+    />
   );
 }
 

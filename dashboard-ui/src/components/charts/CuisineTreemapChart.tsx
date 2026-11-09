@@ -9,10 +9,9 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 import { Info } from "lucide-react";
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
+import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  getCurrentChartTheme,
   resolveChartTheme,
   type ChartTheme,
 } from "@/lib/chart-theme";
@@ -21,13 +20,6 @@ import {
   formatRupees,
   type CuisineDatumLike,
 } from "@/lib/captions";
-import { useFilters } from "@/app/FilterContext";
-import { subscribeTheme } from "@/app/theme";
-import {
-  registerChart,
-  emitHighlight,
-  emitClear,
-} from "@/lib/highlight-bus";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -426,13 +418,6 @@ export function handleCuisineTreemapClick(
   return null;
 }
 
-function useOptionalFilters() {
-  try {
-    return useFilters();
-  } catch {
-    return null;
-  }
-}
 
 export interface CuisineTreemapChartProps {
   cuisines?: readonly (CuisineRowLike | CuisineDatumLike | null | undefined)[] | null;
@@ -511,111 +496,6 @@ export function CuisineTreemapChart({
   const empty = isEmpty || isDataUnavailable || (validCuisines.length === 0 && !isLoading && !error);
   const effectiveEmptyReason = cuisine_unavailable_reason || emptyReason || "No cuisine data available.";
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const chartRef = React.useRef<echarts.ECharts | null>(null);
-  const idRef = React.useRef(`cuisine-treemap-${Math.random().toString(36).slice(2, 9)}`);
-  const chartId = idRef.current;
-
-  const callbacksRef = React.useRef({ filters, onCuisineClick });
-  React.useEffect(() => {
-    callbacksRef.current = { filters, onCuisineClick };
-  });
-
-  const applyUpdate = React.useCallback(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-    registerCuisineTreemapModules();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const theme = getCurrentChartTheme();
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const option = buildCuisineTreemapOption({
-      cuisines: validCuisines,
-      loyalty: effectiveRestaurants,
-      theme,
-      reducedMotion: prefersReducedMotion,
-    });
-
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
-  }, [validCuisines, effectiveRestaurants, empty, isLoading, error]);
-
-  React.useEffect(() => {
-    const node = containerRef.current;
-    if (!node || empty || isLoading || error) return;
-
-    registerCuisineTreemapModules();
-    if (!chartRef.current || chartRef.current.isDisposed()) {
-      chartRef.current = echarts.init(node);
-    }
-    const chart = chartRef.current;
-    const unregister = registerChart(chartId, chart, { dimension: "cuisine" });
-
-    const handleClick = (params: unknown) => {
-      handleCuisineTreemapClick(params, callbacksRef.current.filters, callbacksRef.current.onCuisineClick);
-    };
-
-    const handleOver = (params: any) => {
-      const cuisineName = params?.data?.cuisineName || params?.name;
-      if (cuisineName && typeof cuisineName === "string") {
-        emitHighlight(chartId, "cuisine", cuisineName);
-      }
-    };
-
-    const handleOut = () => emitClear(chartId);
-
-    chart.on("click", handleClick);
-    chart.on("mouseover", handleOver);
-    chart.on("mouseout", handleOut);
-
-    const ro = new ResizeObserver(() => {
-      if (chart && !chart.isDisposed()) chart.resize();
-    });
-    ro.observe(node);
-
-    applyUpdate();
-
-    return () => {
-      chart.off("click", handleClick);
-      chart.off("mouseover", handleOver);
-      chart.off("mouseout", handleOut);
-      unregister();
-      ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.dispose();
-        chartRef.current = null;
-      }
-    };
-  }, [chartId, empty, isLoading, error, applyUpdate]);
-
-  React.useEffect(() => {
-    applyUpdate();
-
-    const unsubscribe = subscribeTheme(() => {
-      applyUpdate();
-    });
-
-    const observer = new MutationObserver(() => {
-      applyUpdate();
-    });
-    if (typeof document !== "undefined" && document.documentElement) {
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-accent"],
-      });
-    }
-
-    return () => {
-      unsubscribe();
-      observer.disconnect();
-    };
-  }, [applyUpdate]);
-
   const infoPopover = (
     <Popover>
       <PopoverTrigger asChild>
@@ -656,7 +536,7 @@ export function CuisineTreemapChart({
   );
 
   return (
-    <ChartCard
+    <BaseChart
       title={title}
       subtitle={subtitle}
       caption={effectiveCaption ?? undefined}
@@ -672,23 +552,27 @@ export function CuisineTreemapChart({
       fullscreen={fullscreen}
       onFullscreenChange={onFullscreenChange}
       className={className}
+      data={validCuisines}
+      spec={(currentCuisines, theme, { prefersReducedMotion }) =>
+        buildCuisineTreemapOption({
+          cuisines: currentCuisines,
+          loyalty: effectiveRestaurants,
+          theme,
+          reducedMotion: prefersReducedMotion,
+        })
+      }
+      onClick={(params) => {
+        handleCuisineTreemapClick(params, filters, onCuisineClick);
+      }}
+      highlightDimension="cuisine"
+      getHighlightValue={(params) => params?.data?.cuisineName || params?.name}
+      registerModules={registerCuisineTreemapModules}
+      ariaLabel={`${title}: ${subtitle}`}
     >
-      <div className="space-y-3">
-        <div className="sr-only" aria-live="polite">
-          {effectiveCaption || `${title}: ${subtitle}`}
-        </div>
-
-        <div className="w-full">
-          <div
-            ref={containerRef}
-            role="img"
-            aria-label={`${title}: ${subtitle}`}
-            className="cursor-pointer"
-            style={{ height: 320, width: "100%" }}
-          />
-        </div>
+      <div className="sr-only" aria-live="polite">
+        {effectiveCaption || `${title}: ${subtitle}`}
       </div>
-    </ChartCard>
+    </BaseChart>
   );
 }
 
