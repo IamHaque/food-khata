@@ -412,7 +412,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-02 | Sync correctness and checkpoint cost | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-02-1 to deepseek | B1 |
 | AC-03 | Database robustness | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-03-1 to gemini-med | B1 |
 | AC-04 | Sync service | B | P0 | TODO | — | — | B2 |
-| AC-05 | Provider linking service and FakeProvider | B | P0 | IN_PROGRESS | 2026-11-09 | dispatched dispatch-AC-05-1 to beam | B1 |
+| AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | TODO | — | — | B2 |
 | AC-08 | Per-user data and encrypted sessions | B | P0 | TODO | — | — | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | TODO | — | — | B4 |
@@ -522,6 +522,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-07 | `npm run build; npm run test:browser; node scripts/verify.mjs . --backend --browser` | all pass (68 Playwright checks, 40 visual snapshots, 979 vitest, 114 pytest) | 61 s | ab244cb |
 | 2026-11-09 | GA | `node scripts/verify.mjs . --backend --browser; audit-Gate-GA-1` | all pass (T9 audit pass, 68 browser tests, 40 visual snapshots) | 61 s | 7adba9b |
 | 2026-11-09 | AC-01 | `node scripts/verify.mjs . --backend` | all pass (wireframes.html verified; user approval obtained) | 32 s | ebdaba7 |
+| 2026-11-09 | AC-05 | `node scripts/verify.mjs . --backend` | all pass (pytest 124 passed, FakeProvider tests, 979 vitest) | 33 s | 35c74bb |
 
 ### 5.9 Changelog
 
@@ -539,6 +540,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-07 | Visual regression suite with 40 snapshots, review pack with 12 original problems checklist, recharts cleanup, and doc updates | ab244cb |
 | 2026-11-09 | GA | Redesign final acceptance audit pass (T9 gemini-high); Phase A complete | 7adba9b |
 | 2026-11-09 | AC-01 | Interactive access wireframes v2 created at docs/access/wireframes.html and approved by user | ebdaba7 |
+| 2026-11-09 | AC-05 | Provider linking service, two-step login handles (10m TTL), FakeProvider test double, and session disconnect | 35c74bb |
 
 ### 5.10 Delegation ledger
 
@@ -555,6 +557,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-01 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | AC-02 | T8 | deepseek | 1 | running | — |
 | 2026-11-09 | AC-03 | T8 | gemini-med | 1 | running | — |
-| 2026-11-09 | AC-05 | T8 | beam | 1 | running | — |
+| 2026-11-09 | AC-05 | T8 | beam | 1 | pass | T6 audit gemini-high running |
 
 
