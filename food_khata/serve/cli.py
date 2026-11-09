@@ -22,7 +22,8 @@ def serve(host: str, port: int, db_path: Path, dev: bool = False) -> int:
     except ImportError:
         print('Install the serve dependencies: pip install -e ".[serve]"')
         return 1
-    app = create_app(db_path, dev=dev)
+    root = Path(db_path).parent
+    app = create_app(db_path, dev=dev, data_root=root if str(root) not in ("", ".") else None)
     dist = Path(__file__).resolve().parents[2] / "dashboard-ui" / "dist" / "index.html"
     if not dist.is_file():
         print("Dashboard build missing; API only. Run the dashboard UI separately.")

@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shutil
 import tempfile
 import uuid
 from collections.abc import Iterator
@@ -13,6 +14,9 @@ from typing import Any
 from .contracts import KhataError
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / ".food-khata"
+ENCRYPTED_KEY = "__encrypted__"
+PHONE_ENCRYPTED_KEY = "phone_encrypted"
+ADOPTION_MARKER = ".adopted.json"
 
 
 def read_json(path: Path) -> Any:
@@ -83,10 +87,27 @@ def _provider(value: str) -> str:
     return value
 
 
+def _is_envelope(value: Any) -> bool:
+    return isinstance(value, dict) and isinstance(value.get(ENCRYPTED_KEY), dict)
+
+
 class Storage:
-    def __init__(self, root: Path | None = None) -> None:
+    """Account and session storage, optionally encrypted with a user data key."""
+
+    def __init__(self, root: Path | None = None, cipher: Any | None = None) -> None:
         self.root = Path(root).expanduser().resolve() if root is not None else DEFAULT_DATA_DIR
         self.accounts_dir = self.root / "accounts"
+        self.cipher = cipher
+
+    @property
+    def users_dir(self) -> Path:
+        return self.root / "users"
+
+    def user_storage(self, user_id: str, cipher: Any | None = None) -> "Storage":
+        """Return storage scoped to ``users/<user_id>/``."""
+        from .users.context import user_root
+
+        return Storage(user_root(self.root, user_id), cipher=cipher)
 
     def account_path(self, local_id: str) -> Path:
         try:
@@ -99,6 +120,52 @@ class Storage:
             raise KhataError("Account directories must not be symbolic links.")
         return path
 
+    # -- encrypted serialization -------------------------------------------------
+
+    def _seal(self, value: dict[str, Any]) -> dict[str, Any]:
+        if self.cipher is None:
+            raise KhataError("User data is locked.")
+        return {ENCRYPTED_KEY: self.cipher.encrypt_json(value)}
+
+    def _unseal(self, value: Any) -> dict[str, Any]:
+        if _is_envelope(value):
+            if self.cipher is None:
+                raise KhataError("Session is encrypted; unlock the user data first.")
+            return self.cipher.decrypt_json(value[ENCRYPTED_KEY])
+        if not isinstance(value, dict):
+            raise KhataError("Invalid session")
+        return value
+
+    def _stored_account(self, account: dict[str, Any]) -> dict[str, Any]:
+        stored = {
+            key: value for key, value in account.items() if key not in ("has_session",)
+        }
+        if self.cipher is not None:
+            phone = stored.pop("phone", None)
+            if phone is not None:
+                stored[PHONE_ENCRYPTED_KEY] = self.cipher.encrypt_text(phone)
+        return stored
+
+    def _write_account(self, account: dict[str, Any]) -> None:
+        save_json(
+            self.account_path(account["local_id"]) / "account.json",
+            self._stored_account(account),
+        )
+
+    def _decrypt_phone(self, data: dict[str, Any], rewrite: bool) -> dict[str, Any]:
+        if PHONE_ENCRYPTED_KEY in data:
+            if self.cipher is None:
+                raise KhataError(
+                    "Account metadata is encrypted; unlock the user data first."
+                )
+            data = dict(data)
+            data["phone"] = self.cipher.decrypt_text(data[PHONE_ENCRYPTED_KEY])
+        elif self.cipher is not None and rewrite and "phone" in data:
+            self._write_account(data)
+        return data
+
+    # -- account metadata -------------------------------------------------------
+
     def _metadata(self) -> list[dict[str, Any]]:
         result = []
         if not self.accounts_dir.exists():
@@ -108,10 +175,11 @@ class Storage:
                 continue
             self.account_path(path.name)
             data = read_json(path / "account.json")
+            if not isinstance(data, dict):
+                raise KhataError("Invalid account metadata")
+            data = self._decrypt_phone(data, rewrite=True)
             if (
-                not isinstance(data, dict)
-                or type(data.get("version")) is not int
-                or data["version"] != 1
+                data.get("version") != 1
                 or data.get("local_id") != path.name
                 or not isinstance(data.get("phone"), str)
                 or not re.fullmatch(r"[6-9][0-9]{9}", data["phone"])
@@ -161,14 +229,24 @@ class Storage:
             if provider in account["providers"] and account["providers"][provider] != provider_id:
                 raise KhataError("Account identity mismatch")
             account["providers"][provider] = provider_id
-            save_json(self.account_path(account["local_id"]) / "account.json", account)
+            self._write_account(account)
             return account
+
+    # -- provider sessions ------------------------------------------------------
 
     def session(self, local_id: str, provider: str) -> dict[str, Any] | None:
         path = self.account_path(local_id) / "sessions" / (_provider(provider) + ".json")
         if not path.exists():
             return None
         value = read_json(path)
+        if _is_envelope(value):
+            value = self._unseal(value)
+        elif not isinstance(value, dict):
+            raise KhataError("Invalid session")
+        elif self.cipher is not None:
+            # Migrate a plaintext session on first unlock; the atomic replace
+            # removes the plaintext bytes.
+            save_json(path, self._seal(value))
         if not isinstance(value, dict):
             raise KhataError("Invalid session")
         return value
@@ -179,9 +257,142 @@ class Storage:
         path = self.account_path(local_id) / "sessions" / (_provider(provider) + ".json")
         if path.exists():
             self.session(local_id, provider)
-        save_json(path, value)
+        save_json(path, self._seal(value) if self.cipher is not None else value)
 
     def remove_session(self, local_id: str, provider: str) -> None:
         (self.account_path(local_id) / "sessions" / (_provider(provider) + ".json")).unlink(
             missing_ok=True
         )
+
+    def migrate_plaintext(self) -> int:
+        """Encrypt plaintext phones and sessions; return the number of rewrites.
+
+        Called after a successful unlock.  Rewrites use atomic replacement, so
+        the plaintext file is deleted once the encrypted file is in place.
+        """
+        if self.cipher is None or not self.accounts_dir.is_dir():
+            return 0
+        migrated = 0
+        for account_dir in self.accounts_dir.iterdir():
+            if not account_dir.is_dir():
+                continue
+            self.account_path(account_dir.name)
+            metadata_path = account_dir / "account.json"
+            metadata = read_json(metadata_path)
+            if (
+                isinstance(metadata, dict)
+                and PHONE_ENCRYPTED_KEY not in metadata
+                and isinstance(metadata.get("phone"), str)
+            ):
+                self._write_account(metadata)
+                migrated += 1
+            sessions_dir = account_dir / "sessions"
+            if not sessions_dir.is_dir():
+                continue
+            for session_path in sessions_dir.glob("*.json"):
+                raw = read_json(session_path)
+                if not isinstance(raw, dict) or _is_envelope(raw):
+                    continue
+                self.save_session(account_dir.name, session_path.stem, raw)
+                migrated += 1
+        return migrated
+
+    # -- legacy adoption --------------------------------------------------------
+
+    def _legacy_entries(self) -> list[Path]:
+        skip = {"users", "legacy-backup", ".adopt.lock", ".root.lock"}
+        entries = []
+        if not self.root.is_dir():
+            return entries
+        for entry in self.root.iterdir():
+            if entry.name in skip or entry.name.startswith("legacy-backup-"):
+                continue
+            if entry.is_symlink():
+                continue
+            entries.append(entry)
+        return entries
+
+    @staticmethod
+    def _unique_path(path: Path) -> Path:
+        if not path.exists():
+            return path
+        for index in range(2, 1000):
+            candidate = path.with_name(f"{path.name}-{index}")
+            if not candidate.exists():
+                return candidate
+        raise KhataError("Unable to choose a backup directory")
+
+    def adopt_legacy_root(self, user: Any) -> dict[str, Any]:
+        """Move a legacy shared data root into ``users/<id>/`` keeping a backup.
+
+        The second call is a no-op thanks to an adoption marker.  The backup is
+        a sibling ``legacy-backup`` folder inside the same data root.
+        """
+        from .users.context import user_id_of, validate_user_id
+
+        user_id = validate_user_id(user_id_of(user))
+        destination = self.users_dir / user_id
+        marker = destination / ADOPTION_MARKER
+        if marker.is_file():
+            return {
+                "adopted": False,
+                "user_id": user_id,
+                "user_dir": str(destination),
+                "backup": None,
+                "items": [],
+            }
+        with lock(self.root / ".adopt.lock"):
+            if marker.is_file():
+                return {
+                    "adopted": False,
+                    "user_id": user_id,
+                    "user_dir": str(destination),
+                    "backup": None,
+                    "items": [],
+                }
+            entries = self._legacy_entries()
+            if not entries:
+                return {
+                    "adopted": False,
+                    "user_id": user_id,
+                    "user_dir": str(destination),
+                    "backup": None,
+                    "items": [],
+                }
+            destination.mkdir(mode=0o700, parents=True, exist_ok=True)
+            backup_base = self.root / "legacy-backup"
+            backup = self._unique_path(backup_base)
+            backup.mkdir(mode=0o700, parents=True, exist_ok=True)
+            copied: list[str] = []
+            for entry in entries:
+                target = destination / entry.name
+                if target.exists():
+                    continue
+                if entry.is_dir():
+                    shutil.copytree(entry, target, symlinks=False)
+                else:
+                    shutil.copy2(entry, target)
+                copied.append(entry.name)
+            # Only remove originals once every item has a copy in the user folder.
+            for entry in entries:
+                target = backup / entry.name
+                if entry.is_dir():
+                    shutil.move(str(entry), str(self._unique_path(target)))
+                else:
+                    shutil.move(str(entry), str(self._unique_path(target)))
+            save_json(
+                marker,
+                {
+                    "version": 1,
+                    "user_id": user_id,
+                    "backup": backup.name,
+                    "items": copied,
+                },
+            )
+            return {
+                "adopted": True,
+                "user_id": user_id,
+                "user_dir": str(destination),
+                "backup": str(backup),
+                "items": copied,
+            }
