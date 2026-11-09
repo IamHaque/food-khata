@@ -405,7 +405,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | FX-04 | Read-only database safety | A | P1 | DONE | 2026-11-09 | commit e2012b9; pytest 114 passed (20-thread concurrency, readonly, missing db 503) | A1 |
 | FX-03 | Lazy routes and bundle budget | A | P1 | DONE | 2026-11-09 | commit a6892ca; entry index-*.js 97.7 kB gzip <= 250 kB, manualChunks split | A2 |
 | FX-05 | BaseChart primitive | A | P1 | DONE | 2026-11-09 | commit b180101; 14 charts migrated, 732 lines net deleted, 979 unit tests pass | A2 |
-| FX-06 | Browser QA suite | A | P0 | TODO | — | — | A3 |
+| FX-06 | Browser QA suite | A | P0 | IN_PROGRESS | — | — | A3 |
 | FX-07 | Visual regression, review pack, cleanup | A | P2 | TODO | — | — | A4 |
 | GA | Redesign final acceptance | A | P0 | TODO | — | — | A4 |
 | AC-01 | Wireframes v2 and flow freeze | B | P0 | TODO | — | — | B0 |
@@ -538,3 +538,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | FX-04 | T8 | deepseek | 1 | pass | — |
 | 2026-11-09 | FX-03 | T2 | beam | 1 | pass | — |
 | 2026-11-09 | FX-05 | T3 | gemini-high | 1 | pass | — |
+| 2026-11-09 | FX-06 | T2 | beam | 1 | in_progress | — |
