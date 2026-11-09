@@ -36,6 +36,10 @@
 
 ---
 
+## Dashboard UI
+
+The `dashboard-ui/` frontend is a React + Vite SPA with 5 routes (`/`, `/spending`, `/food`, `/habits`, `/orders`), a shared `BaseChart` ECharts wrapper, semantic design tokens, and 5 accent themes (emerald, indigo, amber, rose, slate) in light/dark.
+
 ## Account Identity and Sessions
 
 Each saved account folder corresponds to a single human user. It is identified by:
