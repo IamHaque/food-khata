@@ -417,10 +417,10 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-09 | commit 6a1ef89; users/<id>/ isolation, DB per-user, cache keying, AEAD encryption at rest, adoption backup, pytest 146 passed | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
 | AC-09 | Job runner | B | P0 | DONE | 2026-11-09 | commit 40a4f00; JobRunner and JobControl, 1 running 2 queued limits, restart recovery, cancel checkpoint, pytest 165 passed | B4 |
-| AC-10 | Accounts and sync API | B | P0 | TODO | — | — | B5 |
-| AC-11 | LAN mode and transport | B | P1 | TODO | — | — | B5 |
+| AC-10 | Accounts and sync API | B | P0 | IN_PROGRESS | 2026-11-09 | dispatch-AC-10-1 to gemini-3.8-flash | B5 |
+| AC-11 | LAN mode and transport | B | P1 | IN_PROGRESS | 2026-11-09 | dispatch-AC-11-1 to gemini-3.8-flash | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
-| AC-13 | Welcome, setup, login, register screens | B | P0 | TODO | — | — | B5 |
+| AC-13 | Welcome, setup, login, register screens | B | P0 | IN_PROGRESS | 2026-11-09 | dispatch-AC-13-1 to gemini-3.8-flash | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | TODO | — | — | B6 |
 | AC-15 | Sync screens and background states | B | P0 | TODO | — | — | B6 |
 | AC-16 | Owner settings | B | P1 | TODO | — | — | B6 |
@@ -582,5 +582,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-07 | T8 | gemini-high | 1 | pass | — |
 | 2026-11-09 | AC-09 | T8 | deepseek | 1 | fail (quota) | failover to gemini-med |
 | 2026-11-09 | AC-09 | T8 | gemini-med | 2 | pass | — |
+| 2026-11-09 | AC-10 | T8 | gemini-3.8-flash | 1 | running | — |
+| 2026-11-09 | AC-11 | T8 | gemini-3.8-flash | 1 | running | — |
+| 2026-11-09 | AC-13 | T2 | gemini-3.8-flash | 1 | running | — |
 
 
