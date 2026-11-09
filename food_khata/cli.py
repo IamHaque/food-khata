@@ -13,8 +13,8 @@ from .dashboard import export_dashboard_data
 from .db import AnalyticsDB
 from .providers.swiggy import Swiggy
 from .providers.zomato import Zomato
+from .services.sync import sync
 from .storage import DEFAULT_DATA_DIR, Storage, lock, read_json
-from .sync import sync
 
 PROVIDERS = {"zomato": Zomato, "swiggy": Swiggy}
 

@@ -7,6 +7,11 @@ from typing import Any, Protocol
 class KhataError(RuntimeError):
     """An actionable error safe to show without exposing credentials."""
 
+    def __init__(self, message: str = "", code: str | None = None) -> None:
+        super().__init__(message)
+        self.message = str(message)
+        self.code = code
+
 
 class AuthenticationError(KhataError):
     """Authentication was explicitly rejected by a provider."""
