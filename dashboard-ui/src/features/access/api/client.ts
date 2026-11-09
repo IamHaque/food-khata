@@ -149,6 +149,36 @@ export const authApi = {
   },
 };
 
+export const accountsApi = {
+  async list() {
+    return request<components["schemas"]["AccountOut"][]>("/api/accounts");
+  },
+  async linkStart(provider: string, phone: string) {
+    return request<components["schemas"]["LinkStartResponse"]>("/api/accounts/link/start", {
+      method: "POST",
+      body: { provider, phone },
+    });
+  },
+  async linkVerify(handle: string, code: string, account_name?: string) {
+    return request<components["schemas"]["LinkVerifyResponse"]>("/api/accounts/link/verify", {
+      method: "POST",
+      body: { handle, code, account_name },
+    });
+  },
+  async verifyAgain(accountId: string, code?: string) {
+    return request<components["schemas"]["VerifyAgainResponse"]>(`/api/accounts/${accountId}/verify-again`, {
+      method: "POST",
+      body: code ? { code } : {},
+    });
+  },
+  async disconnect(accountId: string, wipe_data = false) {
+    return request<components["schemas"]["DisconnectResponse"]>(`/api/accounts/${accountId}/disconnect`, {
+      method: "POST",
+      body: { wipe_data },
+    });
+  },
+};
+
 export const ownerApi = {
   async getSetup() {
     return request<{ has_owner: boolean; is_loopback: boolean }>("/api/owner/setup");

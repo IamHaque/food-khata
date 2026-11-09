@@ -15,9 +15,9 @@ const Setup = lazy(() => import("./welcome/Setup"));
 const Login = lazy(() => import("./welcome/Login"));
 const Register = lazy(() => import("./welcome/Register"));
 
-const Home = lazy(() => Promise.resolve({ default: Placeholder }));
-const Accounts = lazy(() => Promise.resolve({ default: Placeholder }));
-const LinkAccount = lazy(() => Promise.resolve({ default: Placeholder }));
+const Home = lazy(() => import("./accounts/Home"));
+const Accounts = lazy(() => import("./accounts/Home"));
+const LinkAccount = lazy(() => import("./accounts/LinkAccount"));
 const Sync = lazy(() => Promise.resolve({ default: Placeholder }));
 const Settings = lazy(() => Promise.resolve({ default: Placeholder }));
 
