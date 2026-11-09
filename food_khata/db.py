@@ -5,6 +5,7 @@ import json
 import math
 import re
 import sqlite3
+import traceback
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -250,15 +251,17 @@ class AnalyticsDB:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.init_db()
 
-    def connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path)
+    def connect(self, timeout: float = 30.0) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path, timeout=timeout)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute(f"PRAGMA busy_timeout = {int(timeout * 1000)};")
         return conn
 
     @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        conn = self.connect()
+    def connection(self, timeout: float = 30.0) -> Iterator[sqlite3.Connection]:
+        conn = self.connect(timeout=timeout)
         try:
             yield conn
         finally:
@@ -266,6 +269,8 @@ class AnalyticsDB:
 
     def init_db(self) -> None:
         with self.connection() as conn:
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA busy_timeout = 30000;")
             conn.executescript("""
             CREATE TABLE IF NOT EXISTS accounts (
                 id TEXT PRIMARY KEY,
@@ -342,6 +347,18 @@ class AnalyticsDB:
                 FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS quarantine (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                platform_order_id TEXT,
+                reason TEXT NOT NULL,
+                error_details TEXT,
+                raw_payload TEXT,
+                quarantined_at TEXT NOT NULL,
+                FOREIGN KEY (account_id) REFERENCES accounts(id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);
             CREATE INDEX IF NOT EXISTS idx_orders_platform ON orders(platform);
             CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
@@ -349,6 +366,8 @@ class AnalyticsDB:
             CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id);
             CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
             CREATE INDEX IF NOT EXISTS idx_items_name ON order_items(item_name);
+            CREATE INDEX IF NOT EXISTS idx_quarantine_account ON quarantine(account_id);
+            CREATE INDEX IF NOT EXISTS idx_quarantine_platform ON quarantine(platform, platform_order_id);
             """)
 
             columns = {r[1] for r in conn.execute("PRAGMA table_info(orders)")}
@@ -367,6 +386,43 @@ class AnalyticsDB:
                 if name not in columns:
                     conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}")
             conn.commit()
+
+    def record_quarantine(
+        self,
+        cursor: sqlite3.Cursor,
+        account_id: str,
+        platform: str,
+        order_id: str,
+        reason: str,
+        error_details: str,
+        raw_payload: Any,
+    ) -> None:
+        """Record a malformed order in the quarantine table for auditing."""
+        try:
+            payload_str = (
+                json.dumps(raw_payload, ensure_ascii=False)
+                if not isinstance(raw_payload, str)
+                else raw_payload
+            )
+        except Exception:
+            payload_str = str(raw_payload)
+
+        cursor.execute(
+            """
+            INSERT INTO quarantine (
+                account_id, platform, platform_order_id, reason, error_details, raw_payload, quarantined_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                account_id,
+                platform.upper(),
+                str(order_id),
+                reason,
+                error_details,
+                payload_str,
+                datetime.now(IST).isoformat(),
+            ),
+        )
 
     def record_financials(
         self,
@@ -916,16 +972,30 @@ class AnalyticsDB:
             )
         return True
 
-    def ingest_account(self, storage: Storage, local_id: str) -> dict[str, int]:
+    def ingest_account(
+        self, storage: Storage, local_id: str, *, incremental: bool = True
+    ) -> dict[str, Any]:
         """Ingest all platform histories saved under a specific local account."""
         acc_path = storage.account_path(local_id)
         if not acc_path.exists():
-            return {"swiggy": 0, "zomato": 0, "total": 0}
+            return {
+                "swiggy": 0,
+                "zomato": 0,
+                "total": 0,
+                "quarantined": 0,
+                "quarantine": [],
+            }
 
         meta = read_json(acc_path / "account.json")
         phone = meta.get("phone", "Unknown")
 
-        counts = {"swiggy": 0, "zomato": 0, "total": 0}
+        counts: dict[str, Any] = {
+            "swiggy": 0,
+            "zomato": 0,
+            "total": 0,
+            "quarantined": 0,
+            "quarantine": [],
+        }
         with self.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -944,6 +1014,20 @@ class AnalyticsDB:
                 archive = read_json(archive_path)
                 if not isinstance(archive, dict) or not isinstance(archive.get("orders"), dict):
                     raise KhataError(f"Invalid {provider} archive")
+
+                existing_oids: set[str] = set()
+                if incremental:
+                    cursor.execute(
+                        "SELECT platform_order_id FROM orders WHERE account_id = ? AND platform = ?",
+                        (local_id, provider.upper()),
+                    )
+                    existing_oids.update(str(row[0]) for row in cursor.fetchall())
+                    cursor.execute(
+                        "SELECT platform_order_id FROM quarantine WHERE account_id = ? AND platform = ?",
+                        (local_id, provider.upper()),
+                    )
+                    existing_oids.update(str(row[0]) for row in cursor.fetchall())
+
                 cursor.execute(
                     """INSERT INTO archive_imports VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(account_id, platform) DO UPDATE SET
@@ -961,34 +1045,85 @@ class AnalyticsDB:
                     ),
                 )
                 for oid, order in archive["orders"].items():
+                    oid_str = str(oid)
+                    if incremental and oid_str in existing_oids:
+                        continue
+                    sp_id = f"sp_{re.sub(r'[^a-zA-Z0-9_]', '_', oid_str)}"
+                    cursor.execute(f"SAVEPOINT {sp_id}")
                     try:
                         if not isinstance(order, dict):
-                            raise ValueError("Invalid order")
-                        if ingest(cursor, local_id, str(oid), order):
+                            raise ValueError(
+                                f"Malformed order payload: expected dict, got {type(order).__name__}"
+                            )
+                        if not order.get("details") and not order.get("history"):
+                            raise ValueError("Malformed order: missing both details and history")
+                        if ingest(cursor, local_id, oid_str, order):
                             counts[provider] += 1
+                        cursor.execute(f"RELEASE SAVEPOINT {sp_id}")
+                    except KhataError as exc:
+                        cursor.execute(f"ROLLBACK TO SAVEPOINT {sp_id}")
+                        cursor.execute(f"RELEASE SAVEPOINT {sp_id}")
+                        if "another local account" in str(exc):
+                            raise
+                        reason = str(exc)
+                        error_details = traceback.format_exc()
+                        self.record_quarantine(
+                            cursor, local_id, provider, oid_str, reason, error_details, order
+                        )
+                        counts["quarantined"] += 1
+                        counts["quarantine"].append(
+                            {
+                                "order_id": oid_str,
+                                "platform": provider.upper(),
+                                "reason": reason,
+                                "error_details": error_details,
+                            }
+                        )
                     except Exception as exc:
-                        raise KhataError(
-                            f"Cannot ingest {provider} order {oid}; account import rolled back"
-                        ) from exc
+                        cursor.execute(f"ROLLBACK TO SAVEPOINT {sp_id}")
+                        cursor.execute(f"RELEASE SAVEPOINT {sp_id}")
+                        reason = f"Malformed order: {type(exc).__name__}: {exc}"
+                        error_details = traceback.format_exc()
+                        self.record_quarantine(
+                            cursor, local_id, provider, oid_str, reason, error_details, order
+                        )
+                        counts["quarantined"] += 1
+                        counts["quarantine"].append(
+                            {
+                                "order_id": oid_str,
+                                "platform": provider.upper(),
+                                "reason": reason,
+                                "error_details": error_details,
+                            }
+                        )
 
             conn.commit()
 
         counts["total"] = counts["swiggy"] + counts["zomato"]
         return counts
 
-    def ingest_all(self, storage: Storage) -> dict[str, int]:
+    def ingest_all(self, storage: Storage, *, incremental: bool = True) -> dict[str, Any]:
         """Ingest histories from all accounts found in storage."""
-        total_counts = {"swiggy": 0, "zomato": 0, "total": 0, "accounts": 0}
+        total_counts: dict[str, Any] = {
+            "swiggy": 0,
+            "zomato": 0,
+            "total": 0,
+            "quarantined": 0,
+            "quarantine": [],
+            "accounts": 0,
+        }
         if not storage.accounts_dir.exists():
             return total_counts
 
         for path in storage.accounts_dir.iterdir():
             if not path.is_dir() or not (path / "account.json").exists():
                 continue
-            acc_counts = self.ingest_account(storage, path.name)
+            acc_counts = self.ingest_account(storage, path.name, incremental=incremental)
             total_counts["swiggy"] += acc_counts["swiggy"]
             total_counts["zomato"] += acc_counts["zomato"]
             total_counts["total"] += acc_counts["total"]
+            total_counts["quarantined"] += acc_counts.get("quarantined", 0)
+            total_counts["quarantine"].extend(acc_counts.get("quarantine", []))
             total_counts["accounts"] += 1
 
         return total_counts

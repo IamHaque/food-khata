@@ -212,6 +212,8 @@ def run(
             f"Local DB updated: {ingest_counts['total']} orders recorded "
             f"({ingest_counts['swiggy']} Swiggy, {ingest_counts['zomato']} Zomato)."
         )
+        if ingest_counts.get("quarantined", 0) > 0:
+            print(f"Quarantined: {ingest_counts['quarantined']} malformed order(s).")
 
         if prompt_dashboard:
             should_open = answer(
@@ -291,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"Ingestion complete: {counts['total']} orders recorded across "
                 f"{counts['accounts']} accounts ({counts['swiggy']} Swiggy, {counts['zomato']} Zomato)."
             )
+            if counts.get("quarantined", 0) > 0:
+                print(f"Quarantined: {counts['quarantined']} malformed order(s).")
             return 0
         else:
             return run(
