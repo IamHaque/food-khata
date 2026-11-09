@@ -268,9 +268,29 @@ def main(argv: list[str] | None = None) -> int:
         help="Compatibility flag; JSON export never launches a browser",
     )
     parser.add_argument("--output", type=Path, default=None, help="Dashboard JSON export path")
-    parser.add_argument("--host", default="127.0.0.1", help="Loopback address for serve")
+    parser.add_argument("--host", default=None, help="Host address for serve")
     parser.add_argument("--port", type=int, default=8765, help="Port for serve")
     parser.add_argument("--dev", action="store_true", help="Log slow serve requests")
+    parser.add_argument("--lan", action="store_true", help="Allow LAN access (binds 0.0.0.0)")
+    parser.add_argument(
+        "--allow-host",
+        dest="allow_hosts",
+        action="append",
+        default=[],
+        help="Allowed host header (can be repeated)",
+    )
+    parser.add_argument(
+        "--tls-cert",
+        type=Path,
+        default=None,
+        help="Path to TLS certificate for HTTPS",
+    )
+    parser.add_argument(
+        "--tls-key",
+        type=Path,
+        default=None,
+        help="Path to TLS private key for HTTPS",
+    )
     args = parser.parse_args(argv)
     if args.action == "serve":
         if not 1 <= args.port <= 65535:
@@ -278,10 +298,24 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         from .serve.cli import serve
 
+        host = args.host if args.host is not None else ("0.0.0.0" if args.lan else "127.0.0.1")
+        db_file = args.db_path or (args.data_dir.expanduser().resolve() / "food_analytics.db")
+        if args.lan or args.allow_hosts or args.tls_cert or args.tls_key:
+            return serve(
+                host,
+                args.port,
+                db_file,
+                args.dev,
+                lan=args.lan,
+                allow_hosts=args.allow_hosts,
+                tls_cert=args.tls_cert,
+                tls_key=args.tls_key,
+                data_root=args.data_dir.expanduser().resolve(),
+            )
         return serve(
-            args.host,
+            host,
             args.port,
-            args.db_path or (args.data_dir.expanduser().resolve() / "food_analytics.db"),
+            db_file,
             args.dev,
         )
     storage = Storage(args.data_dir.expanduser().resolve())

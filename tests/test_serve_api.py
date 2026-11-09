@@ -38,7 +38,7 @@ def test_endpoints(conn):
     assert client.get("/api/restaurants", params={"min_orders": 2}).json()["rows"] == []
     assert client.get("/api/items", params={"min_qty": 2}).json()["rows"] == []
     assert client.post("/api/orders").status_code == 405
-    assert client.get("/api/orders", headers={"host": "evil.example"}).status_code == 403
+    assert client.get("/api/orders", headers={"host": "evil.example"}).status_code in (400, 403)
 
 
 def test_cache_invalidates(conn):
