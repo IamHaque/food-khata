@@ -420,7 +420,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-10 | Accounts and sync API | B | P0 | IN_PROGRESS | 2026-11-09 | dispatch-AC-10-1 to gemini-3.8-flash | B5 |
 | AC-11 | LAN mode and transport | B | P1 | DONE | 2026-11-09 | commit 2af129a; loopback default, --lan opt-in, host allow-list (400 on unknown), TLS cert/key and HTTPS secure cookies, provider traffic host-isolated, pytest 172 passed | B5 |
 | AC-12 | Frontend foundation | B | P0 | DONE | 2026-11-09 | commit 9ad3ffa; typed OpenAPI client, CSRF header, 401 redirect, AuthShell, defineForm, StatusBanner, routes.tsx root, 979 vitest passed | B3 |
-| AC-13 | Welcome, setup, login, register screens | B | P0 | IN_PROGRESS | 2026-11-09 | dispatch-AC-13-1 to gemini-3.8-flash | B5 |
+| AC-13 | Welcome, setup, login, register screens | B | P0 | DONE | 2026-11-09 | commit 1fc4ccb; welcome, setup, login, register screens, no-recovery gate, join code window, generic auth errors, 997 vitest passed | B5 |
 | AC-14 | Accounts and linking screens | B | P0 | TODO | — | — | B6 |
 | AC-15 | Sync screens and background states | B | P0 | TODO | — | — | B6 |
 | AC-16 | Owner settings | B | P1 | TODO | — | — | B6 |
@@ -533,6 +533,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-07 | `node scripts/verify.mjs . --backend` | all pass (pytest 152 passed, owner setup, registration, 979 vitest) | 68 s | 911b751 |
 | 2026-11-09 | AC-09 | `node scripts/verify.mjs . --backend` | all pass (pytest 165 passed, job runner lifecycle, limits, restart, cancel, 979 vitest) | 73 s | 40a4f00 |
 | 2026-11-09 | AC-11 | `node scripts/verify.mjs . --backend` | all pass (pytest 172 passed, LAN mode, security middleware, TLS options, 979 vitest) | 74 s | 2af129a |
+| 2026-11-09 | AC-13 | `node scripts/verify.mjs . --backend` | all pass (997 vitest passed, welcome/setup/login/register screen tests, 172 pytest) | 74 s | 1fc4ccb |
 
 ### 5.9 Changelog
 
@@ -560,6 +561,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-07 | Owner setup and registration management: loopback/setup code claim, hashed join code windows, 8 user cap, admin actions, and CLI recovery | 911b751 |
 | 2026-11-09 | AC-09 | Background job runner, queue runner, JobControl API, fair scheduling, provider pacing, restart recovery, and cancellation | 40a4f00 |
 | 2026-11-09 | AC-11 | LAN mode, host allow-list validation, HTTPS transport flags and cookies, and host provider isolation | 2af129a |
+| 2026-11-09 | AC-13 | Welcome, setup, login, and registration screens with no-recovery acknowledgement, join-code protection, and generic error handling | 1fc4ccb |
 
 ### 5.10 Delegation ledger
 
@@ -586,6 +588,6 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-09 | T8 | gemini-med | 2 | pass | — |
 | 2026-11-09 | AC-10 | T8 | gemini-3.8-flash | 1 | running | — |
 | 2026-11-09 | AC-11 | T8 | gemini-3.8-flash | 1 | pass | — |
-| 2026-11-09 | AC-13 | T2 | gemini-3.8-flash | 1 | running | — |
+| 2026-11-09 | AC-13 | T2 | gemini-3.8-flash | 1 | pass | — |
 
 
