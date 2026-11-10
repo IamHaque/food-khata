@@ -4,6 +4,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+from contextlib import closing
 from pathlib import Path
 
 import httpx
@@ -201,7 +202,8 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
         port = sock.getsockname()[1]
     def start_server():
         return subprocess.Popen(
-            [sys.executable, str(Path(__file__).parent / "e2e_access" / "lifecycle_server.py"), str(tmp_path), str(port)],
+            [sys.executable, str(Path(__file__).parent / "e2e_access" / "lifecycle_server.py"), str(tmp_path), str(port), "--shutdown-stdin"],
+            stdin=subprocess.PIPE, text=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
         )
@@ -230,11 +232,12 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
                 time.sleep(0.03)
             assert state.get("page")
             assert client.post(url + "/cancel").json()["status"] == "cancelled"
-            server.terminate()
-            server.wait(timeout=10)
+            # Windows terminate() hard-kills SQLite during WAL cleanup; drain before editing the upgrade fixture.
+            server.communicate("shutdown\n", timeout=10)
+            assert server.returncode == 0
             from food_khata.storage import read_json, save_json
 
-            with sqlite3.connect(tmp_path / "app.db") as conn:
+            with closing(sqlite3.connect(tmp_path / "app.db")) as conn, conn:
                 conn.execute("UPDATE jobs SET provider_id = ? WHERE id = ?", ("9876543210", job["id"]))
             archive_path = next(tmp_path.glob("users/*/accounts/*/zomato-history.json"))
             archive = read_json(archive_path)
@@ -249,7 +252,7 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
             from food_khata.storage import provider_identity
 
             assert read_json(archive_path)["provider_id"] == provider_identity("9876543210")
-            with sqlite3.connect(tmp_path / "app.db") as conn:
+            with closing(sqlite3.connect(tmp_path / "app.db")) as conn, conn:
                 assert conn.execute("SELECT provider_id FROM jobs WHERE id = ?", (job["id"],)).fetchone()[0] == provider_identity("9876543210")
             imported = client.post(url + "/use-partial")
             assert imported.status_code == 200, imported.text
@@ -264,3 +267,4 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
     finally:
         server.terminate()
         server.wait(timeout=10)
+        server.stdin.close()
