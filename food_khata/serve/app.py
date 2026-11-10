@@ -7,6 +7,7 @@ import math
 import sqlite3
 import threading
 import time
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -55,7 +56,16 @@ def create_app(
     allow_hosts: list[str] | set[str] | None = None,
     is_https: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="Food Khata API")
+    @asynccontextmanager
+    async def lifespan(app):
+        app.state.job_runner.start()
+        try:
+            yield
+        finally:
+            app.state.job_runner.stop(wait=True)
+            app.state.unlocked_sessions.clear()
+
+    app = FastAPI(title="Food Khata API", lifespan=lifespan)
     db_path = Path(db_path)
     explicit_data_root = data_root is not None
     if explicit_data_root:
@@ -92,6 +102,7 @@ def create_app(
     app.state.lan = lan
     app.state.allow_hosts = get_allowed_hosts(allow_hosts, lan=lan)
     app.state.is_https = is_https
+    app.state.unlocked_sessions = {}
     init_app_db(resolved_app_db)
     from food_khata.jobs import JobControl, JobRunner
 
@@ -130,14 +141,16 @@ def create_app(
             )
         return response
 
-    UNAUTHENTICATED_ROUTES = frozenset({
-        "/health",
-        "/api/auth/login",
-        "/api/auth/register",
-        "/api/auth/setup-status",
-        "/api/auth/csrf",
-        "/api/owner/setup",
-    })
+    UNAUTHENTICATED_ROUTES = frozenset(
+        {
+            "/health",
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/setup-status",
+            "/api/auth/csrf",
+            "/api/owner/setup",
+        }
+    )
 
     @app.middleware("http")
     async def auth_and_csrf(request: Request, call_next):
@@ -156,6 +169,8 @@ def create_app(
 
         request.state.session = session
         request.state.user = session
+        if session_id and session is None:
+            app.state.unlocked_sessions.pop(session_id, None)
 
         is_unauthenticated = (path in UNAUTHENTICATED_ROUTES) or (not is_api)
         if not is_unauthenticated and session is None:
@@ -415,7 +430,7 @@ def create_app(
         account_rows = [
             {
                 "id": r[0],
-                "label": "••••" + r[1][-4:],
+                "label": "Unknown" if r[1] == "Unknown" else "••••" + r[1][-4:],
                 "platforms": r[2].split(",") if r[2] else [],
                 "order_count": r[3],
                 "date_from": r[4],
@@ -509,7 +524,7 @@ def create_app(
                 conn.execute("BEGIN")
         raise sqlite3.OperationalError("database busy")
 
-    select_order = f"""{FEES_SQL} AS fees, o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
+    select_order = f"""{FEES_SQL} AS fees, o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, CASE WHEN a.phone = 'Unknown' THEN 'Unknown' ELSE '••••' || substr(a.phone,-4) END AS account_label, o.platform, o.order_date,
         o.order_status, r.name AS restaurant_name, d.label AS address_label, COALESCE(d.city,r.city) AS city,
         (SELECT GROUP_CONCAT(i.item_name, ', ') FROM order_items i WHERE i.order_id=o.id) AS items_summary,
         o.final_amount_paid, o.item_subtotal, o.total_discount, o.reported_savings, o.delivery_fee,
@@ -787,8 +802,25 @@ def authenticate_client(
     if not app_db_path:
         raise ValueError("Client app has no app_db_path configured")
     session_id, csrf_token = create_test_user_session(app_db_path, username, is_owner)
+    from food_khata.auth import get_session
+    from food_khata.users.context import UserContext
+
+    conn = connect_app_db(app_db_path)
+    try:
+        user_id = get_session(conn, session_id)["user_id"]
+    finally:
+        conn.close()
+    context = UserContext(client.app.state.data_root, user_id)
+    if client.app.state.legacy_db_path is not None and not (context.data_root / "users").exists():
+        import secrets
+
+        from food_khata.users.crypto import DataCipher
+
+        cipher = DataCipher(secrets.token_bytes(32))
+    else:
+        cipher = context.unlock("test-password").cipher
+    client.app.state.unlocked_sessions[session_id] = (user_id, cipher)
     client.cookies.set(SESSION_COOKIE_NAME, session_id)
     client.cookies.set(CSRF_COOKIE_NAME, csrf_token)
     client.headers[CSRF_HEADER_NAME] = csrf_token
     return session_id, csrf_token
-

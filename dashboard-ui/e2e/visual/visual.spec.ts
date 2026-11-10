@@ -26,6 +26,7 @@ for (const vp of viewports) {
 
           test('visual', async ({ page }) => {
             await mockApi(page);
+            await page.clock.setFixedTime(new Date('2026-11-10T00:00:00Z'));
             await page.addInitScript(
               ({ m, a }) => {
                 localStorage.setItem('food-khata-mode', m);

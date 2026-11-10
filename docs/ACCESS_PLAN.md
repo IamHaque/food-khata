@@ -264,7 +264,7 @@ Owns: `storage.py`, `food_khata/users/context.py`, per-request database selectio
 - **Scenario: user context.** Given a logged-in user / Then the data folder `users/<id>/` and its database come from the session, and no route accepts a path or user id from the client.
 - **Scenario: isolation.** Given users A and B / When A calls the dashboard APIs / Then only A's data returns, and the cache is keyed by user, filters and database version.
 - **Scenario: adoption.** Given an existing `.food-khata` folder (a synthetic fixture in tests) / When `adopt_legacy_root(user)` runs / Then the data becomes that user's folder, a backup is kept, and a second run changes nothing.
-- **Scenario: encryption at rest.** Then provider sessions and phone numbers are encrypted with an AEAD cipher using a random data key wrapped by a key derived from the user's password (DEC-P2); a wrong password fails closed; folder mode 0700 is kept.
+- **Scenario: encryption at rest.** Then provider sessions and phone numbers in account credential metadata are encrypted with an AEAD cipher using a random data key wrapped by a key derived from the user's password (DEC-P2); a wrong password fails closed; folder mode 0700 is kept. Approved scope (DEC-021): analytics and archive order payloads may retain plaintext phone numbers and personal data; new analytics labels retain only the last four digits.
 - **Scenario: migration.** Given plaintext sessions / When first unlocked / Then they are encrypted and the plaintext is deleted.
 - **Scenario: password change versus reset.** Then a user's password change re-wraps the key; an owner reset cannot, so it wipes that user's provider sessions.
 - **Scenario: honest limit.** Then the docs state that whoever administers the host can still read everything.
@@ -414,7 +414,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-04 | Sync service | B | P0 | DONE | 2026-11-09 | commit ee28f0d; SyncEvent typed events, error codes, cancel token, 3 modes, thin CLI wrapper, pytest 133 passed | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
-| AC-08 | Per-user data and encrypted sessions | B | P0 | IN_PROGRESS | 2026-11-10 | Reopened: acceptance audit reproduced unused vault HTTP path and plaintext sessions/phones; security fix dispatched | B3 |
+| AC-08 | Per-user data and encrypted sessions | B | P0 | IN_PROGRESS | 2026-11-10 | 85909e9 merged; HTTP encryption/migration/revocation fixes verified on branch; DEC-021 approved; trunk checks pending | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
 | AC-09 | Job runner | B | P0 | DONE | 2026-11-09 | commit 40a4f00; JobRunner and JobControl, 1 running 2 queued limits, restart recovery, cancel checkpoint, pytest 165 passed | B4 |
 | AC-10 | Accounts and sync API | B | P0 | DONE | 2026-11-09 | commit c7de453; accounts & sync endpoints, 1 running 2 queued limits, 409 PROVIDER_ACCOUNT_TAKEN, 409 QUOTA, 404 auth, contract C-1 freeze, pytest 188 passed | B5 |
@@ -459,6 +459,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | DEC-020 | 2026-11-10 | Orchestration | Replace Gemini dispatches with Terra low/medium/high; SOL low/medium fallback; retain OpenCode | User authorization after quota exhaustion | T3 routing aliases updated | Accepted |
 
+| DEC-021 | 2026-11-10 | AC-08, AC-18 | Encryption covers provider credentials and account metadata; analytics/archive payloads may retain plaintext personal data | Explicit user approval of narrower scope | AC08 acceptance and security docs amended; protect data folders/backups | Accepted |
+
 ### 5.3 Deviation log
 
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status |
@@ -469,6 +471,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-003 | 2026-11-10 | AC-15 | C-1 lacks durable partial discard decision | Add persisted partial decision and additive API support | Independent audit reproduced reload and import/discard inconsistency | Preserve import idempotence and user isolation; no deletion of imported orders | Implemented and audited |
 
 | DEV-004 | 2026-11-10 | AC-17 | Finished-while-away notice needs initial acknowledgement baseline | Browser-local per-user marker; first visit ignores completions older than five minutes | Avoid replaying ancient successes without prior browser state | Later unacknowledged completions remain visible; independently accepted | Accepted |
+
+| DEV-005 | 2026-11-10 | AC-08 | Phone numbers encrypted at rest without scope qualification | Encrypt credential metadata; retain plaintext analytics/archive personal data | User explicitly approved narrower scope (DEC-021) | Legacy full phones may remain; new analytics labels use last four digits | Accepted by user |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -504,7 +508,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | OQ-6 | Quota numbers: max users, linked logins, jobs per user | Decided: 8 users, 5 linked logins each, 1 running and 2 queued jobs per user | AC-07 |
 | OQ-7 | Session idle timeout | Decided: 8 hours | AC-06 |
 
-| OQ-8 | Keep AC08 phone encryption across analytics/archives or explicitly approve narrower credential-only encryption scope? | User decision pending; asked 2026-11-10 under locked-decision stop rule | AC-08, GB |
+| OQ-8 | Keep AC08 phone encryption across analytics/archives or explicitly approve narrower credential-only encryption scope? | Decided 2026-11-10: user approved credential/metadata-only scope; DEC-021 | AC-08, GB |
 
 ### 5.7 Risk register
 

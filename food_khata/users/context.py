@@ -5,11 +5,12 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any
 
 from ..contracts import KhataError
-from ..storage import Storage
+from ..storage import Storage, credential_generation, credential_lock, save_json
 from .crypto import DataCipher, UserVault
 
 USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -71,9 +72,7 @@ def adopt_legacy_root(root_or_storage: Path | str | Storage, user: Any) -> dict[
     Accepts a data root, an existing :class:`Storage`, or a user-like object.
     """
     storage = (
-        root_or_storage
-        if isinstance(root_or_storage, Storage)
-        else Storage(Path(root_or_storage))
+        root_or_storage if isinstance(root_or_storage, Storage) else Storage(Path(root_or_storage))
     )
     return storage.adopt_legacy_root(user_id_of(user))
 
@@ -117,21 +116,42 @@ class UserContext:
     def unlock(self, password: str) -> UserContext:
         """Unlock the data key, then migrate any plaintext sessions/phones."""
         self.ensure()
-        vault = UserVault.unlock_or_create(self.root, password)
+        with credential_lock(self.root):
+            vault = UserVault.unlock_or_create(self.root, password)
+            vault.cipher.credential_generation = credential_generation(self.root)
+            vault.cipher.credential_root = self.root
         self.cipher = vault.cipher
         self.storage = Storage(self.root, cipher=self.cipher)
         self.storage.migrate_plaintext()
+        # A failed adoption keeps its intent so login resumes using the same user and key.
+        if (self.root / ".adoption-pending.json").exists():
+            self.adopt_legacy_root()
+            (self.root / ".adoption-pending.json").unlink(missing_ok=True)
+        for backup in self.data_root.glob("legacy-backup*"):
+            if backup.is_dir() and not backup.is_symlink():
+                Storage(backup, cipher=self.cipher).migrate_plaintext()
         return self
 
     def change_password(self, old_password: str, new_password: str) -> None:
         """Re-wrap the existing data key; provider sessions stay readable."""
-        vault = UserVault.unlock(self.root, old_password)
-        vault.rewrap(new_password)
+        with credential_lock(self.root):
+            vault = UserVault.unlock(self.root, old_password)
+            vault.rewrap(new_password)
+            vault.cipher.credential_generation = credential_generation(self.root)
+            vault.cipher.credential_root = self.root
         self.cipher = vault.cipher
         self.storage = Storage(self.root, cipher=self.cipher)
 
     def wipe_provider_sessions(self) -> int:
         """Delete every encrypted provider session for this user."""
+        with credential_lock(self.root):
+            self._revoke_credentials()
+            return self._wipe_provider_sessions()
+
+    def _revoke_credentials(self) -> None:
+        save_json(self.root / ".credential-generation", uuid.uuid4().hex)
+
+    def _wipe_provider_sessions(self) -> int:
         accounts = self.storage.accounts_dir
         removed = 0
         if not accounts.is_dir():
@@ -149,19 +169,32 @@ class UserContext:
         """Owner-driven reset: sessions cannot be decrypted, so wipe them.
 
         When a new password is supplied a fresh data key is created.  The old
-        key is unrecoverable by design (DEC-P2), so remaining encrypted account
-        metadata can only be re-created by re-linking providers.
+        key is unrecoverable by design (DEC-P2), so phone metadata is cleared while account IDs and provider identity digests
+        remain available for re-linking providers.
         """
-        removed = self.wipe_provider_sessions()
-        if new_password is not None:
-            vault = UserVault.create(self.root, new_password)
-            self.cipher = vault.cipher
-            self.storage = Storage(self.root, cipher=self.cipher)
-        return removed
+        with credential_lock(self.root):
+            self._revoke_credentials()
+            removed = self._wipe_provider_sessions()
+            if new_password is not None:
+                from ..storage import PHONE_ENCRYPTED_KEY, read_json, save_json
+
+                for path in self.storage.accounts_dir.glob("*/account.json"):
+                    metadata = read_json(path)
+                    if "provider_identities" in metadata:
+                        metadata["providers"] = metadata["provider_identities"]
+                    metadata.pop(PHONE_ENCRYPTED_KEY, None)
+                    metadata["phone"] = ""
+                    save_json(path, metadata)
+                vault = UserVault.create(self.root, new_password)
+                vault.cipher.credential_generation = credential_generation(self.root)
+                vault.cipher.credential_root = self.root
+                self.cipher = vault.cipher
+                self.storage = Storage(self.root, cipher=self.cipher)
+            return removed
 
     def adopt_legacy_root(self) -> dict[str, Any]:
         """Adopt the shared legacy data root into this user's folder."""
-        result = Storage(self.data_root).adopt_legacy_root(self.user_id)
+        result = Storage(self.data_root, cipher=self.cipher).adopt_legacy_root(self.user_id)
         if self.cipher is not None:
             self.storage.migrate_plaintext()
         return result
@@ -177,16 +210,12 @@ def unlock_user(data_root: Path | str, user: Any, password: str) -> UserContext:
     return UserContext(data_root, user_id_of(user)).unlock(password)
 
 
-def change_password(
-    data_root: Path | str, user: Any, old_password: str, new_password: str
-) -> None:
+def change_password(data_root: Path | str, user: Any, old_password: str, new_password: str) -> None:
     """Re-wrap a user's data key after their own password change."""
     UserContext(data_root, user_id_of(user)).change_password(old_password, new_password)
 
 
-def reset_password(
-    data_root: Path | str, user: Any, new_password: str | None = None
-) -> int:
+def reset_password(data_root: Path | str, user: Any, new_password: str | None = None) -> int:
     """Owner reset: wipe unreadable provider sessions (and optionally rotate key)."""
     return UserContext(data_root, user_id_of(user)).reset_password(new_password)
 

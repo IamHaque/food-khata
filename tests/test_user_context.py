@@ -12,7 +12,7 @@ from food_khata.auth import connect_app_db
 from food_khata.contracts import KhataError
 from food_khata.db import AnalyticsDB
 from food_khata.serve.app import authenticate_client, create_app
-from food_khata.storage import Storage
+from food_khata.storage import Storage, save_json
 from food_khata.users import (
     UserContext,
     UserVault,
@@ -23,9 +23,7 @@ from food_khata.users import (
 from food_khata.users.aead import decrypt, encrypt
 
 # RFC 8439 section 2.8.2 test vector.
-RFC_KEY = bytes.fromhex(
-    "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"
-)
+RFC_KEY = bytes.fromhex("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
 RFC_NONCE = bytes.fromhex("070000004041424344454647")
 RFC_AAD = bytes.fromhex("50515253c0c1c2c3c4c5c6c7")
 RFC_PLAINTEXT = (
@@ -70,9 +68,8 @@ def test_plaintext_sessions_and_phones_encrypt_on_first_unlock(tmp_path):
     root = user_root(tmp_path, "user-a")
     plaintext = Storage(root)
     account = plaintext.bind("9876543210", "zomato", "zid")
-    plaintext.save_session(
-        account["local_id"], "zomato", {"access_token": "TOKEN-SENTINEL"}
-    )
+    # Seed a pre-upgrade file; managed writes now require an unlocked vault.
+    save_json(plaintext.account_path(account["local_id"]) / "sessions" / "zomato.json", {"access_token": "TOKEN-SENTINEL"})
     account_file = root / "accounts" / account["local_id"] / "account.json"
     session_file = root / "accounts" / account["local_id"] / "sessions" / "zomato.json"
     assert "9876543210" in account_file.read_text(encoding="utf-8")
@@ -96,27 +93,23 @@ def test_plaintext_sessions_and_phones_encrypt_on_first_unlock(tmp_path):
 def test_password_change_rewraps_but_reset_wipes_sessions(tmp_path):
     context = UserContext(tmp_path, "user-a").unlock("old-password")
     account = context.storage.bind("9876543210", "zomato", "zid")
-    context.storage.save_session(
-        account["local_id"], "zomato", {"access_token": "KEEP-ME"}
-    )
+    context.storage.save_session(account["local_id"], "zomato", {"access_token": "KEEP-ME"})
 
     context.change_password("old-password", "new-password")
     with pytest.raises(WrongPassword):
         UserContext(tmp_path, "user-a").unlock("old-password")
 
     unlocked = UserContext(tmp_path, "user-a").unlock("new-password")
-    assert unlocked.storage.session(account["local_id"], "zomato") == {
-        "access_token": "KEEP-ME"
-    }
+    assert unlocked.storage.session(account["local_id"], "zomato") == {"access_token": "KEEP-ME"}
 
     unlocked.reset_password()
     assert unlocked.storage.session(account["local_id"], "zomato") is None
     assert unlocked.storage.accounts("zomato") == []
 
+    # A fresh unlock can link again after revocation.
+    unlocked = UserContext(tmp_path, "user-a").unlock("new-password")
     # A reset that also rotates the key cannot decrypt old sessions.
-    unlocked.storage.save_session(
-        account["local_id"], "zomato", {"access_token": "GONE"}
-    )
+    unlocked.storage.save_session(account["local_id"], "zomato", {"access_token": "GONE"})
     unlocked.reset_password("reset-password")
     assert not (
         context.root / "accounts" / account["local_id"] / "sessions" / "zomato.json"
@@ -130,20 +123,20 @@ def test_adopt_legacy_root_moves_data_and_is_idempotent(tmp_path):
     legacy = Storage(tmp_path)
     account = legacy.bind("9876543210", "swiggy", "sid")
     legacy.save_session(account["local_id"], "swiggy", {"cookie": "value"})
-    (tmp_path / "food_analytics.db").write_bytes(b"legacy database")
+    _seed_database(tmp_path / "food_analytics.db", account["local_id"], "3210", 1)
     (tmp_path / "dashboard.json").write_text('{"accounts": []}', encoding="utf-8")
 
-    result = legacy.adopt_legacy_root("user-a")
+    context = UserContext(tmp_path, "user-a").unlock("password123")
+    result = context.adopt_legacy_root()
     assert result["adopted"] is True
     destination = tmp_path / "users" / "user-a"
-    assert (
-        destination / "accounts" / account["local_id"] / "account.json"
-    ).is_file()
-    assert (destination / "food_analytics.db").read_bytes() == b"legacy database"
+    assert (destination / "accounts" / account["local_id"] / "account.json").is_file()
+    with sqlite3.connect(destination / "food_analytics.db") as conn:
+        assert conn.execute("SELECT count(*) FROM orders").fetchone()[0] == 1
     backup = Path(result["backup"])
     assert backup.is_dir()
-    assert (backup / "food_analytics.db").read_bytes() == b"legacy database"
-    assert not (tmp_path / "food_analytics.db").exists()
+    assert (backup / "food_analytics.db").is_file()
+    assert (tmp_path / "food_analytics.db").exists()
     marker = destination / ".adopted.json"
     assert json.loads(marker.read_text(encoding="utf-8"))["user_id"] == "user-a"
 
@@ -183,9 +176,7 @@ def _seed_database(path: Path, account_id: str, phone: str, orders: int) -> None
 def _session_user_id(app, session_id: str) -> str:
     conn = connect_app_db(app.state.app_db_path)
     try:
-        row = conn.execute(
-            "SELECT user_id FROM sessions WHERE id = ?", (session_id,)
-        ).fetchone()
+        row = conn.execute("SELECT user_id FROM sessions WHERE id = ?", (session_id,)).fetchone()
         assert row is not None
         return row["user_id"]
     finally:
@@ -235,3 +226,75 @@ def test_dashboard_is_isolated_and_cache_is_keyed_by_user(tmp_path):
     missing = charlie.get("/api/meta/filters")
     assert missing.status_code == 503
     assert missing.json()["error"]["code"] == "database_not_found"
+
+
+@pytest.mark.parametrize("failure", ["copy", "marker"])
+def test_live_sqlite_adoption_recovers_interruption_without_plaintext_backups(
+    tmp_path, monkeypatch, failure
+):
+    import shutil
+    from contextlib import closing
+
+    import food_khata.storage as storage_module
+
+    legacy = Storage(tmp_path)
+    account = legacy.bind("9876543210", "fake", "synthetic-provider")
+    legacy.save_session(account["local_id"], "fake", {"token": "SYNTHETIC-TOKEN"})
+    # Reproduce a previous failed adoption which created a backup but no marker.
+    old_backup = tmp_path / "legacy-backup"
+    shutil.copytree(legacy.accounts_dir, old_backup / "accounts")
+    with (
+        closing(sqlite3.connect(tmp_path / "app.db")) as auth,
+        closing(sqlite3.connect(tmp_path / "food_analytics.db")) as analytics,
+    ):
+        auth.execute("CREATE TABLE auth_sentinel (id TEXT)")
+        auth.commit()
+        analytics.execute("PRAGMA journal_mode=WAL")
+        analytics.execute("CREATE TABLE orders (id TEXT, account_id TEXT)")
+        analytics.execute("INSERT INTO orders VALUES (?, ?)", ("order-1", account["local_id"]))
+        analytics.commit()
+        # Both handles remain open through failure and retry, as in the live server.
+        context = UserContext(tmp_path, "alice").unlock("password123")
+        # An old raw copy can exist without the committed WAL orders.
+        with closing(sqlite3.connect(context.database)) as stale:
+            stale.execute("CREATE TABLE orders (id TEXT, account_id TEXT)")
+            stale.commit()
+        original_copy = storage_module.shutil.copytree
+        original_save = storage_module.save_json
+
+        def fail_copy(*args, **kwargs):
+            original_copy(*args, **kwargs)
+            raise OSError("injected copy interruption")
+
+        def fail_marker(path, value):
+            if path.name == ".adopted.json":
+                raise OSError("injected marker interruption")
+            return original_save(path, value)
+
+        with monkeypatch.context() as patch:
+            if failure == "copy":
+                patch.setattr(storage_module.shutil, "copytree", fail_copy)
+            else:
+                patch.setattr(storage_module, "save_json", fail_marker)
+            with pytest.raises(OSError, match="injected"):
+                context.adopt_legacy_root()
+        assert not (context.root / ".adopted.json").exists()
+        for path in tmp_path.rglob("*.json"):
+            assert b"9876543210" not in path.read_bytes()
+            assert b"SYNTHETIC-TOKEN" not in path.read_bytes()
+        recovered = UserContext(tmp_path, "alice").unlock("password123")
+        assert (recovered.root / ".adopted.json").exists()
+        assert not (recovered.root / ".adoption-pending.json").exists()
+        assert recovered.storage.accounts("fake")[0]["local_id"] == account["local_id"]
+        assert recovered.storage.session(account["local_id"], "fake")["token"] == "SYNTHETIC-TOKEN"
+        assert auth.execute("SELECT count(*) FROM auth_sentinel").fetchone()[0] == 0
+        assert not (recovered.root / "app.db").exists()
+        assert not (tmp_path / "legacy-backup" / "app.db").exists()
+        with closing(sqlite3.connect(recovered.database)) as adopted:
+            assert adopted.execute("SELECT * FROM orders").fetchall() == [
+                ("order-1", account["local_id"])
+            ]
+        for path in tmp_path.rglob("*"):
+            if path.is_file():
+                assert b"9876543210" not in path.read_bytes()
+                assert b"SYNTHETIC-TOKEN" not in path.read_bytes()

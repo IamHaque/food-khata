@@ -205,7 +205,7 @@ def resume_sync_job(
     storage = get_user_storage(request, user_id)
     account_meta = _get_account_meta(storage, job["account_id"])
     phone = account_meta.get("phone") if account_meta else None
-    provider_id = job.get("provider_id")
+    provider_id = (account_meta or {}).get("providers", {}).get(job["provider"])
     session = storage.session(job["account_id"], job["provider"])
     cipher = get_user_cipher(request, user_id)
 
@@ -226,6 +226,7 @@ def resume_sync_job(
         session=session,
         cipher=cipher,
         provider_instance=provider_inst,
+        provider_id=provider_id,
     )
     return SyncJobResponse(**resumed)
 
@@ -275,7 +276,7 @@ def use_partial_sync(
     return UsePartialResponse(
         status="ok",
         total=result.get("total", 0),
-        imported=result.get("imported", 0),
+        imported=result.get("imported", result.get("total", 0)),
         result=result,
     )
 

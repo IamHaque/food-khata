@@ -43,12 +43,9 @@ def run_reset_password(
         conn.commit()
 
         # Wipe provider sessions and re-key vault
-        try:
-            from food_khata.users.context import reset_password as context_reset_password
+        from food_khata.users.context import reset_password as context_reset_password
 
-            context_reset_password(data_dir, user["id"], effective_pw)
-        except Exception:
-            pass
+        context_reset_password(data_dir, user["id"], effective_pw)
 
         print(f"Password reset successfully for user '{user['username']}'.")
         if not password:
@@ -66,9 +63,7 @@ def run_transfer(
     init_app_db(app_db_path)
     conn = connect_app_db(app_db_path)
     try:
-        current_owner = conn.execute(
-            "SELECT id, username FROM users WHERE is_owner = 1"
-        ).fetchone()
+        current_owner = conn.execute("SELECT id, username FROM users WHERE is_owner = 1").fetchone()
         if not current_owner:
             print("Error: No owner account exists to transfer from.", file=sys.stderr)
             return 1

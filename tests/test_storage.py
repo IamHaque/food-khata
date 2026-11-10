@@ -55,3 +55,11 @@ class StorageTests(unittest.TestCase):
                 with self.assertRaises(OSError):
                     save_json(path, {"new": True})
             self.assertEqual(read_json(path), {"old": True})
+
+
+def test_managed_user_rejects_cipherless_checkpoint(tmp_path):
+    from food_khata.storage import CredentialsRevoked
+    storage = Storage(tmp_path / "users" / "synthetic-user")
+    with unittest.TestCase().assertRaises(CredentialsRevoked):
+        storage.save_session("00000000-0000-4000-8000-000000000001", "fake", {"token": "synthetic-token"})
+    assert not list(storage.root.rglob("*.json"))

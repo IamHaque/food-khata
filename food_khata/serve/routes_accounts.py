@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from food_khata.contracts import KhataError
 from food_khata.services.linking import LinkingService
-from food_khata.storage import Storage, read_json
+from food_khata.storage import Storage, provider_identity, read_json
 from food_khata.users.context import ensure_private_dir, user_database, user_root
 
 from .schemas_accounts import (
@@ -46,17 +46,11 @@ def get_current_user_id(request: Request) -> str:
 
 def get_user_cipher(request: Request, user_id: str) -> Any | None:
     """Locate user encryption cipher in memory if unlocked."""
-    if hasattr(request.state, "cipher") and request.state.cipher is not None:
-        return request.state.cipher
-    user_ciphers = getattr(request.app.state, "user_ciphers", None)
-    if isinstance(user_ciphers, dict) and user_id in user_ciphers:
-        return user_ciphers[user_id]
-    user_contexts = getattr(request.app.state, "user_contexts", None)
-    if isinstance(user_contexts, dict) and user_id in user_contexts:
-        ctx = user_contexts[user_id]
-        if hasattr(ctx, "cipher"):
-            return ctx.cipher
-    return None
+    session = getattr(request.state, "session", None)
+    unlocked = request.app.state.unlocked_sessions.get(session["id"]) if session else None
+    if unlocked and unlocked[0] == user_id:
+        return unlocked[1]
+    raise HTTPException(status_code=401, detail="User data is locked; log in again.")
 
 
 def get_user_storage(request: Request, user_id: str) -> Storage:
@@ -119,13 +113,10 @@ def _get_account_meta(storage: Storage, account_id: str) -> dict[str, Any] | Non
     acc_file = acc_path / "account.json"
     if not acc_file.is_file():
         return None
-    try:
-        data = read_json(acc_file)
-        if isinstance(data, dict):
-            return storage._decrypt_phone(data, rewrite=False)
-    except Exception:
-        pass
-    return None
+    data = read_json(acc_file)
+    if not isinstance(data, dict):
+        raise KhataError("Invalid account metadata")
+    return storage._decrypt_phone(data, rewrite=False)
 
 
 @router.get("", response_model=list[AccountOut])
@@ -179,18 +170,25 @@ def link_start(
     user_id: Annotated[str, Depends(get_current_user_id)],
 ):
     """Start provider linking: delegates to LinkingService and returns opaque handle. Never returns OTP code."""
+    get_user_cipher(request, user_id)
     provider_name = data.provider.strip().lower()
     if provider_name not in ("zomato", "swiggy", "fake"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_PROVIDER", "message": f"Unsupported provider: {data.provider}"},
+            detail={
+                "code": "INVALID_PROVIDER",
+                "message": f"Unsupported provider: {data.provider}",
+            },
         )
 
     phone = data.phone.strip()
     if not re.fullmatch(r"[6-9][0-9]{9}", phone):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_PHONE", "message": "Enter a valid 10-digit Indian phone number."},
+            detail={
+                "code": "INVALID_PHONE",
+                "message": "Enter a valid 10-digit Indian phone number.",
+            },
         )
 
     svc = get_linking_service(request)
@@ -259,17 +257,6 @@ def link_verify(
                 if meta:
                     existing_accounts.append(meta)
 
-    # Allow re-linking if matching phone already exists among user's accounts
-    is_existing = any(a.get("phone") == entry.phone for a in existing_accounts)
-    if len(existing_accounts) >= DEC_010_MAX_ACCOUNTS and not is_existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": "QUOTA",
-                "message": f"Account quota exceeded (maximum {DEC_010_MAX_ACCOUNTS} accounts allowed).",
-            },
-        )
-
     # 2. Verify OTP with provider
     try:
         provider_id = entry.provider_instance.verify_otp(data.code.strip())
@@ -281,6 +268,17 @@ def link_verify(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_OTP", "message": str(exc)},
         ) from exc
+
+    # Allow re-linking if matching phone already exists among user's accounts
+    is_existing = any((a.get("phone") == entry.phone or (not a.get("phone") and a.get("providers", {}).get(entry.provider) == provider_identity(provider_id))) for a in existing_accounts)
+    if len(existing_accounts) >= DEC_010_MAX_ACCOUNTS and not is_existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "QUOTA",
+                "message": f"Account quota exceeded (maximum {DEC_010_MAX_ACCOUNTS} accounts allowed).",
+            },
+        )
 
     # 3. Check reverify mismatch if this handle was initiated via verify-again
     reverify_info = getattr(request.app.state, "reverify_handles", {}).pop(handle, None)
@@ -315,7 +313,9 @@ def link_verify(
                         other_data = read_json(acc_json_file)
                         if isinstance(other_data, dict):
                             other_provs = other_data.get("providers", {})
-                            if other_provs.get(entry.provider) == provider_id:
+                            if other_provs.get(entry.provider) == provider_id or other_data.get(
+                                "provider_identities", {}
+                            ).get(entry.provider) == provider_identity(provider_id):
                                 raise HTTPException(
                                     status_code=status.HTTP_409_CONFLICT,
                                     detail={

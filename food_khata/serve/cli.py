@@ -90,6 +90,7 @@ def serve(
         "host": host,
         "port": port,
         "access_log": False,
+        "proxy_headers": False,
     }
     if is_https:
         uvicorn_kwargs["ssl_certfile"] = str(tls_cert)

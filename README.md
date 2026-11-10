@@ -20,13 +20,14 @@ On macOS/Linux activate with `source .venv/bin/activate`. The installed
 ### Commands & Subcommands
 
 * **`food-khata serve`**:
-  Starts the local read-only FastAPI web server and serves the built dashboard UI at `http://127.0.0.1:8765`.
+  Starts the FastAPI server and serves the built dashboard UI at `http://127.0.0.1:8765`.
   Flags:
-  * `--host`: Host to bind to (loopback only, default: `127.0.0.1`). Non-loopback bindings are rejected.
+  * `--host`: Host to bind to (loopback by default; non-loopback requires `--lan`).
   * `--port`: Port to listen on (default: `8765`).
   * `--db-path PATH`: Path to SQLite database (default: `.food-khata/food_analytics.db`).
   * `--data-dir PATH`: Private data root (default: `.food-khata/`).
-  * `--dev`: Development mode with automatic reload.
+  * `--lan`, `--allow-host`, `--tls-cert`, `--tls-key`: LAN and HTTPS options; see the access guide below.
+  * `--dev`: Log slow requests.
 
 * **`food-khata`** or **`food-khata sync`** *(Default)*:
   Interactive account selection, login/refresh, smart order sync, automatic local
@@ -86,7 +87,7 @@ npm --prefix dashboard-ui run build
 food-khata serve
 ```
 
-Open `http://127.0.0.1:8765`. The server opens SQLite with `mode=ro` and `PRAGMA query_only=ON`; it never mutates source data.
+Open `http://127.0.0.1:8765` and claim the owner account. Dashboard queries use read-only SQLite connections; account setup and synchronization write to the private data directory.
 
 ### Dashboard Pages
 
@@ -127,9 +128,9 @@ to merge conflicting identities automatically.
 Sessions contain reusable credentials. Metadata contains your phone number, and
 order payloads can contain addresses and other personal information. Keep this
 directory private and out of Git, cloud sharing, and public bug reports. Per-user
-provider sessions and phone numbers are encrypted at rest with a random data key
+provider sessions and phone numbers in account credential metadata are encrypted at rest with a random data key
 wrapped by the user's password (ChaCha20-Poly1305, DEC-P2). Order archives and
-the analytics SQLite database remain plain files. On Windows the data directory
+the analytics SQLite database remain plain files and may retain phone numbers and other personal data. New analytics imports retain only the last four phone digits for account labels. On Windows the data directory
 inherits your ACLs; keep the checkout private or use `--data-dir` to select
 another private location.
 
@@ -138,6 +139,11 @@ the machine, the Python environment, or the running process can read decrypted
 data and capture the in-memory data key while a user is logged in. Encryption
 separates users of the application and protects data at rest; it is not a
 defence against the host owner.
+
+For first-run access, LAN security, recovery commands and the risks of unofficial
+provider APIs, see [access security and recovery](docs/access/security-and-recovery.md).
+The [manual smoke checklist](docs/access/manual-smoke.md) is for the user to run;
+automated tests use synthetic providers only.
 
 ## Sync and recovery
 

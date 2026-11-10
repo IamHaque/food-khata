@@ -23,16 +23,16 @@ class SetupForbiddenError(OwnerError):
 
 
 class JobControl:
-    """Stub/graceful fallback for background job cancellation until AC-09 merges."""
+    """Cancel jobs only in the application database being administered."""
 
     @classmethod
-    def cancel_user(cls, user_id: str) -> None:
-        try:
-            from food_khata.jobs import JobControl as RealJobControl  # type: ignore
+    def cancel_user(cls, user_id: str, conn: sqlite3.Connection) -> None:
+        from food_khata.jobs import JobControl as RealJobControl
 
-            RealJobControl.cancel_user(user_id)
-        except Exception:
-            pass
+        database = Path(conn.execute("PRAGMA database_list").fetchone()[2]).resolve()
+        for control in list(RealJobControl._instances):
+            if Path(control.app_db_path).resolve() == database:
+                control.cancel_user(user_id)
 
 
 def _get_setting(conn: sqlite3.Connection, key: str) -> str | None:
@@ -241,12 +241,9 @@ def claim_owner(
 
     # Adopt legacy data root if present (AC-08 adopt_legacy_root)
     if data_root:
-        try:
-            from food_khata.users import adopt_legacy_root
+        from food_khata.users import UserContext
 
-            adopt_legacy_root(data_root, user_id)
-        except Exception:
-            pass
+        UserContext(data_root, user_id).unlock(password).adopt_legacy_root()
 
     return {
         "id": user_id,
@@ -276,7 +273,9 @@ def list_users(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
-def set_user_disabled(conn: sqlite3.Connection, user_id: str, disabled: bool) -> dict[str, Any]:
+def set_user_disabled(
+    conn: sqlite3.Connection, user_id: str, disabled: bool, data_root: Path | str | None = None
+) -> dict[str, Any]:
     """Enable or disable a user account. Cannot disable the owner."""
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if not user:
@@ -288,8 +287,13 @@ def set_user_disabled(conn: sqlite3.Connection, user_id: str, disabled: bool) ->
     if disabled:
         # Invalidate active web sessions
         conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-        # Cancel any running/queued jobs
-        JobControl.cancel_user(user_id)
+        conn.commit()
+        # Cancellation writes through a separate connection.
+        JobControl.cancel_user(user_id, conn)
+        if data_root is not None:
+            from food_khata.users.context import wipe_provider_sessions
+
+            wipe_provider_sessions(data_root, user_id)
     conn.commit()
 
     return {
@@ -330,17 +334,13 @@ def reset_user_password(
     conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
     conn.commit()
 
+    JobControl.cancel_user(user_id, conn)
+
     # Wipe provider sessions (cannot be decrypted after owner reset)
     if data_root:
-        try:
-            from food_khata.users.context import reset_password as context_reset_password
+        from food_khata.users.context import reset_password as context_reset_password
 
-            context_reset_password(data_root, user_id, effective_pw)
-        except Exception:
-            pass
-
-    # Cancel running/queued jobs
-    JobControl.cancel_user(user_id)
+        context_reset_password(data_root, user_id, effective_pw)
 
     return {
         "status": "ok",
