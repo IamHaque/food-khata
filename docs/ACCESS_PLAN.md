@@ -573,6 +573,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-08, AC-18 | parent verify --full --backend --browser at85909e9 | all seven stages pass after managed credential write guard; focused44 tests+8 subtests passed | 156.70 s | 85909e9 |
 
+| 2026-11-10 | AC-18 | final trunk verify | pytest collection failed: trunk venv lacked declared httpx serve dependency; installed existing dev/serve extras via uv; full rerun started | 25.39 s | 66a2bfa |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
