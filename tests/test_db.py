@@ -19,6 +19,71 @@ from food_khata.serve.db import connect_readonly
 from food_khata.storage import Storage, save_json
 
 
+def test_personal_data_inventory_synthetic(tmp_path: Path):
+    """AC08: demonstrate retention without provider calls or real personal data."""
+    from food_khata.providers.http import redact
+    from food_khata.storage import read_json
+    from food_khata.users.crypto import DataCipher
+
+    storage = Storage(tmp_path / "inventory", cipher=DataCipher(b"x" * 32))
+    account = storage.bind("9000001234", "swiggy", "synthetic-provider-id")
+    account_id = account["local_id"]
+    directory = storage.account_path(account_id)
+    metadata = read_json(directory / "account.json")
+    assert metadata["phone_suffix"] == "1234"
+    assert "phone" not in metadata
+    assert metadata["phone_encrypted"]
+
+    recipient = {"name": "SYNTHETIC RECIPIENT", "phone": "9000005678"}
+    swiggy = {
+        "order_id": "101", "order_items": [], "order_total": 100,
+        "order_time": "2026-10-10 12:00:00",
+        "restaurant_address": "SYNTHETIC RESTAURANT ROAD",
+        "delivery_address": {
+            "annotation": "Home", "address": "SYNTHETIC FLAT 42, TEST ROAD",
+            "city": "Test City", "lat": 12.345, "lng": 76.543, **recipient,
+        },
+    }
+    zomato = {
+        "id": "202", "order": {"items": []},
+        "delivery_address_obj": {
+            "alias": "Work", "full_address_text": "SYNTHETIC OFFICE 9, TEST ROAD",
+            "city": "Test City", "latitude": 23.456, "longitude": 87.654,
+            **recipient,
+        },
+    }
+    for provider, details in (("swiggy", {"orders": [swiggy]}), ("zomato", zomato)):
+        path = directory / f"{provider}-history.json"
+        archive = {"orders": {provider: {"history": recipient, "details": details}}}
+        save_json(path, redact(archive))
+        assert read_json(path) == archive
+        assert "SYNTHETIC RECIPIENT" in path.read_text(encoding="utf-8")
+        assert "9000005678" in path.read_text(encoding="utf-8")
+
+    db = AnalyticsDB(tmp_path / "inventory.db")
+    counts = db.ingest_account(storage, account_id)
+    assert counts["total"] == 2
+    assert counts["quarantined"] == 0
+    with db.connection() as conn:
+        assert conn.execute("SELECT phone FROM accounts").fetchone()[0] == "1234"
+        rows = conn.execute(
+            "SELECT label, full_address, city, latitude, longitude FROM delivery_addresses ORDER BY label"
+        ).fetchall()
+        assert [tuple(row) for row in rows] == [
+            ("Home", "SYNTHETIC FLAT 42, TEST ROAD", "Test City", 12.345, 76.543),
+            ("Work", "SYNTHETIC OFFICE 9, TEST ROAD", "Test City", 23.456, 87.654),
+        ]
+        assert conn.execute(
+            "SELECT address FROM restaurants WHERE platform='SWIGGY'"
+        ).fetchone()[0] == "SYNTHETIC RESTAURANT ROAD"
+
+    # Legacy metadata is reduced on ingestion; this does not erase old database pages.
+    save_json(directory / "account.json", {"phone": "9000001234"})
+    db.ingest_account(storage, account_id)
+    with db.connection() as conn:
+        assert conn.execute("SELECT phone FROM accounts").fetchone()[0] == "1234"
+
+
 def test_normalization_utilities():
     assert clean_num("â‚¹ 149.50") == 149.50
     assert clean_num(None, default=10.0) == 10.0

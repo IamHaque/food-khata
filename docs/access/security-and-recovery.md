@@ -34,3 +34,5 @@ linking an account; automated acceptance tests use only synthetic FakeProvider
 data and never contact a real provider.
 
 For personal data at rest, enable host full-disk encryption (for example, BitLocker on Windows or FileVault on macOS), restrict data-folder permissions, and encrypt backups separately. Archive payloads and analytics can retain full delivery addresses and coordinates; application credential encryption does not protect those files. Password reset preserves history under this scope. Wider history encryption would require a recovery key independent of the reset password to avoid making history unreadable.
+
+See the [personal-data inventory](personal-data-inventory.md) for confirmed plaintext fields, including full delivery addresses and precise coordinates, and the limits of the synthetic evidence.

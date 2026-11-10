@@ -427,8 +427,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-15 | Sync screens and background states | B | P0 | DONE | 2026-11-10 | a917762 + 1d4e11b; trunk verify 94.05s; independent crash/restart/API/1440/390 audit pass | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | DONE | 2026-11-10 | 282a0db; trunk verify 91.10s; parent 6 browser regressions plus independent isolation and visuals pass | B7 |
-| AC-18 | Security acceptance, end-to-end, docs | B | P0 | TODO | — | — | B8 |
-| GB | Access feature acceptance | B | P0 | TODO | — | — | B8 |
+| AC-18 | Security acceptance, end-to-end, docs | B | P0 | IN_PROGRESS | 2026-11-10 | 85909e9 + f11964b merged; final trunk full verify/build/bundle/journey running | B8 |
+| GB | Access feature acceptance | B | P0 | IN_PROGRESS | 2026-11-10 | Independent technical audits and approved DEC-021 recorded; final trunk checks and user manual sign-off pending | B8 |
 
 ### 5.2 Decision log
 
@@ -662,4 +662,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | F3 | Delayed checkpoint can recreate credentials after reset200; retained full phones conflict with AC08 acceptance scope |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | review | c23228e; per-user credential lock/generation; parent verify and independent delayed-write recheck pending |
 | 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | F3 | Background race accepted; cipherless managed-root CLI writes bypass revocation; parent guard added with44 tests+8 subtests pass |
-| 2026-11-10 | AC-08 | T8 | sol-medium | 7 | running | inventory-personal-data-20261110; synthetic/code field inventory before final sign-off |
+| 2026-11-10 | AC-08 | T8 | sol-medium | 7 | pass | f11964b; parent15 database tests pass; full address/coordinate/name/phone retention confirmed and presented |
