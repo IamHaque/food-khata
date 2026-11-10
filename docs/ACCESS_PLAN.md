@@ -644,4 +644,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18 | T5 | sol-medium | 4 | pass | de928ed; locked auth DB excluded, sqlite analytics snapshot, encrypted retry-safe adoption; focused tests pass |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 5 | review | 7ad0565; migration/lifecycle42 tests+8 subtests reported; parent full verify and independent real-server recheck pending |
 | 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 3 | F1 | OpenCode free usage limit; no latest-fix review delivered; failover to SOL Medium |
-| 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | running | recheck-real-http-sol-20261110; fresh review of latest Terra migration/lifecycle fix |
+| 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | F3 | Delayed checkpoint can recreate credentials after reset200; retained full phones conflict with AC08 acceptance scope |
+| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | running | fix-revocation-race-20261110; serialize credential checkpoint with reset/disable revocation |
