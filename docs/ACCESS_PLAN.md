@@ -1,6 +1,6 @@
 # Food Khata: Fixes and Access Feature, Execution Plan (BDD)
 
-Plan v1.1 · 9 Nov 2026 · baseline commit `2fcacf4` · 25 of 25 stories DONE; Gate GB awaiting user sign-off
+Plan v1.1 · 9 Nov 2026 · baseline commit `2fcacf4` · 25 of 25 stories DONE; Gate GB approved
 
 ## 1. Scope, order and rules
 
@@ -428,7 +428,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | DONE | 2026-11-10 | 282a0db; trunk verify 91.10s; parent 6 browser regressions plus independent isolation and visuals pass | B7 |
 | AC-18 | Security acceptance, end-to-end, docs | B | P0 | DONE | 2026-11-10 | 4e1adf5; full trunk verify/build/bundle pass; actual FakeProvider journey1440/390 pass; manual checklist and privacy inventory ready | B8 |
-| GB | Access feature acceptance | B | P0 | IN_PROGRESS | 2026-11-10 | Technical checks pass4e1adf5; all25 stories DONE; user manual checklist and explicit Gate GB approval pending | B8 |
+| GB | Access feature acceptance | B | P0 | DONE | 2026-11-10 | User explicitly approved Gate GB; full technical verification passed at 4e1adf5; manual checklist completion not independently confirmed | B8 |
 
 ### 5.2 Decision log
 
@@ -609,6 +609,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-10 | Accounts and background sync API endpoints, OpenAPI contract freeze C-1, regenerated frontend types, and verification test suites | c7de453 |
 
 | 2026-11-10 | AC-08, AC-18 | Completed audited security fixes and user-approved encryption scope, privacy inventory, recovery docs and real-backend acceptance. All automated trunk checks pass; Gate GB remains user-only. | 4e1adf5 |
+
+| 2026-11-10 | GB | User explicitly approved Gate GB after automated acceptance; manual checklist completion not independently confirmed. | 4e1adf5 |
 
 ### 5.10 Delegation ledger
 

@@ -56,6 +56,6 @@ are protected; analytics and raw archive payloads remain ordinary protected file
 The [personal-data inventory](personal-data-inventory.md) confirms full delivery
 addresses and precise coordinates in SQLite and synthetic recipient names and
 phones in archives. Full-disk encryption and separately encrypted backups are
-recommended. All 25 implementation stories are DONE. Gate GB remains pending the
-[user's manual checklist and explicit approval](manual-smoke.md); no real accounts
+recommended. All 25 implementation stories are DONE. The user explicitly approved Gate GB on 2026-11-10. Completion of the
+[manual checklist](manual-smoke.md) was not independently confirmed; no real accounts
 or real LAN deployment were tested by automation.
