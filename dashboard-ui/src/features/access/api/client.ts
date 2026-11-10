@@ -185,10 +185,13 @@ export const ownerApi = {
     return request<{ has_owner: boolean; is_loopback: boolean }>("/api/owner/setup");
   },
   async setup(data: { username: string; password: string; setup_code?: string; adopt_data?: boolean }) {
-    return request<components["schemas"]["food_khata__serve__routes_owner__UserResponse"]>("/api/owner/setup", {
+    const user = await request<components["schemas"]["food_khata__serve__routes_owner__UserResponse"]>("/api/owner/setup", {
       method: "POST",
       body: data,
     });
+    setCsrfToken(null);
+    await refreshCsrf();
+    return user;
   },
 };
 

@@ -37,6 +37,13 @@ describe("AC-13 Access Screens", () => {
     vi.restoreAllMocks();
   });
 
+  it("warns on an insecure connection before login", () => {
+    vi.spyOn(accessApi, "useSetupStatus").mockReturnValue({
+      data: { has_owner: true, registration_open: false, insecure_transport: true },
+    } as any);
+    expect(renderWithProviders(<Login />)).toContain("connection is not encrypted");
+  });
+
   describe("Scenario 1: First run / Setup screen", () => {
     it("renders 'Set up this server' on first run when has_owner is false", () => {
       vi.spyOn(accessApi, "useSetupStatus").mockReturnValue({

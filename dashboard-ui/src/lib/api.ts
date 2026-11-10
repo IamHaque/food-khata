@@ -1,5 +1,6 @@
 import type { operations, components } from "../types/api";
 import { z } from "zod";
+import { authApi, getCsrfToken } from "../features/access/api";
 import { FilterOptionsSchema, DashboardSchema, HealthSchema, OrdersSchema, BillSchema, LeadersSchema, SlimSchema } from "./response-schema";
 export type Filters = NonNullable<operations["data_health_api_meta_data_health_get"]["parameters"]["query"]>;
 export type OrdersParams = NonNullable<operations["orders_api_orders_get"]["parameters"]["query"]>;
@@ -17,7 +18,8 @@ export function serializeParams(params: Filters | OrdersParams | RestaurantsPara
  return query.toString();
 }
 async function request<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal, body?: DashboardFilters): Promise<T> {
- const response = await fetch(path, { signal, ...(body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }) });
+ if (body !== undefined && !getCsrfToken()) await authApi.csrf();
+ const response = await fetch(path, { signal, ...(body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "x-csrf-token": getCsrfToken() ?? "" }, body: JSON.stringify(body) }) });
  if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`);
  let data: unknown;
  try { data = await response.json(); } catch { throw new ApiError(response.status, "Invalid API response"); }

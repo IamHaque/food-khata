@@ -1,6 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { slim, serializeParams } from "./api";
+import { dashboard, slim, serializeParams } from "./api";
+import { setCsrfToken } from "../features/access/api";
 afterEach(() => vi.unstubAllGlobals());
+it("sends the session CSRF token with dashboard requests", async () => {
+ setCsrfToken("synthetic-token");
+ const mock = vi.fn().mockResolvedValue(new Response("error", { status: 500 }));
+ vi.stubGlobal("fetch", mock);
+ await expect(dashboard({})).rejects.toThrow();
+ expect(mock.mock.calls[0][1].headers["x-csrf-token"]).toBe("synthetic-token");
+ setCsrfToken(null);
+});
 it("serializes filters including all statuses", () => {
  expect(serializeParams({ statuses: [], platforms: ["a", "b"], verified_only: false, amount_min: 0, date_from: "2024-01-01" })).toBe("statuses=&platforms=a&platforms=b&verified_only=false&amount_min=0&date_from=2024-01-01");
  expect(serializeParams({ statuses: ["a", "b"] })).toBe("statuses=a&statuses=b");
