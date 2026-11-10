@@ -642,4 +642,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 2 | F3 | Real-server probes: silent adoption leaves plaintext backups; raw provider IDs in jobs/archives; uvicorn proxy headers bypass throttle |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 3 | F3 | Uncommitted transport/new-record/key fixes tested; legacy adoption and existing identifier migration incomplete; split recovery slices |
 | 2026-11-10 | AC-08, AC-18 | T5 | sol-medium | 4 | pass | de928ed; locked auth DB excluded, sqlite analytics snapshot, encrypted retry-safe adoption; focused tests pass |
-| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 5 | running | finish-id-migration-20261110; migrate existing identifiers and real-HTTP lifecycle evidence |
+| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 5 | review | 7ad0565; migration/lifecycle42 tests+8 subtests reported; parent full verify and independent real-server recheck pending |
+| 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 3 | running | recheck-final-real-http-20261110; original blockers against migration and real-transport fixes |
