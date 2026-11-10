@@ -90,9 +90,6 @@ class StatusResponse(BaseModel):
 
 
 def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "127.0.0.1"
 
 
@@ -263,12 +260,18 @@ def login(
             detail=INVALID_CREDENTIALS_MESSAGE,
         )
 
+    from food_khata.users.context import UserContext
+
+    context = UserContext(request.app.state.data_root, user["id"]).unlock(data.password)
+
     # 4. Successful login: reset failed login attempts
     reset_failed_logins(conn, username, ip)
 
     # 5. Rotate session ID on login
     old_session_id = request.cookies.get(SESSION_COOKIE_NAME)
     session_id, csrf_token = rotate_session(conn, old_session_id, user["id"])
+    request.app.state.unlocked_sessions.pop(old_session_id, None)
+    request.app.state.unlocked_sessions[session_id] = (user["id"], context.cipher)
 
     # 6. Set HttpOnly/SameSite=Lax session cookie (Secure when HTTPS) and CSRF cookie
     secure = _is_secure_request(request)
@@ -296,6 +299,7 @@ def logout(
     session = getattr(request.state, "session", None)
     if session:
         delete_session(conn, session["id"])
+        request.app.state.unlocked_sessions.pop(session["id"], None)
     clear_session_cookies(response)
     return StatusResponse(status="ok")
 

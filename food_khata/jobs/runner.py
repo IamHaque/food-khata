@@ -283,13 +283,10 @@ class JobRunner:
                 )
 
             def checkpoint_session() -> None:
-                if hasattr(raw_provider, "dump_session"):
-                    try:
-                        latest = raw_provider.dump_session()
-                        if isinstance(latest, dict) and latest:
-                            storage.save_session(payload.account_id, payload.provider, latest)
-                    except Exception:
-                        pass
+                if hasattr(raw_provider, "dump_session") and not active_job.cancel_token.is_cancelled():
+                    latest = raw_provider.dump_session()
+                    if isinstance(latest, dict) and latest and not active_job.cancel_token.is_cancelled():
+                        storage.save_session(payload.account_id, payload.provider, latest)
 
             # 4. Execute sync
             report = sync(
@@ -674,13 +671,13 @@ class JobControl:
             actual_user_id = str(self_or_user_id)
             total = 0
             for inst in list(JobControl._instances):
-                try:
-                    total += inst.cancel_user(actual_user_id)
-                except Exception:
-                    pass
+                total += inst.cancel_user(actual_user_id)
             return total
         self = self_or_user_id
-        all_user_jobs = list_jobs(self.app_db_path, user_id=user_id, limit=200)
+        with get_db_conn(self.app_db_path) as conn:
+            all_user_jobs = conn.execute(
+                "SELECT id, status FROM jobs WHERE user_id = ?", (user_id,)
+            ).fetchall()
         cancelled = 0
         for j in all_user_jobs:
             if j["status"] in ACTIVE_STATES:

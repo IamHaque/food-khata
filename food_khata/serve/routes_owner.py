@@ -44,9 +44,6 @@ def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
 
 
 def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "127.0.0.1"
 
 
@@ -218,8 +215,12 @@ def post_setup(
             detail=str(exc),
         ) from exc
 
+    from food_khata.users.context import UserContext
+
+    context = UserContext(request.app.state.data_root, user["id"]).unlock(data.password)
     # Establish initial session for the new owner
     session_id, csrf_token = rotate_session(conn, None, user["id"])
+    request.app.state.unlocked_sessions[session_id] = (user["id"], context.cipher)
     secure = _is_secure_request(request)
     set_session_cookie(response, session_id, secure=secure)
     set_csrf_cookie(response, csrf_token, secure=secure)
@@ -308,17 +309,22 @@ def get_users(
 def disable_user_endpoint(
     user_id: str,
     data: DisableUserRequest,
+    request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
     _: Annotated[dict[str, Any], Depends(require_owner)],
 ):
     """Disable or enable a user. Disabling terminates active sessions and running jobs."""
     try:
-        res = set_user_disabled(conn, user_id, data.disabled)
+        res = set_user_disabled(conn, user_id, data.disabled, data_root=request.app.state.data_root)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
+    if data.disabled:
+        for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
+            if uid == user_id:
+                request.app.state.unlocked_sessions.pop(session_id, None)
     user_row = conn.execute("SELECT created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     return UserResponse(
         id=res["id"],
@@ -361,6 +367,10 @@ def reset_password_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+    for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
+        if uid == user_id:
+            request.app.state.unlocked_sessions.pop(session_id, None)
 
     return ResetUserPasswordResponse(
         status="ok",

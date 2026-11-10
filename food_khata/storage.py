@@ -1,5 +1,6 @@
 """Crash-safe local account and session storage."""
 
+import hashlib
 import json
 import os
 import re
@@ -16,6 +17,12 @@ from .contracts import KhataError
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / ".food-khata"
 ENCRYPTED_KEY = "__encrypted__"
 PHONE_ENCRYPTED_KEY = "phone_encrypted"
+
+
+def provider_identity(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode()).hexdigest()
+
+
 ADOPTION_MARKER = ".adopted.json"
 
 
@@ -137,10 +144,14 @@ class Storage:
         return value
 
     def _stored_account(self, account: dict[str, Any]) -> dict[str, Any]:
-        stored = {
-            key: value for key, value in account.items() if key not in ("has_session",)
-        }
+        stored = {key: value for key, value in account.items() if key not in ("has_session",)}
         if self.cipher is not None:
+            providers = stored.get("providers", {})
+            stored["provider_identities"] = {
+                k: (v if v.startswith("sha256:") else provider_identity(v))
+                for k, v in providers.items()
+            }
+            stored["providers"] = {k: self.cipher.encrypt_text(v) for k, v in providers.items()}
             phone = stored.pop("phone", None)
             if phone is not None:
                 stored[PHONE_ENCRYPTED_KEY] = self.cipher.encrypt_text(phone)
@@ -153,11 +164,18 @@ class Storage:
         )
 
     def _decrypt_phone(self, data: dict[str, Any], rewrite: bool) -> dict[str, Any]:
+        data = dict(data)
+        providers = data.get("providers", {})
+        if any(isinstance(v, dict) for v in providers.values()):
+            if self.cipher is None:
+                raise KhataError("Account metadata is encrypted; unlock the user data first.")
+            data["providers"] = {
+                k: self.cipher.decrypt_text(v) if isinstance(v, dict) else v
+                for k, v in providers.items()
+            }
         if PHONE_ENCRYPTED_KEY in data:
             if self.cipher is None:
-                raise KhataError(
-                    "Account metadata is encrypted; unlock the user data first."
-                )
+                raise KhataError("Account metadata is encrypted; unlock the user data first.")
             data = dict(data)
             data["phone"] = self.cipher.decrypt_text(data[PHONE_ENCRYPTED_KEY])
         elif self.cipher is not None and rewrite and "phone" in data:
@@ -182,7 +200,7 @@ class Storage:
                 data.get("version") != 1
                 or data.get("local_id") != path.name
                 or not isinstance(data.get("phone"), str)
-                or not re.fullmatch(r"[6-9][0-9]{9}", data["phone"])
+                or (data["phone"] != "" and not re.fullmatch(r"[6-9][0-9]{9}", data["phone"]))
                 or not isinstance(data.get("providers"), dict)
                 or any(
                     k not in ("zomato", "swiggy", "fake") or not isinstance(v, str) or not v
@@ -215,9 +233,18 @@ class Storage:
             raise KhataError("Invalid account identity")
         with lock(self.root / ".root.lock"):
             accounts = self._metadata()
-            matches = [a for a in accounts if a["phone"] == phone]
+            matches = [
+                a
+                for a in accounts
+                if a["phone"] == phone
+                or (
+                    not a["phone"]
+                    and a["providers"].get(provider)
+                    in (provider_id, provider_identity(provider_id))
+                )
+            ]
             if len(matches) > 1 or any(
-                a["providers"].get(provider) == provider_id and a["phone"] != phone
+                a["providers"].get(provider) == provider_id and a["phone"] not in ("", phone)
                 for a in accounts
             ):
                 raise KhataError("Account identity mismatch")
@@ -226,8 +253,12 @@ class Storage:
                 if matches
                 else {"version": 1, "local_id": str(uuid.uuid4()), "phone": phone, "providers": {}}
             )
-            if provider in account["providers"] and account["providers"][provider] != provider_id:
+            if provider in account["providers"] and account["providers"][provider] not in (
+                provider_id,
+                provider_identity(provider_id),
+            ):
                 raise KhataError("Account identity mismatch")
+            account["phone"] = phone
             account["providers"][provider] = provider_id
             self._write_account(account)
             return account
@@ -276,15 +307,20 @@ class Storage:
         for account_dir in self.accounts_dir.iterdir():
             if not account_dir.is_dir():
                 continue
-            self.account_path(account_dir.name)
             metadata_path = account_dir / "account.json"
-            metadata = read_json(metadata_path)
+            if not metadata_path.is_file():
+                continue
+            self.account_path(account_dir.name)
+            metadata = read_json(metadata_path) if metadata_path.is_file() else None
             if (
                 isinstance(metadata, dict)
-                and PHONE_ENCRYPTED_KEY not in metadata
-                and isinstance(metadata.get("phone"), str)
+                and (
+                    PHONE_ENCRYPTED_KEY not in metadata
+                    or any(isinstance(v, str) for v in metadata.get("providers", {}).values())
+                )
+                and (isinstance(metadata.get("phone"), str) or PHONE_ENCRYPTED_KEY in metadata)
             ):
-                self._write_account(metadata)
+                self._write_account(self._decrypt_phone(metadata, rewrite=False))
                 migrated += 1
             sessions_dir = account_dir / "sessions"
             if not sessions_dir.is_dir():

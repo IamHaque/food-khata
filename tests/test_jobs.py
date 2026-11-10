@@ -521,6 +521,27 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(self.control.get_job(j2["id"])["status"], CANCELLED)
 
     # --- Scenario: use_partial import ---
+    def test_disable_cancels_jobs_without_database_lock_and_wipes_credentials(self):
+        from food_khata.auth.owner import set_user_disabled
+
+        job = self.control.submit_sync(
+            user_id=self.alice_id,
+            account_id=self.alice_account_id,
+            provider="zomato",
+            session=self.alice_session,
+            cipher=self.alice_ctx.cipher,
+            provider_instance=ControlledFakeProvider(total_orders=20, page_size=2, step_delay=0.1),
+        )
+        conn = connect_app_db(self.app_db)
+        try:
+            conn.execute("UPDATE users SET is_owner = 0 WHERE id = ?", (self.alice_id,))
+            conn.commit()
+            set_user_disabled(conn, self.alice_id, True, self.data_root)
+        finally:
+            conn.close()
+        self.assertEqual(self.control.get_job(job["id"])["status"], CANCELLED)
+        self.assertIsNone(self.alice_storage.session(self.alice_account_id, "zomato"))
+
     def test_use_partial_imports_cancelled_or_failed_archive(self):
         """Partial archives are kept for resume and imported only when user chooses use_partial."""
         provider = ControlledFakeProvider(total_orders=6, page_size=2, step_delay=0.04)
