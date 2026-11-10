@@ -630,4 +630,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-17 | T6 | sol-medium | 1 | F3 | Cross-tab URL filter leakage; paused/code job banners misleading; stale completion notice |
 | 2026-11-10 | AC-17 | T5 | terra-high | 2 | review | 09522c9; cross-tab/return URL and banner fixes; parent verify and independent recheck pending |
 | 2026-11-10 | AC-17 | T6 | sol-medium | 2 | pass | 6 supplied plus 2 independent synthetic regressions; delayed-response cache/preset isolation and visuals pass |
-| 2026-11-10 | AC-18 | T8 | terra-high | 1 | running | implement-AC-18-20261110; full journey, isolation, route/CSRF/LAN/log acceptance and docs |
+| 2026-11-10 | AC-18 | T8 | terra-high | 1 | F1 | Quota after staged implementation; real-backend journey passed1440/390; preserving existing worktree |
+| 2026-11-10 | AC-18 | T8 | sol-medium | 2 | running | resume-AC-18-sol-20261110; finish staged implementation and full acceptance checks |
