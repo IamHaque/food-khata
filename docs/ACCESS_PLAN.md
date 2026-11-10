@@ -504,6 +504,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | OQ-6 | Quota numbers: max users, linked logins, jobs per user | Decided: 8 users, 5 linked logins each, 1 running and 2 queued jobs per user | AC-07 |
 | OQ-7 | Session idle timeout | Decided: 8 hours | AC-06 |
 
+| OQ-8 | Keep AC08 phone encryption across analytics/archives or explicitly approve narrower credential-only encryption scope? | User decision pending; asked 2026-11-10 under locked-decision stop rule | AC-08, GB |
+
 ### 5.7 Risk register
 
 | ID | Risk | Mitigation | Story |
@@ -645,4 +647,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 5 | review | 7ad0565; migration/lifecycle42 tests+8 subtests reported; parent full verify and independent real-server recheck pending |
 | 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 3 | F1 | OpenCode free usage limit; no latest-fix review delivered; failover to SOL Medium |
 | 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | F3 | Delayed checkpoint can recreate credentials after reset200; retained full phones conflict with AC08 acceptance scope |
-| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | running | fix-revocation-race-20261110; serialize credential checkpoint with reset/disable revocation |
+| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | review | c23228e; per-user credential lock/generation; parent verify and independent delayed-write recheck pending |
+| 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | running | recheck-revocation-race-20261110; exact delayed checkpoint/reset interleaving |
