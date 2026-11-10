@@ -212,3 +212,5 @@ CI runs on Windows and Linux with Python 3.11 and 3.14.
 The integrations were adapted from Jomato (MIT, copyright 2026 jatin-dot-py).
 See [LICENSE](LICENSE). This repository is independent and imports no parent project
 modules, configuration, sessions, or exports. Use only for accounts you control.
+
+For personal data at rest, enable host full-disk encryption (for example, BitLocker on Windows or FileVault on macOS), restrict data-folder permissions, and encrypt backups separately. Archive payloads and analytics can retain full delivery addresses and coordinates; application credential encryption does not protect those files. Password reset preserves history under this scope. Wider history encryption would require a recovery key independent of the reset password to avoid making history unreadable.

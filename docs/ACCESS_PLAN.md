@@ -261,6 +261,8 @@ Owns: `food_khata/auth/{passwords,sessions,csrf,throttle}.py`, `serve/routes_aut
 
 Owns: `storage.py`, `food_khata/users/context.py`, per-request database selection in `serve/app.py` and `serve/db.py`, the dashboard cache. Finding 8, 10. Depends: AC-03, AC-06. Size: about 400 lines, the largest story; split into two if it passes 450.
 
+- **Scenario: personal-data inventory (first).** Before accepting encryption scope, inventory personal fields retained in archives and analytics (names, phones, full delivery addresses and coordinates) using code and synthetic fixtures only; record confirmed fields and unknowns in docs/access/personal-data-inventory.md.
+
 - **Scenario: user context.** Given a logged-in user / Then the data folder `users/<id>/` and its database come from the session, and no route accepts a path or user id from the client.
 - **Scenario: isolation.** Given users A and B / When A calls the dashboard APIs / Then only A's data returns, and the cache is keyed by user, filters and database version.
 - **Scenario: adoption.** Given an existing `.food-khata` folder (a synthetic fixture in tests) / When `adopt_legacy_root(user)` runs / Then the data becomes that user's folder, a backup is kept, and a second run changes nothing.
@@ -489,6 +491,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | BL-009 | 2026-11-10 | AC-15 audit | use_partial accepts queued jobs; restrict actions to valid partial lifecycle states in crash fix | P1 | Resolved by fb01fb2; partial lifecycle actions restricted |
 
+| BL-107 | 2026-11-10 | User / AC-08 | Optional archive and analytics at-rest encryption; revisit after personal-data inventory or keyring choice BL-102 | P2 | Narrow scope approved; wider encryption needs recoverable key and data-format design |
+
 ### 5.5 Blockers
 
 | ID | Date | Story | Description | Needed to unblock | Status |
@@ -520,6 +524,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | R-4 | AC-08 grows past 450 lines | Split into isolation and encryption | AC-08 |
 | R-5 | Verify cannot reach 20 s | Documented fallback in FX-02 | FX-02 |
 | R-6 | Python findings were read, not run, and may not reproduce | First scenario of each story reproduces it | AC-02, AC-03 |
+
+| R-7 | Extending password-key encryption to history can make password reset render history unreadable | Approved narrow scope preserves analytics/archives on reset; wider encryption needs independent recovery/keyring design (BL-102, BL-107) | AC-08, AC-18 |
+| R-8 | Plain analytics and archives can contain full delivery addresses, coordinates, names or phones | Inventory before final sign-off; host full-disk encryption and private backups; explicit plaintext-data scope docs | AC-08, AC-18 |
 
 ### 5.8 Verification log
 
@@ -655,3 +662,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | F3 | Delayed checkpoint can recreate credentials after reset200; retained full phones conflict with AC08 acceptance scope |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | review | c23228e; per-user credential lock/generation; parent verify and independent delayed-write recheck pending |
 | 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | F3 | Background race accepted; cipherless managed-root CLI writes bypass revocation; parent guard added with44 tests+8 subtests pass |
+| 2026-11-10 | AC-08 | T8 | sol-medium | 7 | running | inventory-personal-data-20261110; synthetic/code field inventory before final sign-off |
