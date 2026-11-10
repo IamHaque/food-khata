@@ -560,6 +560,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-18 | parent full verify --backend --browser; real-backend journey.cjs; screenshot inspection | all seven stages pass; FakeProvider journey pass1440/390; populated dashboard screenshots readable | 114.00 s | 413db9c |
 
+| 2026-11-10 | AC-08, AC-18 | parent verify --full --backend --browser at85909e9 | all seven stages pass after managed credential write guard; focused44 tests+8 subtests passed | 156.70 s | 85909e9 |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
