@@ -311,6 +311,8 @@ class Storage:
         return value
 
     def _check_credential_generation(self) -> None:
+        if self.cipher is None and self.root.parent.name == "users":
+            raise CredentialsRevoked("Managed user credentials require an unlocked vault.")
         generation = getattr(self.cipher, "credential_generation", None)
         if (
             generation is not None

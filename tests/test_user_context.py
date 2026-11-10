@@ -12,7 +12,7 @@ from food_khata.auth import connect_app_db
 from food_khata.contracts import KhataError
 from food_khata.db import AnalyticsDB
 from food_khata.serve.app import authenticate_client, create_app
-from food_khata.storage import Storage
+from food_khata.storage import Storage, save_json
 from food_khata.users import (
     UserContext,
     UserVault,
@@ -68,7 +68,8 @@ def test_plaintext_sessions_and_phones_encrypt_on_first_unlock(tmp_path):
     root = user_root(tmp_path, "user-a")
     plaintext = Storage(root)
     account = plaintext.bind("9876543210", "zomato", "zid")
-    plaintext.save_session(account["local_id"], "zomato", {"access_token": "TOKEN-SENTINEL"})
+    # Seed a pre-upgrade file; managed writes now require an unlocked vault.
+    save_json(plaintext.account_path(account["local_id"]) / "sessions" / "zomato.json", {"access_token": "TOKEN-SENTINEL"})
     account_file = root / "accounts" / account["local_id"] / "account.json"
     session_file = root / "accounts" / account["local_id"] / "sessions" / "zomato.json"
     assert "9876543210" in account_file.read_text(encoding="utf-8")
