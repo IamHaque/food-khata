@@ -1,6 +1,6 @@
 # Food Khata: Fixes and Access Feature, Execution Plan (BDD)
 
-Plan v1.1 · 9 Nov 2026 · baseline commit `2fcacf4` · 0 of 25 stories started
+Plan v1.1 · 9 Nov 2026 · baseline commit `2fcacf4` · 25 of 25 stories DONE; Gate GB awaiting user sign-off
 
 ## 1. Scope, order and rules
 
@@ -416,7 +416,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-04 | Sync service | B | P0 | DONE | 2026-11-09 | commit ee28f0d; SyncEvent typed events, error codes, cancel token, 3 modes, thin CLI wrapper, pytest 133 passed | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
-| AC-08 | Per-user data and encrypted sessions | B | P0 | IN_PROGRESS | 2026-11-10 | 85909e9 merged; HTTP encryption/migration/revocation fixes verified on branch; DEC-021 approved; trunk checks pending | B3 |
+| AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-10 | 4e1adf5; final trunk full verify171.59s; encryption/migration/revocation and inventory tests pass; approved scope DEC-021 | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
 | AC-09 | Job runner | B | P0 | DONE | 2026-11-09 | commit 40a4f00; JobRunner and JobControl, 1 running 2 queued limits, restart recovery, cancel checkpoint, pytest 165 passed | B4 |
 | AC-10 | Accounts and sync API | B | P0 | DONE | 2026-11-09 | commit c7de453; accounts & sync endpoints, 1 running 2 queued limits, 409 PROVIDER_ACCOUNT_TAKEN, 409 QUOTA, 404 auth, contract C-1 freeze, pytest 188 passed | B5 |
@@ -427,8 +427,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-15 | Sync screens and background states | B | P0 | DONE | 2026-11-10 | a917762 + 1d4e11b; trunk verify 94.05s; independent crash/restart/API/1440/390 audit pass | B6 |
 | AC-16 | Owner settings | B | P1 | DONE | 2026-11-10 | bc34ca2 + 8c1c276; trunk verify 104.92s includes owner typecheck; independent API/1440/390 visuals pass; parent expiry/error/dialog checks pass | B6 |
 | AC-17 | Dashboard integration | B | P1 | DONE | 2026-11-10 | 282a0db; trunk verify 91.10s; parent 6 browser regressions plus independent isolation and visuals pass | B7 |
-| AC-18 | Security acceptance, end-to-end, docs | B | P0 | IN_PROGRESS | 2026-11-10 | 85909e9 + f11964b merged; final trunk full verify/build/bundle/journey running | B8 |
-| GB | Access feature acceptance | B | P0 | IN_PROGRESS | 2026-11-10 | Independent technical audits and approved DEC-021 recorded; final trunk checks and user manual sign-off pending | B8 |
+| AC-18 | Security acceptance, end-to-end, docs | B | P0 | DONE | 2026-11-10 | 4e1adf5; full trunk verify/build/bundle pass; actual FakeProvider journey1440/390 pass; manual checklist and privacy inventory ready | B8 |
+| GB | Access feature acceptance | B | P0 | IN_PROGRESS | 2026-11-10 | Technical checks pass4e1adf5; all25 stories DONE; user manual checklist and explicit Gate GB approval pending | B8 |
 
 ### 5.2 Decision log
 
@@ -577,6 +577,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-18 | final trunk full verify after serve dependency repair | pytest failed disk I/O at real-server restart legacy SQLite update; focused root-cause fix dispatched; build/journey not run | 131.47 s | 7f305b4 |
 
+| 2026-11-10 | AC-08, AC-18, GB | trunk full verify; production build; bundle check; FakeProvider journey | guardrails/typecheck/lint/full unit/ruff/pytest/browser all pass; build pass; entry101.8kB gzip under250kB; actual backend journey1440/390 pass | 171.59 s verify | 4e1adf5 |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
@@ -605,6 +607,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-09 | AC-11 | LAN mode, host allow-list validation, HTTPS transport flags and cookies, and host provider isolation | 2af129a |
 | 2026-11-09 | AC-13 | Welcome, setup, login, and registration screens with no-recovery acknowledgement, join-code protection, and generic error handling | 1fc4ccb |
 | 2026-11-09 | AC-10 | Accounts and background sync API endpoints, OpenAPI contract freeze C-1, regenerated frontend types, and verification test suites | c7de453 |
+
+| 2026-11-10 | AC-08, AC-18 | Completed audited security fixes and user-approved encryption scope, privacy inventory, recovery docs and real-backend acceptance. All automated trunk checks pass; Gate GB remains user-only. | 4e1adf5 |
 
 ### 5.10 Delegation ledger
 

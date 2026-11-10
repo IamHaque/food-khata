@@ -42,3 +42,20 @@ validation. Automated acceptance does not verify real provider compatibility,
 network deployment or protection from the host administrator. Gate GB remains
 pending the user's manual checks and explicit approval; this evidence does not
 close other tracker stories or approve the gate.
+
+## Final trunk verification (2026-11-10)
+
+At trunk commit `4e1adf5`, the parent ran the full verification suite (171.59s),
+production build, bundle budget check and real-backend FakeProvider journeys at
+1440 and 390 pixels; all passed. Largest entry: 101.8 kB gzip / 250 kB budget.
+This supersedes the initial worktree-only checks above and includes the vault,
+revocation, adoption, identifier migration and Windows SQLite test lifecycle fixes.
+
+The approved encryption scope is DEC-021. Provider credentials and account metadata
+are protected; analytics and raw archive payloads remain ordinary protected files.
+The [personal-data inventory](personal-data-inventory.md) confirms full delivery
+addresses and precise coordinates in SQLite and synthetic recipient names and
+phones in archives. Full-disk encryption and separately encrypted backups are
+recommended. All 25 implementation stories are DONE. Gate GB remains pending the
+[user's manual checklist and explicit approval](manual-smoke.md); no real accounts
+or real LAN deployment were tested by automation.
