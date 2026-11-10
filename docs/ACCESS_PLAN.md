@@ -648,4 +648,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 3 | F1 | OpenCode free usage limit; no latest-fix review delivered; failover to SOL Medium |
 | 2026-11-10 | AC-08, AC-18, GB | T9 | sol-medium | 4 | F3 | Delayed checkpoint can recreate credentials after reset200; retained full phones conflict with AC08 acceptance scope |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | review | c23228e; per-user credential lock/generation; parent verify and independent delayed-write recheck pending |
-| 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | running | recheck-revocation-race-20261110; exact delayed checkpoint/reset interleaving |
+| 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | F3 | Background race accepted; cipherless managed-root CLI writes bypass revocation; parent guard added with44 tests+8 subtests pass |
