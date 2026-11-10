@@ -414,7 +414,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | AC-04 | Sync service | B | P0 | DONE | 2026-11-09 | commit ee28f0d; SyncEvent typed events, error codes, cancel token, 3 modes, thin CLI wrapper, pytest 133 passed | B2 |
 | AC-05 | Provider linking service and FakeProvider | B | P0 | DONE | 2026-11-09 | commit 35c74bb; LinkingService, two-step login handle (10m TTL), FakeProvider double, pytest 124 passed | B1 |
 | AC-06 | Auth core | B | P0 | DONE | 2026-11-09 | commit 79f8dda; scrypt slow hashing, server sessions (8h idle), CSRF 403, 5-try throttle 429, route auth sweep, contract C-0, pytest 140 passed | B2 |
-| AC-08 | Per-user data and encrypted sessions | B | P0 | DONE | 2026-11-09 | commit 6a1ef89; users/<id>/ isolation, DB per-user, cache keying, AEAD encryption at rest, adoption backup, pytest 146 passed | B3 |
+| AC-08 | Per-user data and encrypted sessions | B | P0 | IN_PROGRESS | 2026-11-10 | Reopened: acceptance audit reproduced unused vault HTTP path and plaintext sessions/phones; security fix dispatched | B3 |
 | AC-07 | Owner, setup and registration | B | P0 | DONE | 2026-11-09 | commit 911b751; loopback/setup code claim, hashed rotatable join code, 8 user cap, admin actions, CLI recovery, pytest 152 passed | B4 |
 | AC-09 | Job runner | B | P0 | DONE | 2026-11-09 | commit 40a4f00; JobRunner and JobControl, 1 running 2 queued limits, restart recovery, cancel checkpoint, pytest 165 passed | B4 |
 | AC-10 | Accounts and sync API | B | P0 | DONE | 2026-11-09 | commit c7de453; accounts & sync endpoints, 1 running 2 queued limits, 409 PROVIDER_ACCOUNT_TAKEN, 409 QUOTA, 404 auth, contract C-1 freeze, pytest 188 passed | B5 |
@@ -636,4 +636,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-17 | T6 | sol-medium | 2 | pass | 6 supplied plus 2 independent synthetic regressions; delayed-response cache/preset isolation and visuals pass |
 | 2026-11-10 | AC-18 | T8 | terra-high | 1 | F1 | Quota after staged implementation; real-backend journey passed1440/390; preserving existing worktree |
 | 2026-11-10 | AC-18 | T8 | sol-medium | 2 | review | 413db9c; parent full verify/journey and independent Phase B acceptance audit pending |
-| 2026-11-10 | AC-18, GB | T9 | glm-high | 1 | running | audit-GB-acceptance-20261110; independent Phase B technical readiness; user approval remains pending |
+| 2026-11-10 | AC-18, GB | T9 | glm-high | 1 | F3 | HTTP vault never unlocked; plaintext provider secrets reproduced; spoofed forwarded IP bypasses throttle |
+| 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 1 | running | fix-vault-http-20261110; locked encryption requirement HTTP wiring and spoofed-IP throttle fix |
