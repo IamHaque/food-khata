@@ -241,12 +241,9 @@ def claim_owner(
 
     # Adopt legacy data root if present (AC-08 adopt_legacy_root)
     if data_root:
-        try:
-            from food_khata.users import adopt_legacy_root
+        from food_khata.users import UserContext
 
-            adopt_legacy_root(data_root, user_id)
-        except Exception:
-            pass
+        UserContext(data_root, user_id).unlock(password).adopt_legacy_root()
 
     return {
         "id": user_id,

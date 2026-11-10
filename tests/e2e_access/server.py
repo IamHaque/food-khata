@@ -31,4 +31,4 @@ class SyntheticProvider(FakeProvider):
 app.state.provider_factory = lambda provider, phone=None, **kwargs: SyntheticProvider(
     provider=provider, account_id="synthetic-" + (phone or "account"), **kwargs
 )
-uvicorn.run(app, host="127.0.0.1", port=int(sys.argv[2]), access_log=False)
+uvicorn.run(app, host="127.0.0.1", port=int(sys.argv[2]), access_log=False, proxy_headers=False)

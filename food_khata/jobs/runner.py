@@ -17,7 +17,7 @@ from ..contracts import AuthenticationError, KhataError
 from ..db import AnalyticsDB
 from ..providers.base import get_provider
 from ..services.sync import CancelToken, sync
-from ..storage import Storage
+from ..storage import Storage, provider_identity
 from ..users.context import user_database, user_root
 from .db import (
     add_job_event,
@@ -144,6 +144,8 @@ class JobRunner:
         self.last_request_time: dict[str, float] = {}
         self.pacing_lock = threading.Lock()
         self._stopped = False
+        self._cleanup_stop = threading.Event()
+        self._cleanup_thread: threading.Thread | None = None
 
     def mark_interrupted_on_startup(self) -> list[str]:
         """Mark running jobs as interrupted on server start (AC-09 restart scenario)."""
@@ -152,10 +154,21 @@ class JobRunner:
     def start(self) -> None:
         self._stopped = False
         self.mark_interrupted_on_startup()
+        self._cleanup_stop.clear()
+        if self._cleanup_thread is None or not self._cleanup_thread.is_alive():
+            self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
+            self._cleanup_thread.start()
         self.process_queue()
+
+    def _cleanup_loop(self) -> None:
+        while not self._cleanup_stop.wait(60):
+            self.drop_expired_keys()
 
     def stop(self, wait: bool = True, timeout: float = 5.0) -> None:
         self._stopped = True
+        self._cleanup_stop.set()
+        if self._cleanup_thread and self._cleanup_thread is not threading.current_thread():
+            self._cleanup_thread.join()
         with self.lock:
             active_list = list(self.active_jobs.values())
         for aj in active_list:
@@ -496,7 +509,7 @@ class JobRunner:
         with self.lock:
             for job_id, payload in list(self.registered_payloads.items()):
                 job = get_job(self.app_db_path, job_id)
-                if job and job.get("status") == NEEDS_CODE:
+                if job and job.get("status") in (NEEDS_CODE, PAUSED):
                     if job.get("updated_at", 0) < cutoff:
                         if payload.session_copy and isinstance(payload.session_copy, dict):
                             payload.session_copy.clear()
@@ -570,7 +583,7 @@ class JobControl:
 
         # In-memory copies of session and cipher for the job
         session_copy = copy.deepcopy(session) if session is not None else None
-        cipher_copy = cipher  # Cipher wrapper or data key copy
+        cipher_copy = cipher  # Shared cipher capability retained for this job
 
         payload = JobPayload(
             job_id=job_id,
@@ -590,7 +603,7 @@ class JobControl:
             user_id=user_id,
             account_id=account_id,
             provider=provider,
-            provider_id=provider_id,
+            provider_id=provider_identity(provider_id) if provider_id else None,
             mode=mode,
             status=QUEUED,
         )
@@ -703,6 +716,7 @@ class JobControl:
         session: dict[str, Any] | None = None,
         cipher: Any | None = None,
         provider_instance: Any | None = None,
+        provider_id: str | None = None,
     ) -> dict[str, Any]:
         job = self.get_job(job_id, user_id=user_id)
         if job["status"] not in (PAUSED, NEEDS_CODE, INTERRUPTED, CANCELLED, FAILED):
@@ -714,7 +728,7 @@ class JobControl:
             user_id=job["user_id"],
             account_id=job["account_id"],
             provider=job["provider"],
-            provider_id=job.get("provider_id"),
+            provider_id=provider_id,
             mode=job.get("mode", "incremental"),
             session_copy=session_copy,
             cipher_copy=cipher,

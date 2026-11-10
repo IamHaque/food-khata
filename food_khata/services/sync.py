@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ..contracts import AuthenticationError, KhataError, Provider
-from ..storage import read_json, save_json
+from ..storage import provider_identity, read_json, save_json
 
 CHECKPOINT_PAGES = 5
 CHECKPOINT_DETAILS = 50
@@ -206,7 +206,7 @@ def sync(
             or type(archive.get("version")) is not int
             or archive["version"] != 1
             or archive.get("provider") != provider.name
-            or archive.get("provider_id") != provider_id
+            or archive.get("provider_id") not in (provider_id, provider_identity(provider_id))
             or not isinstance(archive.get("orders"), dict)
             or any(
                 not isinstance(k, str)
@@ -230,7 +230,7 @@ def sync(
         archive = {
             "version": 1,
             "provider": provider.name,
-            "provider_id": provider_id,
+            "provider_id": provider_identity(provider_id),
             "orders": {},
             "history_complete": False,
             "details_complete": False,
@@ -240,6 +240,7 @@ def sync(
             "errors": [],
             "counts": {},
         }
+    archive["provider_id"] = provider_identity(provider_id)
     prior_history_complete = archive.get("history_complete", False)
     prior_lifetime_complete = archive.get("lifetime_complete", False)
     archive.update(

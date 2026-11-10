@@ -58,6 +58,7 @@ def create_app(
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
+        app.state.job_runner.start()
         try:
             yield
         finally:
@@ -429,7 +430,7 @@ def create_app(
         account_rows = [
             {
                 "id": r[0],
-                "label": "••••" + r[1][-4:],
+                "label": "Unknown" if r[1] == "Unknown" else "••••" + r[1][-4:],
                 "platforms": r[2].split(",") if r[2] else [],
                 "order_count": r[3],
                 "date_from": r[4],
@@ -523,7 +524,7 @@ def create_app(
                 conn.execute("BEGIN")
         raise sqlite3.OperationalError("database busy")
 
-    select_order = f"""{FEES_SQL} AS fees, o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, '••••' || substr(a.phone,-4) AS account_label, o.platform, o.order_date,
+    select_order = f"""{FEES_SQL} AS fees, o.account_id, o.platform_order_id, o.order_timestamp, o.order_time, o.payment_method, o.user_rating, o.food_discount, o.delivery_fee_discount, o.other_charges, o.source_complete, o.reconciliation_difference, o.id, CASE WHEN a.phone = 'Unknown' THEN 'Unknown' ELSE '••••' || substr(a.phone,-4) END AS account_label, o.platform, o.order_date,
         o.order_status, r.name AS restaurant_name, d.label AS address_label, COALESCE(d.city,r.city) AS city,
         (SELECT GROUP_CONCAT(i.item_name, ', ') FROM order_items i WHERE i.order_id=o.id) AS items_summary,
         o.final_amount_paid, o.item_subtotal, o.total_discount, o.reported_savings, o.delivery_fee,

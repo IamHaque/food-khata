@@ -119,13 +119,13 @@ class UserContext:
         self.cipher = vault.cipher
         self.storage = Storage(self.root, cipher=self.cipher)
         self.storage.migrate_plaintext()
-        from ..storage import ADOPTION_MARKER, read_json
-
-        marker = self.root / ADOPTION_MARKER
-        if marker.is_file():
-            backup = read_json(marker).get("backup")
-            if isinstance(backup, str) and backup.startswith("legacy-backup") and Path(backup).name == backup and not (self.data_root / backup).is_symlink():
-                Storage(self.data_root / backup, cipher=self.cipher).migrate_plaintext()
+        # A failed adoption keeps its intent so login resumes using the same user and key.
+        if (self.root / ".adoption-pending.json").exists():
+            self.adopt_legacy_root()
+            (self.root / ".adoption-pending.json").unlink(missing_ok=True)
+        for backup in self.data_root.glob("legacy-backup*"):
+            if backup.is_dir() and not backup.is_symlink():
+                Storage(backup, cipher=self.cipher).migrate_plaintext()
         return self
 
     def change_password(self, old_password: str, new_password: str) -> None:
@@ -175,7 +175,7 @@ class UserContext:
 
     def adopt_legacy_root(self) -> dict[str, Any]:
         """Adopt the shared legacy data root into this user's folder."""
-        result = Storage(self.data_root).adopt_legacy_root(self.user_id)
+        result = Storage(self.data_root, cipher=self.cipher).adopt_legacy_root(self.user_id)
         if self.cipher is not None:
             self.storage.migrate_plaintext()
         return result

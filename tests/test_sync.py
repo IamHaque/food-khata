@@ -41,6 +41,19 @@ class Fake:
 
 
 class SyncTests(unittest.TestCase):
+    def test_phone_identity_is_not_written_to_archive_and_legacy_resumes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            provider = Fake()
+            provider.identity = "9876543210"
+            sync(provider, path, provider.identity)
+            archive = read_json(path)
+            self.assertNotIn(provider.identity, path.read_text())
+            archive["provider_id"] = provider.identity
+            save_json(path, archive)
+            sync(provider, path, provider.identity)
+            self.assertNotIn(provider.identity, path.read_text())
+
     def test_unchanged_run_and_old_missing_details(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "history.json"

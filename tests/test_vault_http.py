@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from food_khata.providers.fake import FakeProvider
@@ -120,11 +121,73 @@ def test_adoption_backup_migrates_secrets(tmp_path):
     legacy = Storage(tmp_path)
     account = legacy.bind("9876543210", "fake", "9876543210")
     legacy.save_session(account["local_id"], "fake", {"token": "SECRET"})
-    (tmp_path / "food_analytics.db").write_bytes(b"order-data")
-    result = legacy.adopt_legacy_root("alice")
-    UserContext(tmp_path, "alice").unlock("password")
+    import sqlite3
+
+    with sqlite3.connect(tmp_path / "food_analytics.db") as conn:
+        conn.execute("CREATE TABLE orders (id TEXT)")
+        conn.execute("INSERT INTO orders VALUES ('order-data')")
+    context = UserContext(tmp_path, "alice").unlock("password")
+    result = context.adopt_legacy_root()
     for root in (tmp_path / "users" / "alice", __import__("pathlib").Path(result["backup"])):
-        assert (root / "food_analytics.db").read_bytes() == b"order-data"
+        with sqlite3.connect(root / "food_analytics.db") as conn:
+            assert conn.execute("SELECT id FROM orders").fetchone()[0] == "order-data"
         for path in (root / "accounts").rglob("*.json"):
             assert "9876543210" not in path.read_text()
             assert "SECRET" not in path.read_text()
+
+
+def test_analytics_stores_only_phone_suffix(tmp_path):
+    from food_khata.db import AnalyticsDB
+    from food_khata.users.context import UserContext
+
+    context = UserContext(tmp_path, "alice").unlock("password123")
+    account = context.storage.bind("9876543210", "fake", "9876543210")
+    metadata = context.storage.account_path(account["local_id"]) / "account.json"
+    assert "9876543210" not in metadata.read_text()
+    assert '"phone_suffix": "3210"' in metadata.read_text()
+    db = AnalyticsDB(context.database)
+    db.ingest_account(context.storage, account["local_id"])
+    with db.connection() as conn:
+        assert conn.execute("SELECT phone FROM accounts").fetchone()[0] == "3210"
+
+
+@pytest.mark.parametrize("endpoint", ["/api/owner/setup", "/api/auth/register"])
+def test_adoption_failure_is_visible_and_owner_login_resumes(tmp_path, monkeypatch, endpoint):
+    from contextlib import closing
+
+    import food_khata.storage as storage_module
+    from food_khata.auth import connect_app_db
+    from food_khata.storage import Storage
+
+    legacy = Storage(tmp_path)
+    account = legacy.bind("9876543210", "fake", "synthetic-provider")
+    legacy.save_session(account["local_id"], "fake", {"token": "SYNTHETIC-TOKEN"})
+    app = create_app(tmp_path, data_root=tmp_path)
+    client = TestClient(app, base_url="http://127.0.0.1", raise_server_exceptions=False)
+    client.headers["X-CSRF-Token"] = client.get("/api/auth/csrf").json()["csrf_token"]
+    original_save = storage_module.save_json
+
+    def interrupted(path, value):
+        if path.name == ".adopted.json":
+            raise OSError("injected adoption interruption")
+        return original_save(path, value)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(storage_module, "save_json", interrupted)
+        response = client.post(endpoint, json={"username": "owner", "password": "password123"})
+    assert response.status_code == 500
+    with closing(connect_app_db(app.state.app_db_path)) as conn:
+        users = conn.execute("SELECT id, is_owner FROM users").fetchall()
+        assert len(users) == 1 and users[0]["is_owner"]
+        user_id = users[0]["id"]
+        assert conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 0
+    login = client.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+    assert login.status_code == 200
+    assert login.json()["user"]["id"] == user_id
+    client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
+    assert client.get("/api/accounts").json()[0]["id"] == account["local_id"]
+    assert (tmp_path / "users" / user_id / ".adopted.json").exists()
+    for path in tmp_path.rglob("*"):
+        if path.is_file():
+            assert b"9876543210" not in path.read_bytes()
+            assert b"SYNTHETIC-TOKEN" not in path.read_bytes()

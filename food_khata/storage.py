@@ -5,10 +5,11 @@ import json
 import os
 import re
 import shutil
+import sqlite3
 import tempfile
 import uuid
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +156,7 @@ class Storage:
             phone = stored.pop("phone", None)
             if phone is not None:
                 stored[PHONE_ENCRYPTED_KEY] = self.cipher.encrypt_text(phone)
+                stored["phone_suffix"] = phone[-4:] if phone else ""
         return stored
 
     def _write_account(self, account: dict[str, Any]) -> None:
@@ -316,6 +318,7 @@ class Storage:
                 isinstance(metadata, dict)
                 and (
                     PHONE_ENCRYPTED_KEY not in metadata
+                    or "phone_suffix" not in metadata
                     or any(isinstance(v, str) for v in metadata.get("providers", {}).values())
                 )
                 and (isinstance(metadata.get("phone"), str) or PHONE_ENCRYPTED_KEY in metadata)
@@ -336,7 +339,19 @@ class Storage:
     # -- legacy adoption --------------------------------------------------------
 
     def _legacy_entries(self) -> list[Path]:
-        skip = {"users", "legacy-backup", ".adopt.lock", ".root.lock"}
+        skip = {
+            "users",
+            "legacy-backup",
+            ".adopt.lock",
+            ".root.lock",
+            "app.db",
+            "app.db-wal",
+            "app.db-shm",
+            "app.db-journal",
+            "food_analytics.db-wal",
+            "food_analytics.db-shm",
+            "food_analytics.db-journal",
+        }
         entries = []
         if not self.root.is_dir():
             return entries
@@ -348,18 +363,8 @@ class Storage:
             entries.append(entry)
         return entries
 
-    @staticmethod
-    def _unique_path(path: Path) -> Path:
-        if not path.exists():
-            return path
-        for index in range(2, 1000):
-            candidate = path.with_name(f"{path.name}-{index}")
-            if not candidate.exists():
-                return candidate
-        raise KhataError("Unable to choose a backup directory")
-
     def adopt_legacy_root(self, user: Any) -> dict[str, Any]:
-        """Move a legacy shared data root into ``users/<id>/`` keeping a backup.
+        """Adopt legacy data with an unlocked cipher, keeping encrypted secret backups.
 
         The second call is a no-op thanks to an adoption marker.  The backup is
         a sibling ``legacy-backup`` folder inside the same data root.
@@ -387,7 +392,7 @@ class Storage:
                     "items": [],
                 }
             entries = self._legacy_entries()
-            if not entries:
+            if not entries and not (destination / ".adoption-pending.json").exists():
                 return {
                     "adopted": False,
                     "user_id": user_id,
@@ -395,27 +400,59 @@ class Storage:
                     "backup": None,
                     "items": [],
                 }
+            if self.cipher is None:
+                raise KhataError("Unlock user data before adopting legacy data.")
             destination.mkdir(mode=0o700, parents=True, exist_ok=True)
-            backup_base = self.root / "legacy-backup"
-            backup = self._unique_path(backup_base)
+            pending = destination / ".adoption-pending.json"
+            if pending.is_file():
+                backup_name = read_json(pending)["backup"]
+                if (
+                    not isinstance(backup_name, str)
+                    or Path(backup_name).name != backup_name
+                    or not backup_name.startswith("legacy-backup")
+                ):
+                    raise KhataError("Invalid adoption backup path")
+            else:
+                backup_name = "legacy-backup"
+                if (self.root / backup_name).exists():
+                    backup_name = f"legacy-backup-{uuid.uuid4()}"
+                save_json(pending, {"version": 1, "backup": backup_name})
+            # Encrypt originals before creating any new copies, including old interrupted backups.
+            roots = [self.root, destination, *self.root.glob("legacy-backup*")]
+            for root in roots:
+                if root.is_dir() and not root.is_symlink():
+                    Storage(root, cipher=self.cipher).migrate_plaintext()
+            backup = self.root / backup_name
+            if backup.is_symlink():
+                raise KhataError("Adoption backups must not be symbolic links.")
             backup.mkdir(mode=0o700, parents=True, exist_ok=True)
             copied: list[str] = []
             for entry in entries:
                 target = destination / entry.name
-                if target.exists():
-                    continue
-                if entry.is_dir():
-                    shutil.copytree(entry, target, symlinks=False)
+                if entry.name == "food_analytics.db":
+                    # SQLite backup includes committed WAL data and works with live Windows handles.
+                    snapshot = destination / ".analytics-snapshot"
+                    try:
+                        with (
+                            closing(sqlite3.connect(entry)) as source,
+                            closing(sqlite3.connect(snapshot)) as dest,
+                        ):
+                            source.backup(dest)
+                        os.replace(snapshot, target)
+                    finally:
+                        snapshot.unlink(missing_ok=True)
+                    if not (backup / entry.name).exists():
+                        shutil.copy2(target, backup / entry.name)
+                    # Keep the live legacy database in place; never move an open SQLite file.
+                elif entry.is_dir():
+                    shutil.copytree(entry, target, dirs_exist_ok=True)
+                    shutil.copytree(entry, backup / entry.name, dirs_exist_ok=True)
+                    shutil.rmtree(entry)
                 else:
                     shutil.copy2(entry, target)
+                    shutil.copy2(entry, backup / entry.name)
+                    entry.unlink()
                 copied.append(entry.name)
-            # Only remove originals once every item has a copy in the user folder.
-            for entry in entries:
-                target = backup / entry.name
-                if entry.is_dir():
-                    shutil.move(str(entry), str(self._unique_path(target)))
-                else:
-                    shutil.move(str(entry), str(self._unique_path(target)))
             save_json(
                 marker,
                 {
@@ -425,6 +462,7 @@ class Storage:
                     "items": copied,
                 },
             )
+            pending.unlink(missing_ok=True)
             return {
                 "adopted": True,
                 "user_id": user_id,

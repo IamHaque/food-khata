@@ -202,12 +202,9 @@ def register(
         clear_setup_code(conn)
         data_root = getattr(request.app.state, "data_root", None)
         if data_root:
-            try:
-                from food_khata.users import adopt_legacy_root
+            from food_khata.users import UserContext
 
-                adopt_legacy_root(data_root, user_id)
-            except Exception:
-                pass
+            UserContext(data_root, user_id).unlock(data.password).adopt_legacy_root()
 
     return UserResponse(
         id=user_id,

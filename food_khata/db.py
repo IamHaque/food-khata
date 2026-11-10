@@ -995,7 +995,8 @@ class AnalyticsDB:
             }
 
         meta = read_json(acc_path / "account.json")
-        phone = meta.get("phone", "Unknown")
+        phone = meta.get("phone_suffix") or meta.get("phone") or "Unknown"
+        phone = phone[-4:] if re.fullmatch(r"[0-9]{4,}", phone) else "Unknown"
 
         counts: dict[str, Any] = {
             "swiggy": 0,
