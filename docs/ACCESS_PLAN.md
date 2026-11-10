@@ -638,4 +638,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-18 | T8 | sol-medium | 2 | review | 413db9c; parent full verify/journey and independent Phase B acceptance audit pending |
 | 2026-11-10 | AC-18, GB | T9 | glm-high | 1 | F3 | HTTP vault never unlocked; plaintext provider secrets reproduced; spoofed forwarded IP bypasses throttle |
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 1 | F3 | Partial uncommitted HTTP encryption proof; owner-reset failure and key/migration lifecycle incomplete |
-| 2026-11-10 | AC-08, AC-18 | T5 | sol-medium | 2 | running | finish-vault-recovery-20261110; preserve patch and complete reset/key/migration lifecycle acceptance |
+| 2026-11-10 | AC-08, AC-18 | T5 | sol-medium | 2 | review | 9f4f903; session-bound vault lifecycle implemented; parent full verify and independent HTTP-at-rest recheck pending |
+| 2026-11-10 | AC-08, AC-18, GB | T9 | glm-high | 2 | running | audit-vault-final-20261110; HTTP encryption/key/reset/migration and locked-scope recheck |
