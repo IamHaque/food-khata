@@ -554,6 +554,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-17 | node scripts/verify.mjs . --backend; Playwright access-integration | all six checks pass on trunk; 6 parent browser tests and 2 independent isolation checks pass | 91.10 s | 282a0db |
 
+| 2026-11-10 | AC-18 | pytest tests/e2e_access/test_route_sweep.py -q in acceptance worktree | parent independently confirmed 3 tests pass: logged-out route sweep, CSRF/cookie/host flags, HTTP transport status | 2.31 s | staged AC-18 on 54cdbb6 |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
