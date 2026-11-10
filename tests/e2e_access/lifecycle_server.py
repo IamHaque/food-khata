@@ -1,5 +1,6 @@
 """Slow synthetic provider for HTTP lifecycle tests."""
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -42,4 +43,13 @@ app.state.job_runner._cleanup_loop = fast_cleanup
 app.state.provider_factory = lambda provider, phone=None, account_id=None: SlowProvider(
     provider=provider, phone=phone, account_id=account_id or phone, total_orders=6, page_size=2
 )
-uvicorn.run(app, host="127.0.0.1", port=int(sys.argv[2]), access_log=False, proxy_headers=False)
+server = uvicorn.Server(uvicorn.Config(
+    app, host="127.0.0.1", port=int(sys.argv[2]), access_log=False, proxy_headers=False
+))
+if "--shutdown-stdin" in sys.argv[3:]:
+    def shutdown_on_stdin():
+        if sys.stdin.readline().strip() == "shutdown":
+            server.should_exit = True
+
+    threading.Thread(target=shutdown_on_stdin, daemon=True).start()
+server.run()

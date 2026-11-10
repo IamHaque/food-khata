@@ -667,4 +667,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-10 | AC-08, AC-18 | T8 | terra-high | 6 | review | c23228e; per-user credential lock/generation; parent verify and independent delayed-write recheck pending |
 | 2026-11-10 | AC-08, AC-18 | T6 | sol-medium | 5 | F3 | Background race accepted; cipherless managed-root CLI writes bypass revocation; parent guard added with44 tests+8 subtests pass |
 | 2026-11-10 | AC-08 | T8 | sol-medium | 7 | pass | f11964b; parent15 database tests pass; full address/coordinate/name/phone retention confirmed and presented |
-| 2026-11-10 | AC-18 | T5 | sol-medium | 8 | running | fix-trunk-sqlite-restart-test-20261110; reproduce Windows SQLite hard-stop restart failure without weakening acceptance |
+| 2026-11-10 | AC-18 | T5 | sol-medium | 8 | pass | 603811a; reproduced Windows hard-stop/WAL race; parent targeted test pass4.90s; controlled fixture shutdown preserves assertions |
