@@ -105,6 +105,8 @@ def test_password_change_rewraps_but_reset_wipes_sessions(tmp_path):
     assert unlocked.storage.session(account["local_id"], "zomato") is None
     assert unlocked.storage.accounts("zomato") == []
 
+    # A fresh unlock can link again after revocation.
+    unlocked = UserContext(tmp_path, "user-a").unlock("new-password")
     # A reset that also rotates the key cannot decrypt old sessions.
     unlocked.storage.save_session(account["local_id"], "zomato", {"access_token": "GONE"})
     unlocked.reset_password("reset-password")

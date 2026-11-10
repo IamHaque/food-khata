@@ -17,7 +17,7 @@ from ..contracts import AuthenticationError, KhataError
 from ..db import AnalyticsDB
 from ..providers.base import get_provider
 from ..services.sync import CancelToken, sync
-from ..storage import Storage, provider_identity
+from ..storage import CredentialsRevoked, Storage, provider_identity
 from ..users.context import user_database, user_root
 from .db import (
     add_job_event,
@@ -299,7 +299,11 @@ class JobRunner:
                 if hasattr(raw_provider, "dump_session") and not active_job.cancel_token.is_cancelled():
                     latest = raw_provider.dump_session()
                     if isinstance(latest, dict) and latest and not active_job.cancel_token.is_cancelled():
-                        storage.save_session(payload.account_id, payload.provider, latest)
+                        try:
+                            storage.save_session(payload.account_id, payload.provider, latest)
+                        except CredentialsRevoked:
+                            if not active_job.cancel_token.is_cancelled():
+                                raise
 
             # 4. Execute sync
             report = sync(

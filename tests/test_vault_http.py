@@ -191,3 +191,101 @@ def test_adoption_failure_is_visible_and_owner_login_resumes(tmp_path, monkeypat
         if path.is_file():
             assert b"9876543210" not in path.read_bytes()
             assert b"SYNTHETIC-TOKEN" not in path.read_bytes()
+
+@pytest.mark.parametrize("action", ["reset-password", "disable"])
+@pytest.mark.parametrize("inside_write", [False, True])
+def test_revocation_serializes_delayed_checkpoint(tmp_path, monkeypatch, action, inside_write):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    import food_khata.auth.owner as owner_module
+    import food_khata.storage as storage_module
+    from food_khata.jobs import CANCELLED
+    from food_khata.storage import Storage
+    from food_khata.users.context import UserContext
+
+    app = create_app(tmp_path, data_root=tmp_path)
+    app.state.provider_factory = lambda *args, **kwargs: FakeProvider(name="fake")
+    owner = TestClient(app, base_url="http://127.0.0.1")
+    owner.headers["X-CSRF-Token"] = owner.get("/api/auth/csrf").json()["csrf_token"]
+    assert owner.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+    owner.headers["X-CSRF-Token"] = owner.cookies["csrf_token"]
+    assert owner.post("/api/owner/window", json={"action": "open"}).status_code == 200
+    member = TestClient(app, base_url="http://127.0.0.1")
+    member.headers["X-CSRF-Token"] = member.get("/api/auth/csrf").json()["csrf_token"]
+    registration = member.post("/api/auth/register", json={"username": "alice", "password": "password123"})
+    assert registration.status_code == 200
+    user_id = registration.json()["id"]
+    login = member.post("/api/auth/login", json={"username": "alice", "password": "password123"})
+    assert login.status_code == 200
+    member.headers["X-CSRF-Token"] = login.json()["csrf_token"]
+    start = member.post("/api/accounts/link/start", json={"provider": "fake", "phone": "9876543210"})
+    linked = member.post("/api/accounts/link/verify", json={"handle": start.json()["handle"], "code": "123456"})
+    account_id = linked.json()["id"]
+    context = UserContext(tmp_path, user_id).unlock("password123")
+    other = UserContext(tmp_path, "other").unlock("other-password")
+    other_account = other.storage.bind("9876543211", "fake", "other")
+    entered, release, cancellation_finished = Event(), Event(), Event()
+    original_save = Storage.save_session
+    original_json = storage_module.save_json
+    original_cancel = owner_module.JobControl.cancel_user
+
+    def delayed_save(self, local_id, provider, value):
+        if self.root == context.root and not inside_write:
+            entered.set()
+            assert release.wait(20)
+        return original_save(self, local_id, provider, value)
+
+    def delayed_json(path, value):
+        if inside_write and path == context.root / "accounts" / account_id / "sessions" / "fake.json":
+            entered.set()
+            assert release.wait(20)
+        return original_json(path, value)
+
+    def cancel(*args):
+        result = original_cancel(*args)
+        cancellation_finished.set()
+        return result
+
+    monkeypatch.setattr(Storage, "save_session", delayed_save)
+    monkeypatch.setattr(storage_module, "save_json", delayed_json)
+    monkeypatch.setattr(owner_module.JobControl, "cancel_user", cancel)
+    control = app.state.job_control
+    job = control.submit_sync(user_id=user_id, account_id=account_id, provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
+    assert entered.wait(10)
+    queued = control.submit_sync(user_id=user_id, account_id=account_id, provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
+    body = {"owner_password": "password123", "new_password": "new-password"} if action == "reset-password" else {"disabled": True}
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            response = pool.submit(owner.post, f"/api/owner/users/{user_id}/{action}", json=body)
+            assert cancellation_finished.wait(15)
+            other.storage.save_session(other_account["local_id"], "fake", {"token": "other"})
+            if inside_write:
+                assert not response.done()
+                release.set()
+                assert response.result(timeout=10).status_code == 200
+            else:
+                assert response.result(timeout=10).status_code == 200
+                release.set()
+            active = app.state.job_runner.active_jobs.get(job["id"])
+            if active:
+                assert active.finished_event.wait(10)
+    finally:
+        release.set()
+    assert control.get_job(job["id"])["status"] == CANCELLED
+    assert control.get_job(queued["id"])["status"] == CANCELLED
+    assert not list((context.root / "accounts" / account_id / "sessions").glob("*.json"))
+    if action == "disable":
+        assert owner.post(f"/api/owner/users/{user_id}/disable", json={"disabled": False}).status_code == 200
+    password = "new-password" if action == "reset-password" else "password123"
+    restarted_app = create_app(tmp_path, data_root=tmp_path)
+    restarted_client = TestClient(restarted_app, base_url="http://127.0.0.1")
+    restarted_client.headers["X-CSRF-Token"] = restarted_client.get("/api/auth/csrf").json()["csrf_token"]
+    assert restarted_client.post("/api/auth/login", json={"username": "alice", "password": password}).status_code == 200
+    assert not list((context.root / "accounts" / account_id / "sessions").glob("*.json"))
+    restarted = UserContext(tmp_path, user_id).unlock(password)
+    assert restarted.storage.session(account_id, "fake") is None
+    rebound = restarted.storage.bind("9876543210", "fake", "fake-account-1")
+    restarted.storage.save_session(rebound["local_id"], "fake", {"token": "new"})
+    assert restarted.storage.session(rebound["local_id"], "fake") == {"token": "new"}
+    assert other.storage.session(other_account["local_id"], "fake") == {"token": "other"}

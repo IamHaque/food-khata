@@ -1,5 +1,6 @@
 """Crash-safe local account and session storage."""
 
+import errno
 import hashlib
 import json
 import os
@@ -7,6 +8,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
@@ -53,7 +55,7 @@ def save_json(path: Path, value: Any) -> None:
 
 
 @contextmanager
-def lock(path: Path) -> Iterator[None]:
+def lock(path: Path, *, wait: bool = False) -> Iterator[None]:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with os.fdopen(os.open(path, os.O_RDWR | os.O_CREAT, 0o600), "r+b") as f:
         if os.name == "nt":
@@ -64,17 +66,23 @@ def lock(path: Path) -> Iterator[None]:
                 f.write(b"0")
                 f.flush()
             f.seek(0)
-            try:
-                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-            except OSError:
-                raise KhataError(
-                    "Another Food Khata process is using this account; retry when it finishes."
-                ) from None
+            while True:
+                try:
+                    msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as exc:
+                    if wait and exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                        raise
+                    if not wait:
+                        raise KhataError(
+                            "Another Food Khata process is using this account; retry when it finishes."
+                        ) from None
+                    time.sleep(0.05)
         else:
             import fcntl
 
             try:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
             except OSError:
                 raise KhataError(
                     "Another Food Khata process is using this account; retry when it finishes."
@@ -87,6 +95,19 @@ def lock(path: Path) -> Iterator[None]:
                 msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
             else:
                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+class CredentialsRevoked(KhataError):
+    """A previously unlocked credential context was revoked."""
+
+
+def credential_generation(root: Path) -> str:
+    path = root / ".credential-generation"
+    return read_json(path) if path.exists() else ""
+
+
+def credential_lock(root: Path):
+    return lock(root / ".credentials.lock", wait=True)
 
 
 def _provider(value: str) -> str:
@@ -279,18 +300,34 @@ class Storage:
         elif self.cipher is not None:
             # Migrate a plaintext session on first unlock; the atomic replace
             # removes the plaintext bytes.
-            save_json(path, self._seal(value))
+            with credential_lock(self.root):
+                self._check_credential_generation()
+                if path.exists():
+                    current = read_json(path)
+                    if not _is_envelope(current):
+                        save_json(path, self._seal(current))
         if not isinstance(value, dict):
             raise KhataError("Invalid session")
         return value
+
+    def _check_credential_generation(self) -> None:
+        generation = getattr(self.cipher, "credential_generation", None)
+        if (
+            generation is not None
+            and getattr(self.cipher, "credential_root", None) == self.root
+            and generation != credential_generation(self.root)
+        ):
+            raise CredentialsRevoked("Provider credentials have been revoked; log in again.")
 
     def save_session(self, local_id: str, provider: str, value: dict[str, Any]) -> None:
         if not isinstance(value, dict):
             raise KhataError("Invalid session")
         path = self.account_path(local_id) / "sessions" / (_provider(provider) + ".json")
-        if path.exists():
-            self.session(local_id, provider)
-        save_json(path, self._seal(value) if self.cipher is not None else value)
+        with credential_lock(self.root):
+            self._check_credential_generation()
+            if path.exists():
+                self._unseal(read_json(path))
+            save_json(path, self._seal(value) if self.cipher is not None else value)
 
     def remove_session(self, local_id: str, provider: str) -> None:
         (self.account_path(local_id) / "sessions" / (_provider(provider) + ".json")).unlink(
