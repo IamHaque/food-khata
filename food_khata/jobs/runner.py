@@ -533,6 +533,31 @@ class JobRunner:
                             message="Verification code expired (24h timeout); key dropped",
                         )
                         interrupted.append(job_id)
+            # A running job's cancellation clears its payload before pause is recorded.
+            with get_db_conn(self.app_db_path) as conn:
+                stale = conn.execute(
+                    "SELECT id FROM jobs WHERE status = ? AND updated_at < ?",
+                    (PAUSED, cutoff),
+                ).fetchall()
+                for row in stale:
+                    job_id = row["id"]
+                    if job_id in self.registered_payloads:
+                        continue
+                    now = time.time()
+                    changed = conn.execute(
+                        "UPDATE jobs SET status = ?, error_code = ?, error_message = ?, "
+                        "finished_at = ?, updated_at = ? WHERE id = ? AND status = ? AND updated_at < ?",
+                        (INTERRUPTED, "INTERRUPTED", "Paused job expired; key dropped",
+                         now, now, job_id, PAUSED, cutoff),
+                    ).rowcount
+                    if changed:
+                        conn.execute(
+                            "INSERT INTO job_events (job_id, status, code, message, created_at) "
+                            "VALUES (?, ?, ?, ?, ?)",
+                            (job_id, INTERRUPTED, "INTERRUPTED", "Paused job expired; key dropped", now),
+                        )
+                        interrupted.append(job_id)
+                conn.commit()
         return interrupted
 
 

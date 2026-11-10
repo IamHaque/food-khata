@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from ..storage import provider_identity
 from .states import INTERRUPTED, QUEUED, RUNNING
 
 JOBS_SCHEMA_SQL = """
@@ -75,17 +76,32 @@ def get_db_conn(conn_or_path: sqlite3.Connection | Path | str) -> Iterator[sqlit
             conn.close()
 
 
+def migrate_job_identifiers(conn: sqlite3.Connection) -> None:
+    """Replace legacy job identifiers inside the caller's transaction."""
+    for job_id, provider_id in conn.execute(
+        "SELECT id, provider_id FROM jobs WHERE provider_id IS NOT NULL"
+    ).fetchall():
+        if not provider_id.startswith("sha256:"):
+            conn.execute(
+                "UPDATE jobs SET provider_id = ? WHERE id = ?",
+                (provider_identity(provider_id), job_id),
+            )
+
+
 def init_jobs_tables(conn_or_path: sqlite3.Connection | Path | str) -> None:
     """Initialize jobs and job_events tables in app.db."""
     with get_db_conn(conn_or_path) as conn:
         conn.executescript(JOBS_SCHEMA_SQL)
+        conn.execute("PRAGMA secure_delete = ON")
         conn.execute("BEGIN IMMEDIATE")
         columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
         if "partial_decision" not in columns:
             conn.execute("ALTER TABLE jobs ADD COLUMN partial_decision TEXT NOT NULL DEFAULT 'pending'")
         conn.execute("""UPDATE jobs SET partial_decision = 'imported' WHERE partial_decision = 'pending' AND EXISTS
             (SELECT 1 FROM job_events WHERE job_id = jobs.id AND code = 'IMPORTED_PARTIAL')""")
+        migrate_job_identifiers(conn)
         conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
 
 def _format_counts(counts: Any) -> str | None:

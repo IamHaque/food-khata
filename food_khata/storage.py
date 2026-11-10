@@ -298,12 +298,24 @@ class Storage:
         )
 
     def migrate_plaintext(self) -> int:
-        """Encrypt plaintext phones and sessions; return the number of rewrites.
+        """Migrate plaintext credentials and archive identity headers.
 
         Called after a successful unlock.  Rewrites use atomic replacement, so
         the plaintext file is deleted once the encrypted file is in place.
         """
-        if self.cipher is None or not self.accounts_dir.is_dir():
+        if self.cipher is None:
+            return 0
+        app_db = self.root / "app.db"
+        if app_db.is_file():
+            from .jobs.db import migrate_job_identifiers
+
+            with closing(sqlite3.connect(app_db, timeout=30)) as conn:
+                if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'jobs'").fetchone():
+                    conn.execute("PRAGMA secure_delete = ON")
+                    migrate_job_identifiers(conn)
+                    conn.commit()
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        if not self.accounts_dir.is_dir():
             return 0
         migrated = 0
         for account_dir in self.accounts_dir.iterdir():
@@ -325,6 +337,14 @@ class Storage:
             ):
                 self._write_account(self._decrypt_phone(metadata, rewrite=False))
                 migrated += 1
+            for archive_path in account_dir.glob("*-history.json"):
+                archive = read_json(archive_path)
+                if isinstance(archive, dict):
+                    identity = archive.get("provider_id")
+                    if isinstance(identity, str) and identity and not identity.startswith("sha256:"):
+                        archive["provider_id"] = provider_identity(identity)
+                        save_json(archive_path, archive)
+                        migrated += 1
             sessions_dir = account_dir / "sessions"
             if not sessions_dir.is_dir():
                 continue
