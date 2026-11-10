@@ -556,6 +556,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | 2026-11-10 | AC-18 | pytest tests/e2e_access/test_route_sweep.py -q in acceptance worktree | parent independently confirmed 3 tests pass: logged-out route sweep, CSRF/cookie/host flags, HTTP transport status | 2.31 s | staged AC-18 on 54cdbb6 |
 
+| 2026-11-10 | AC-18 | parent full verify --backend --browser; real-backend journey.cjs; screenshot inspection | all seven stages pass; FakeProvider journey pass1440/390; populated dashboard screenshots readable | 114.00 s | 413db9c |
+
 ### 5.9 Changelog
 
 | Date | Story | Change | Commit |
