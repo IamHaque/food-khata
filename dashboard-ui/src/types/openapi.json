@@ -601,7 +601,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Filters"
+                "$ref": "#/components/schemas/DashboardRequest"
               }
             }
           },
@@ -4309,6 +4309,208 @@
         ],
         "title": "Dashboard"
       },
+      "DashboardRequest": {
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "account_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Account Ids"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Platforms"
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses",
+            "description": "Repeat for multiple statuses; statuses= selects all statuses."
+          },
+          "cities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cities"
+          },
+          "localities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Localities"
+          },
+          "restaurant_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Restaurant Ids"
+          },
+          "cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cuisines"
+          },
+          "veg": {
+            "type": "string",
+            "enum": [
+              "all",
+              "veg",
+              "nonveg",
+              "unknown"
+            ],
+            "title": "Veg",
+            "default": "all"
+          },
+          "payment_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payment Methods"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "meal_slots": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "breakfast",
+                "lunch",
+                "snack",
+                "dinner",
+                "late_night"
+              ]
+            },
+            "type": "array",
+            "title": "Meal Slots"
+          },
+          "day_type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "default": "all"
+          },
+          "verified_only": {
+            "type": "boolean",
+            "title": "Verified Only",
+            "default": false
+          },
+          "anomaly": {
+            "type": "string",
+            "enum": [
+              "all",
+              "review"
+            ],
+            "title": "Anomaly",
+            "default": "all"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search"
+          },
+          "compare": {
+            "type": "string",
+            "enum": [
+              "none",
+              "previous_period",
+              "previous_year"
+            ],
+            "title": "Compare",
+            "default": "none"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "overview",
+                    "spending",
+                    "food",
+                    "behavior",
+                    "places"
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sections"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DashboardRequest",
+        "description": "Filters plus the optional sections the page needs; unlisted sections come back empty (C-2, additive)."
+      },
       "DietMonth": {
         "properties": {
           "month": {
@@ -6845,6 +7047,11 @@
             },
             "type": "array",
             "title": "Rows"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
           }
         },
         "type": "object",
