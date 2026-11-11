@@ -51,7 +51,7 @@ export function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { data, isLoading } = useAuth();
   const location = useLocation();
   if (isLoading) return null;
-  if (data) return <Navigate to={safeReturnPath(new URLSearchParams(location.search).get("return") || "/")} replace />;
+  if (data) return <Navigate to={safeReturnPath(new URLSearchParams(location.search).get("return") || "/home")} replace />;
   return <>{children}</>;
 }
 
@@ -96,9 +96,11 @@ export function useLogout() {
 export function safeReturnPath(value: string): string {
   try {
     const url = new URL(value, window.location.origin);
-    if (url.origin !== window.location.origin || !value.startsWith('/') || value.startsWith('//')) return '/';
-    return url.pathname;
+    if (url.origin !== window.location.origin || !value.startsWith('/') || value.startsWith('//')) return '/home';
+    // Ids in filters belong to the previous user; keep every other parameter.
+    ['account_ids', 'restaurant_ids'].forEach((k) => url.searchParams.delete(k));
+    return url.pathname + url.search;
   } catch {
-    return '/';
+    return '/home';
   }
 }

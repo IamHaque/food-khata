@@ -95,6 +95,8 @@ function Shell() {
   const health = useHealth(filters);
   const accounts = useAccounts();
 
+  if (accounts.data?.length === 0) return <Navigate to="/home" replace />; // no data yet: Home is the hub
+
   return (
     <TooltipProvider>
     <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden">
@@ -156,10 +158,10 @@ function Shell() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
             <UtensilsCrossed className="h-4 w-4" />
           </div>
-          <div className="brand leading-none">
+          <Link to="/" className="brand leading-none">
             <span className="font-bold text-sm sm:text-base tracking-tight text-foreground block">Food Khata</span>
             <span className="text-xs text-muted-foreground font-normal hidden sm:block mt-0.5">Your food story</span>
-          </div>
+          </Link>
         </div>
 
         {/* Center: Account Selector */}

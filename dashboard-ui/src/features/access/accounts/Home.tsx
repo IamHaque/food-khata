@@ -69,7 +69,10 @@ export function Home() {
   return (
     <AuthShell title="Home" subtitle="Linked accounts">
       <div className="space-y-4">
-        <Link className="underline text-sm" to="/">Dashboard</Link>
+        <div className="flex gap-4 text-sm">
+          <Link className="underline" to="/">Open dashboard</Link>
+          <Link className="underline" to="/sync">Sync now</Link>
+        </div>
         <SessionControls />
         {message && <StatusBanner variant="info">{message}</StatusBanner>}
 

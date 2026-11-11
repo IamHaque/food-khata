@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { useSetupStatus } from "../api";
 import { StatusBanner } from "./StatusBanner";
 
@@ -13,6 +14,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+        <Link to="/home" className="block text-center text-sm font-semibold">Food Khata</Link>
         {(title || subtitle) && (
           <div className="space-y-1 text-center">
             {title && <h1 className="text-xl font-bold">{title}</h1>}

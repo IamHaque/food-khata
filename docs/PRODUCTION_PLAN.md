@@ -483,7 +483,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PR-01 | Reproduction harness for the reported bugs | P0 | P0 | DONE | 2026-11-11 | auth-flow.spec.ts at 1440 and 390: 6 pass, 4 red for PR-02 (session-ended message) and PR-03 (setup lands on /login) | W0 |
 | PR-02 | Session consistency and login without bounce | P0 | P0 | DONE | 2026-11-11 | pytest + vitest + browser (restart test green at 1440 and 390); verify on trunk after merge | W1 |
-| PR-03 | Landing on Home and navigation rules | P0 | P0 | TODO | | | W2 |
+| PR-03 | Landing on Home and navigation rules | P0 | P0 | DONE | 2026-11-11 | browser suite 84 pass incl. [PR-03] at 1440 and 390; vitest 1024; verify on trunk after merge | W2 |
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
 | PR-05 | Account scope and no shared database | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-05; trunk re-run after merge; browser not run | W1 |
 | G0 | User findings closed | P0 | P0 | TODO | | | W2 |
@@ -533,6 +533,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-07 | 2026-11-11 | PR-01 | Register in the U-2 test | Register needs an open registration window and join code; the register landing check moves to PR-03, which owns `Register.tsx` | One of three U-2 paths is covered later | Open |
 | DEV-08 | 2026-11-11 | PR-02 | `serve/deps.py`; "keeps the typed username"; login p95 number | `deps.py` is left to PR-17 (nothing needs it yet); the login screen is re-mounted after the redirect so no username is kept; the login p95 is measured at Gate GC | Fewer files, two small gaps | Open |
 | DEV-09 | 2026-11-11 | PR-02 | Edits only in Owns | Also edited `features/access/routes.tsx` (RedirectIfAuthed wrapper), `e2e/access-integration.spec.ts` (labels from PR-05, login tab starts signed out) and removed unused `isAuthenticated()` | PR-05's label change had broken the access-integration spec; fixed here | Closed |
+| DEV-10 | 2026-11-11 | PR-03 | `return` keeps its query string | `account_ids` and `restaurant_ids` are dropped from the return path, because they are the previous user's ids and the cross-tab test (and PR-05's 422) require it | Other parameters are kept | Closed |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -585,6 +586,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-03 | `npx playwright test` (all) and `verify . --backend` on branch pr-03 | all PASS | — | pr-03 |
 | 2026-11-11 | PR-02 | `verify . --backend` and `npx playwright test` on branch pr-02 | see Progress | — | pr-02 |
 | 2026-11-11 | PR-01 | `npx playwright test e2e/auth-flow.spec.ts` | 6 pass, 4 fail as designed: [PR-02] restart lacks "Your session ended" message, [PR-03] setup ends on `/login?setup=complete` | 24 s | trunk |
 | 2026-11-11 | PR-05 | `verify . --backend` on branch pr-05 and trunk | all PASS | 96 s | pr-05 |
@@ -596,6 +598,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-03 | Login and setup land on `/home`; `return` keeps query; zero accounts at `/` redirect to Home; `/accounts` redirects to `/home`; Open dashboard and Sync now on Home; brand links | pr-03 |
 | 2026-11-11 | PR-02 | Sessions deleted at startup; middleware closes a key-less session with 401 `SESSION_EXPIRED`; touch at most once a minute; client handles 401 once through the router, retries a stale CSRF once, seeds `/me` from login; login page redirects when signed in; expired banner | pr-02 |
 | 2026-11-11 | PR-01 | Browser repro suite: backend serves the built UI, restart reuses data folder and port, two widths | trunk |
 | 2026-11-11 | PR-05 | `create_app(legacy_single_db=False)` default, `serve` always has a data root; `account_ids` checked against the user's own account folders (422 `INVALID_ACCOUNT`); selector reads "All my accounts (n)" with tooltip and "Swiggy ••••1234" labels | pr-05 |
