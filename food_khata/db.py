@@ -386,6 +386,7 @@ class AnalyticsDB:
                 "source_complete": "INTEGER DEFAULT 0",
                 "source_bill_json": "TEXT",
                 "discount_breakdown_json": "TEXT",
+                "source_hash": "TEXT",
             }.items():
                 if name not in columns:
                     conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}")
@@ -1025,12 +1026,14 @@ class AnalyticsDB:
                     raise KhataError(f"Invalid {provider} archive")
 
                 existing_oids: set[str] = set()
+                stored_hashes: dict[str, str | None] = {}
                 if incremental:
+                    # An order is skipped only when its archive content is unchanged since it was imported.
                     cursor.execute(
-                        "SELECT platform_order_id FROM orders WHERE account_id = ? AND platform = ?",
+                        "SELECT platform_order_id, source_hash FROM orders WHERE account_id = ? AND platform = ?",
                         (local_id, provider.upper()),
                     )
-                    existing_oids.update(str(row[0]) for row in cursor.fetchall())
+                    stored_hashes = {str(row[0]): row[1] for row in cursor.fetchall()}
                     cursor.execute(
                         "SELECT platform_order_id FROM quarantine WHERE account_id = ? AND platform = ?",
                         (local_id, provider.upper()),
@@ -1055,7 +1058,8 @@ class AnalyticsDB:
                 )
                 for oid, order in archive["orders"].items():
                     oid_str = str(oid)
-                    if incremental and oid_str in existing_oids:
+                    digest = hashlib.sha256(json.dumps(order, sort_keys=True, default=str).encode()).hexdigest()
+                    if incremental and (oid_str in existing_oids or stored_hashes.get(oid_str) == digest):
                         continue
                     sp_id = f"sp_{re.sub(r'[^a-zA-Z0-9_]', '_', oid_str)}"
                     cursor.execute(f"SAVEPOINT {sp_id}")
@@ -1068,6 +1072,10 @@ class AnalyticsDB:
                             raise ValueError("Malformed order: missing both details and history")
                         if ingest(cursor, local_id, oid_str, order):
                             counts[provider] += 1
+                            cursor.execute(
+                                "UPDATE orders SET source_hash = ? WHERE account_id = ? AND platform = ? AND platform_order_id = ?",
+                                (digest, local_id, provider.upper(), oid_str),
+                            )
                         cursor.execute(f"RELEASE SAVEPOINT {sp_id}")
                     except KhataError as exc:
                         cursor.execute(f"ROLLBACK TO SAVEPOINT {sp_id}")
@@ -1112,6 +1120,19 @@ class AnalyticsDB:
 
         counts["total"] = counts["swiggy"] + counts["zomato"]
         return counts
+
+    def open_order_ids(self, account_id: str, platform: str, days: int = 14, limit: int = 50) -> list[str]:
+        """Recent orders whose status is not final yet; the next sync fetches their details again."""
+        cutoff = (datetime.now(IST) - timedelta(days=days)).date().isoformat()
+        with self.connection() as conn:
+            return [
+                str(r[0])
+                for r in conn.execute(
+                    "SELECT platform_order_id FROM orders WHERE account_id = ? AND platform = ? AND order_date >= ? "
+                    "AND order_status NOT IN ('DELIVERED', 'CANCELLED') ORDER BY order_date DESC LIMIT ?",
+                    (account_id, platform.upper(), cutoff, limit),
+                )
+            ]
 
     def ingest_all(self, storage: Storage, *, incremental: bool = True) -> dict[str, Any]:
         """Ingest histories from all accounts found in storage."""

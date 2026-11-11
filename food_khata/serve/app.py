@@ -438,6 +438,9 @@ def create_app(
         ).fetchone()
         verified, duplicates, anomalies = agg[0], agg[-2], agg[-1]
         null_rates = {n: (round(v, 2) if v is not None else None) for n, v in zip(columns, agg[1:-2], strict=True)}
+        quarantined = conn.execute(
+            "SELECT COUNT(*) FROM quarantine a WHERE " + (" AND ".join(clauses) or "1=1"), scope
+        ).fetchone()[0]
         item_rates = conn.execute(
             f"SELECT AVG(CASE WHEN i.is_veg IS NULL THEN 100.0 ELSE 0 END), AVG(CASE WHEN i.category IS NULL THEN 100.0 ELSE 0 END) FROM order_items i JOIN orders o ON o.id=i.order_id WHERE {where}",
             params,
@@ -453,6 +456,7 @@ def create_app(
             "null_rates": null_rates,
             "duplicate_orders": duplicates,
             "reconciliation_anomalies": anomalies,
+            "quarantined_orders": quarantined,
             "note": "Food orders only; Instamart/Dineout excluded; API-visible history only. Saved details are snapshots; later refunds or status changes may be missing.",
         }
 

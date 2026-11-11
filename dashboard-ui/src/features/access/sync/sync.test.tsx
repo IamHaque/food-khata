@@ -12,7 +12,7 @@ vi.mock("@tanstack/react-query", () => ({
   useMutation: (options: unknown) => { state.mutation = options; return { mutate: state.mutate, error: state.error, isPending: false }; },
   useQueryClient: () => ({ setQueryData: state.set, invalidateQueries: state.invalidate }),
 }));
-const job = (status: string): SyncJob => ({ id: "synthetic-job", user_id: "synthetic-user", account_id: "synthetic-account", provider: "swiggy", mode: "new", status, partial_decision: "pending", phase: "bills", counts: { orders: 12 } });
+const job = (status: string): SyncJob => ({ id: "synthetic-job", user_id: "synthetic-user", account_id: "synthetic-account", provider: "swiggy", mode: "new", status, partial_decision: "pending", phase: "bills", counts: { orders: 12 }, import_pending: status === "import_failed" });
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>);
 beforeEach(() => { vi.restoreAllMocks(); state.data = undefined; state.error = null; state.mutate.mockClear(); state.set.mockClear(); setCsrfToken("synthetic-csrf"); });
 
@@ -38,6 +38,11 @@ describe("sync screens", () => {
     await state.mutation.mutationFn("cancel");
     expect(cancel).toHaveBeenCalledWith("synthetic-job");
     expect(state.set).toHaveBeenCalledWith(["access", "sync", "synthetic-job"], job("cancelled"));
+  });
+  it("shows Fetched, import failed with Retry import and never Sync complete", () => {
+    state.data = { ...job("failed"), import_pending: true };
+    const output = html(<SyncJobScreen jobId="synthetic-job" />);
+    expect(output).toContain("Fetched, import failed"); expect(output).toContain("Retry import"); expect(output).not.toContain("Sync complete");
   });
   it("asks to verify again and offers resume after login for interrupted jobs", async () => {
     state.data = job("needs_code");

@@ -307,6 +307,7 @@ def sync(
         else:
             archive["history_complete"] = prior_history_complete
 
+        refresh = set(archive.get("refresh_ids") or []) if internal_mode != "repair" else set()
         if not cancelled_flag:
             details_since_checkpoint = 0
             for order_id in sorted(archive["orders"].keys()):
@@ -315,6 +316,11 @@ def sync(
                     checkpoint()
                     break
                 order = archive["orders"][order_id]
+                if order_id in refresh:  # still open at the last import: fetch again so refunds and cancellations appear
+                    fresh = provider.details(order_id)
+                    if provider.valid_details(order_id, fresh):
+                        order["details"] = fresh
+                        details_downloaded += 1
                 if not provider.valid_details(order_id, order.get("details")):
                     details = provider.details(order_id)
                     if not provider.valid_details(order_id, details):
@@ -340,6 +346,7 @@ def sync(
         all_details_valid = all(
             provider.valid_details(k, v.get("details")) for k, v in archive["orders"].items()
         )
+        archive["refresh_ids"] = []
         archive["details_complete"] = all_details_valid
         archive["complete"] = archive["history_complete"] and archive["details_complete"]
         if internal_mode == "full" and archive["history_complete"]:

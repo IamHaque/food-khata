@@ -3537,6 +3537,49 @@
         }
       }
     },
+    "/api/sync/jobs/{job_id}/retry-import": {
+      "post": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Retry Import Sync",
+        "description": "Run the import again for a job whose fetch finished but whose import failed.",
+        "operationId": "retry_import_sync_api_sync_jobs__job_id__retry_import_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sync/jobs/{job_id}/use-partial": {
       "post": {
         "tags": [
@@ -5214,6 +5257,11 @@
           "reconciliation_anomalies": {
             "type": "integer",
             "title": "Reconciliation Anomalies"
+          },
+          "quarantined_orders": {
+            "type": "integer",
+            "title": "Quarantined Orders",
+            "default": 0
           },
           "note": {
             "type": "string",
@@ -7358,6 +7406,12 @@
             ],
             "title": "Resumable",
             "description": "Whether job can be resumed"
+          },
+          "import_pending": {
+            "type": "boolean",
+            "title": "Import Pending",
+            "description": "Fetched, but the import into analytics failed; retry it",
+            "default": false
           }
         },
         "type": "object",

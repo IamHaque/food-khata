@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class CreateSyncJobRequest(BaseModel):
@@ -37,6 +37,14 @@ class SyncJobResponse(BaseModel):
     created_at: float | None = Field(default=None, description="Timestamp job was enqueued")
     updated_at: float | None = Field(default=None, description="Timestamp job state was last updated")
     resumable: int | bool | None = Field(default=None, description="Whether job can be resumed")
+    import_pending: bool = Field(default=False, description="Fetched, but the import into analytics failed; retry it")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _import_pending(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data = {**data, "import_pending": data.get("status") == "failed" and data.get("error_code") == "IMPORT_FAILED"}
+        return data
 
 
 class JobEventOut(BaseModel):

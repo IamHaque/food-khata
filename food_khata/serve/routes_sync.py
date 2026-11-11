@@ -230,6 +230,27 @@ def resume_sync_job(
     return SyncJobResponse(**resumed)
 
 
+@router.post("/jobs/{job_id}/retry-import", response_model=SyncJobResponse)
+def retry_import_sync(
+    job_id: str,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    control: Annotated[JobControl, Depends(get_job_control)],
+):
+    """Run the import again for a job whose fetch finished but whose import failed."""
+    try:
+        return SyncJobResponse(**control.retry_import(job_id, user_id=user_id))
+    except JobNotFoundError as err:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "NOT_FOUND", "message": f"Job '{job_id}' not found."},
+        ) from err
+    except KhataError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "IMPORT_FAILED", "message": str(exc)},
+        ) from exc
+
+
 @router.post("/jobs/{job_id}/use-partial", response_model=UsePartialResponse)
 def use_partial_sync(
     job_id: str,
