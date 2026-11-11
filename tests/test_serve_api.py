@@ -372,7 +372,7 @@ def test_read_path_budgets_and_sections(conn):
     assert client.post("/api/dashboard", json={"sections": ["nope"]}).status_code == 422
     budgets = {
         "dashboard": (lambda: client.post("/api/dashboard", json={"statuses": ["x"]}), 40),
-        "data-health": (lambda: client.get("/api/meta/data-health"), 4),
+        "data-health": (lambda: client.get("/api/meta/data-health"), 5),
         "items": (lambda: client.get("/api/items"), 6),  # price trends are one grouped query, not one per item
     }
     for name, (call, limit) in budgets.items():

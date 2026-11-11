@@ -489,7 +489,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | G0 | User findings closed | P0 | P0 | DONE | 2026-11-11 | owner approved by hand: login, register and link scenarios | W2 |
 | PR-06 | One account, several providers | P1 | P1 | DONE | 2026-11-11 | test_one_account_several_providers; browser 84 pass; verify on trunk after merge | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | DONE | 2026-11-11 | tests in test_serve_sync.py and test_jobs.py; verify on trunk after merge | W3 |
-| PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
+| PR-08 | Import integrity and fresh data | P1 | P1 | DONE | 2026-11-11 | tests/test_pr08.py 4 pass; vitest 1025; verify on trunk after merge | W4 |
 | PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | DONE | 2026-11-11 | tests/test_pr09.py 4 pass; verify on trunk after merge | W3 |
 | PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | DONE | 2026-11-11 | tests/test_pr10.py 7 pass (20 threads claim, 2 threads link); verify on trunk after merge | W2 |
 | PR-11 | Job runner throughput and write cost | P2 | P1 | TODO | | | W4 |
@@ -541,6 +541,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-15 | 2026-11-11 | PR-12 | UI asks for the open page's `sections` | Server side is done and measured, but the pages read charts across sections (Spending reads behavior and calendar), so the UI still sends no `sections`; adopting it needs a per-page audit (BL-208) | The full dashboard call is 796 ms cold, above the 500 ms target; each section is under 500 ms | Open |
 | DEV-16 | 2026-11-11 | PR-12 | Indexes by migration; ETag 304; `/api/meta/filters` cache | The evidence report shows neither proposed index changes any plan or timing (noise under 5 percent), so none is added; browsers do not revalidate POST, so no ETag (the cached call is already 43 ms); the filters cache is left out (159 ms, Backlog BL-209) | Fewer changes | Open |
 | DEV-17 | 2026-11-11 | PR-12 | Data health in at most 2 queries | Three queries (imports, orders in one pass, items) | 16 queries to 3 | Open |
+| DEV-18 | 2026-11-11 | PR-08 | Refresh orders younger than 14 days, not final; quarantine link; first-import speed | The runner stores the open order ids (status not DELIVERED or CANCELLED, last 14 days, 50 at most) in the archive after each import and the next `new` or `all` sync fetches them again, because sync has no provider-neutral date or status; the quarantine count has no link because no reasons endpoint exists (BL-210); the first import is about 3x slower once; `archive_imports` was already written in the import transaction, so only the test was added | Reasons for quarantined orders not browsable | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -553,6 +554,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-206 | 2026-11-11 | Owner | Reproduce the owner double login prompt (U-1) at Gate G0 with browser, URL and restart details; reopen only if it still occurs | P2 | Deferred by owner (DEC-P11) |
 | BL-208 | 2026-11-11 | PR-12 | Make the UI request only the open page's `sections` (audit cross-page chart reads first) | P2 | Needs a per-page audit |
 | BL-209 | 2026-11-11 | PR-12 | Cache `/api/meta/filters` per user and database version | P3 | 159 ms; not on the critical path |
+| BL-210 | 2026-11-11 | PR-08 | Endpoint and link that list quarantined orders with their reasons | P3 | Not in PR-08 scope |
 | BL-205 | 2026-11-11 | Review | Move app state to a shared store so several workers can run | P3 | One worker is enough; PR-16 enforces it |
 | BL-207 | 2026-11-11 | PR-20 verify | `tests/test_serve_sync.py::test_discard_partial_api_persists_across_restart` fails about 2 runs in 5 (KeyError `partial_decision`), passes alone; root cause: the real job thread started by the test holds `app.db`, a request after restart gets 503 `database_unavailable`; the test now waits for the job; the product-side lock contention is for PR-11 | P1 | Test stabilised in PR-05; contention left to PR-11 |
 
@@ -595,6 +597,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-08 | Bench: 5,000 archived orders, 5 changed, incremental ingest | before 23 ms and 0 changes imported (the 5 edits were ignored); after 52 ms and 5 imported; first import 0.63 s to 2.02 s (hash and update per order, once per order) | — | pr-08 |
 | 2026-11-11 | PR-12 | Bench: 20,000 orders, `POST /api/dashboard`, 5 runs median, distinct filter per call (before = master `30d2a6c`+PR-10; after = pr-12) | cold all sections 5240 ms to 796 ms; sections overview 347, spending 276, food 361, behavior 307, places 310 ms; cached 38 to 43 ms; data-health 16 to 3 queries; items 45 to 4 queries | — | pr-12 |
 | 2026-11-11 | PR-09 | `verify . --backend` on branch pr-09 | see Progress | — | pr-09 |
 | 2026-11-11 | PR-07 | `verify . --backend` on branch pr-07 | see Progress | — | pr-07 |
@@ -613,6 +616,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-08 | `orders.source_hash` (additive); incremental import skips an order only when its archive content is unchanged, so repaired details and new statuses update the row and items; import is the visible `importing` stage and a failure ends the job `failed` with `IMPORT_FAILED` (`import_pending`), with `POST /api/sync/jobs/{id}/retry-import`; still-open orders from the last import are fetched again on the next sync (cap 50); Data health shows quarantined orders | pr-08 |
 | 2026-11-11 | PR-12 | `kpi_history` in two grouped queries (was two per month, about 4 s); dish count by join (5x); per-request metrics memo; data health one pass over orders; item price trends one grouped query; `sections` on `POST /api/dashboard` (C-2 additive, unlisted sections return empty shapes); `/api/orders/slim` capped at 5,000 with `truncated`; dashboard cache bounded 8 per user and 64 total; query-count budgets in tests; types regenerated | pr-12 |
 | 2026-11-11 | PR-09 | `delete_account_data` (one transaction, orphans removed, rolls back); wipe renames the folder first, 409 `ACCOUNT_BUSY` with a running job, 500 `WIPE_FAILED`; `POST /api/owner/users/{id}/remove`; `maintenance.py` hourly thread (sessions, attempts, events 7 d, jobs 90 d, WAL checkpoint) in chunks of 500 | pr-09 |
 | 2026-11-11 | PR-07 | Startup marks running, queued, needs_code and paused jobs interrupted/RESTART; `/jobs/{id}/code` removed (404) and the Sync screen sends users to Verify again; verify-again resumes the account's needs_code job; expiry works from the database; unique index (migration 4) gives 409 `ACCOUNT_BUSY`; types regenerated | pr-07 |

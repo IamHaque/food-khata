@@ -729,6 +729,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sync/jobs/{job_id}/retry-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Import Sync
+         * @description Run the import again for a job whose fetch finished but whose import failed.
+         */
+        post: operations["retry_import_sync_api_sync_jobs__job_id__retry_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sync/jobs/{job_id}/use-partial": {
         parameters: {
             query?: never;
@@ -1340,6 +1360,11 @@ export interface components {
             duplicate_orders: number;
             /** Reconciliation Anomalies */
             reconciliation_anomalies: number;
+            /**
+             * Quarantined Orders
+             * @default 0
+             */
+            quarantined_orders: number;
             /** Note */
             note: string;
         };
@@ -2114,6 +2139,12 @@ export interface components {
              * @description Whether job can be resumed
              */
             resumable?: number | boolean | null;
+            /**
+             * Import Pending
+             * @description Fetched, but the import into analytics failed; retry it
+             * @default false
+             */
+            import_pending: boolean;
         };
         /** TransferOwnershipRequest */
         TransferOwnershipRequest: {
@@ -3573,6 +3604,37 @@ export interface operations {
         };
     };
     resume_sync_job_api_sync_jobs__job_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_import_sync_api_sync_jobs__job_id__retry_import_post: {
         parameters: {
             query?: never;
             header?: never;

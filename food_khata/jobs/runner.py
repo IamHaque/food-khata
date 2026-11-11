@@ -18,7 +18,7 @@ from ..contracts import AuthenticationError, KhataError
 from ..db import AnalyticsDB
 from ..providers.base import get_provider
 from ..services.sync import CancelToken, sync
-from ..storage import CredentialsRevoked, Storage, provider_identity
+from ..storage import CredentialsRevoked, Storage, provider_identity, read_json, save_json
 from ..users.context import user_database, user_root
 from .db import (
     add_job_event,
@@ -347,38 +347,27 @@ class JobRunner:
                     counts=report.get("counts"),
                 )
             elif report.get("complete"):
-                # Success: Scenario import once
-                if self.data_root:
-                    try:
-                        user_db_path = user_database(self.data_root, payload.user_id)
-                        user_db_path.parent.mkdir(parents=True, exist_ok=True)
-                        analytics_db = AnalyticsDB(user_db_path)
-                        analytics_db.ingest_account(
-                            storage,
-                            payload.account_id,
-                            incremental=(payload.mode != "full"),
+                # Success: import is its own visible stage; a failure here must not look like a finished sync.
+                update_job(self.app_db_path, job_id, phase="importing")
+                try:
+                    if self.data_root:
+                        self.import_account(
+                            storage, payload.user_id, payload.account_id, payload.provider,
+                            incremental=(payload.mode != "full"), archive_path=archive_path,
                         )
-                    except Exception as e:
-                        logger.warning("Auto-import failed for job %s: %s", job_id, e)
-                update_job(
-                    self.app_db_path,
-                    job_id,
-                    status=DONE,
-                    phase="done",
-                    resumable=0,
-                    error_code=None,
-                    error_message=None,
-                    finished_at=now,
-                    counts=report.get("counts"),
-                )
-                add_job_event(
-                    self.app_db_path,
-                    job_id,
-                    status=DONE,
-                    phase="done",
-                    message="Job completed successfully",
-                    counts=report.get("counts"),
-                )
+                except Exception as e:
+                    logger.error("Import failed for job %s: %s", job_id, type(e).__name__)
+                    update_job(
+                        self.app_db_path, job_id, status=FAILED, resumable=1, error_code="IMPORT_FAILED",
+                        error_message="Fetched, but importing into your dashboard failed. Retry import.",
+                        finished_at=now, counts=report.get("counts"),
+                    )
+                    add_job_event(
+                        self.app_db_path, job_id, status=FAILED, code="IMPORT_FAILED",
+                        message="Fetched, import failed", counts=report.get("counts"),
+                    )
+                else:
+                    self.finish_done(job_id, now, report.get("counts"))
             elif report.get("error_code") == "NEEDS_OTP" or (
                 report.get("errors") and any("NEEDS_OTP" in str(e) for e in report["errors"])
             ):
@@ -498,6 +487,26 @@ class JobRunner:
 
             active_job.finished_event.set()
             self.process_queue()
+
+    def finish_done(self, job_id: str, now: float, counts: Any) -> None:
+        update_job(
+            self.app_db_path, job_id, status=DONE, phase="done", resumable=0, error_code=None,
+            error_message=None, finished_at=now, counts=counts,
+        )
+        add_job_event(
+            self.app_db_path, job_id, status=DONE, phase="done", message="Job completed successfully", counts=counts
+        )
+
+    def import_account(self, storage, user_id, account_id, provider, *, incremental, archive_path) -> dict:
+        """Import an account's archives into the analytics database, then queue still-open orders for a refresh."""
+        user_db_path = user_database(self.data_root, user_id)
+        user_db_path.parent.mkdir(parents=True, exist_ok=True)
+        analytics_db = AnalyticsDB(user_db_path)
+        result = analytics_db.ingest_account(storage, account_id, incremental=incremental)
+        archive = read_json(archive_path)
+        archive["refresh_ids"] = analytics_db.open_order_ids(account_id, provider)
+        save_json(archive_path, archive)
+        return result
 
     def cancel_active_job(
         self,
@@ -786,6 +795,23 @@ class JobControl:
             raise AccountBusy() from exc
         add_job_event(self.app_db_path, job_id, status=QUEUED, message="Job resumed")
         self.runner.process_queue()
+        return self.get_job(job_id)
+
+    def retry_import(self, job_id: str, user_id: str | None = None) -> dict[str, Any]:
+        """Run the import again for a job whose fetch finished but whose import failed; safe to repeat."""
+        job = self.get_job(job_id, user_id=user_id)
+        if job["status"] != FAILED or job.get("error_code") != "IMPORT_FAILED":
+            raise KhataError("This job has no failed import to retry.")
+        runner = self.runner
+        storage = Storage(user_root(runner.data_root, job["user_id"]))
+        archive_path = storage.account_path(job["account_id"]) / f"{job['provider']}-history.json"
+        update_job(self.app_db_path, job_id, phase="importing")
+        try:
+            runner.import_account(storage, job["user_id"], job["account_id"], job["provider"], incremental=True, archive_path=archive_path)
+        except Exception as exc:
+            update_job(self.app_db_path, job_id, phase="done", error_code="IMPORT_FAILED")
+            raise KhataError("Import failed again; nothing was changed.") from exc
+        runner.finish_done(job_id, time.time(), job.get("counts"))
         return self.get_job(job_id)
 
     def _reconcile_partial_receipt(self, conn: Any, job: dict[str, Any]) -> None:

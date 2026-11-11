@@ -25,6 +25,7 @@ export type SyncPanelHealth = {
   verified_percent?: number | null;
   null_rates?: Record<string, number | null>;
   duplicate_orders?: number;
+  quarantined_orders?: number;
   reconciliation_anomalies?: number;
   imports?: ImportHealth[];
 };
@@ -251,6 +252,12 @@ export function SyncStatusPanelBody({
                 <dt className="text-muted-foreground">Duplicate orders</dt>
                 <dd className="mt-0.5 font-mono font-semibold text-foreground">
                   {(health?.duplicate_orders ?? 0).toLocaleString('en-IN')}
+                </dd>
+              </div>
+              <div className="rounded-lg border bg-card p-3">
+                <dt className="text-muted-foreground">Quarantined orders</dt>
+                <dd className="mt-0.5 font-mono font-semibold text-foreground">
+                  {(health?.quarantined_orders ?? 0).toLocaleString('en-IN')}
                 </dd>
               </div>
               <div className="rounded-lg border bg-card p-3">
