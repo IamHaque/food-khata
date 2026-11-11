@@ -1,5 +1,6 @@
 """Local synthetic-only server for the browser acceptance journey."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -9,6 +10,15 @@ from food_khata.providers.fake import FakeProvider
 from food_khata.serve.app import create_app
 
 root = Path(sys.argv[1])
+# Test-server flag (default off, production-like): allow switching the fake
+# provider on via CLI or env without implementing the product switch here.
+for _arg in sys.argv[3:]:
+    if _arg in ("--enable-fake-provider", "--fake-provider", "--switch-on", "--fake-provider=on", "--fake-provider-switch=on"):
+        os.environ["FOOD_KHATA_ENABLE_FAKE_PROVIDER"] = "1"
+    elif _arg.startswith("--fake-provider="):
+        if _arg.split("=", 1)[1].lower() in ("1", "true", "on", "yes"):
+            os.environ["FOOD_KHATA_ENABLE_FAKE_PROVIDER"] = "1"
+
 app = create_app(root / "orders.db", data_root=root)
 
 
