@@ -491,7 +491,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | TODO | | | W3 |
 | PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
 | PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | TODO | | | W3 |
-| PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | TODO | | | W2 |
+| PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | DONE | 2026-11-11 | tests/test_pr10.py 7 pass (20 threads claim, 2 threads link); verify on trunk after merge | W2 |
 | PR-11 | Job runner throughput and write cost | P2 | P1 | TODO | | | W4 |
 | PR-12 | Dashboard and read-path performance | P2 | P1 | TODO | | | W3 |
 | PR-13 | Frontend load and polling | P2 | P2 | TODO | | | W5 |
@@ -534,6 +534,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-08 | 2026-11-11 | PR-02 | `serve/deps.py`; "keeps the typed username"; login p95 number | `deps.py` is left to PR-17 (nothing needs it yet); the login screen is re-mounted after the redirect so no username is kept; the login p95 is measured at Gate GC | Fewer files, two small gaps | Open |
 | DEV-09 | 2026-11-11 | PR-02 | Edits only in Owns | Also edited `features/access/routes.tsx` (RedirectIfAuthed wrapper), `e2e/access-integration.spec.ts` (labels from PR-05, login tab starts signed out) and removed unused `isAuthenticated()` | PR-05's label change had broken the access-integration spec; fixed here | Closed |
 | DEV-10 | 2026-11-11 | PR-03 | `return` keeps its query string | `account_ids` and `restaurant_ids` are dropped from the return path, because they are the previous user's ids and the cross-tab test (and PR-05's 422) require it | Other parameters are kept | Closed |
+| DEV-11 | 2026-11-11 | PR-10 | Handles "swept every minute"; lock-order test; `authenticate_client` default owner | Handles are swept on every new login (comment marks the shortcut; PR-09's scheduler can call `sweep()` each minute); the lock-order test runs `bind` and `save_session` from two threads and checks for no deadlock, because the code has no per-account lock, only the root and credential file locks; two test helpers now pass `is_owner=False` for second users because the owner index forbids a second owner | Weaker lock test than written | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -586,6 +587,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-10 | `verify . --backend` on branch pr-10 | all PASS | — | pr-10 |
 | 2026-11-11 | PR-03 | `npx playwright test` (all) and `verify . --backend` on branch pr-03 | all PASS | — | pr-03 |
 | 2026-11-11 | PR-02 | `verify . --backend` and `npx playwright test` on branch pr-02 | see Progress | — | pr-02 |
 | 2026-11-11 | PR-01 | `npx playwright test e2e/auth-flow.spec.ts` | 6 pass, 4 fail as designed: [PR-02] restart lacks "Your session ended" message, [PR-03] setup ends on `/login?setup=complete` | 24 s | trunk |
@@ -598,6 +600,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-10 | `migrations.py` (schema_migrations, backup before first run, one transaction each); unique owner index and `BEGIN IMMEDIATE` claim; transfer refuses disabled target; `provider_links` table replaces the folder scan (backfilled at startup, freed on disconnect); quota checked at Send code; login handles capped at 200 and 3 per user | pr-10 |
 | 2026-11-11 | PR-03 | Login and setup land on `/home`; `return` keeps query; zero accounts at `/` redirect to Home; `/accounts` redirects to `/home`; Open dashboard and Sync now on Home; brand links | pr-03 |
 | 2026-11-11 | PR-02 | Sessions deleted at startup; middleware closes a key-less session with 401 `SESSION_EXPIRED`; touch at most once a minute; client handles 401 once through the router, retries a stale CSRF once, seeds `/me` from login; login page redirects when signed in; expired banner | pr-02 |
 | 2026-11-11 | PR-01 | Browser repro suite: backend serves the built UI, restart reuses data folder and port, two widths | trunk |

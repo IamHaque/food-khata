@@ -73,6 +73,9 @@ def init_app_db(db_path: Path | str) -> None:
         init_jobs_tables(conn)
     finally:
         conn.close()
+    from ..migrations import run_migrations
+
+    run_migrations(path)
 
 
 def connect_app_db(db_path: Path | str) -> sqlite3.Connection:

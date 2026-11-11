@@ -229,12 +229,25 @@ def claim_owner(
     pw_hash = hash_password(password)
     created_at = datetime.now(UTC).isoformat()
 
-    conn.execute(
-        "INSERT INTO users (id, username, password_hash, is_owner, disabled, created_at) "
-        "VALUES (?, ?, ?, 1, 0, ?)",
-        (user_id, username, pw_hash, created_at),
-    )
-    conn.commit()
+    # BEGIN IMMEDIATE plus the unique index on is_owner: of N simultaneous claims exactly one wins.
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        if has_owner(conn):
+            raise OwnerAlreadyExistsError("An owner already exists on this server.")
+        conn.execute(
+            "INSERT INTO users (id, username, password_hash, is_owner, disabled, created_at) "
+            "VALUES (?, ?, ?, 1, 0, ?)",
+            (user_id, username, pw_hash, created_at),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError as exc:
+        conn.rollback()
+        if has_owner(conn):
+            raise OwnerAlreadyExistsError("An owner already exists on this server.") from exc
+        raise ValueError("Username is already taken.") from exc
+    except Exception:
+        conn.rollback()
+        raise
 
     # Clear setup code once claimed
     clear_setup_code(conn)
@@ -355,7 +368,16 @@ def transfer_ownership(
     target_username_or_id: str,
     owner_password: str | None = None,
 ) -> dict[str, Any]:
-    """Transfer owner role to another existing user."""
+    """Transfer owner role to another existing user (one transaction)."""
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        return _transfer_ownership(conn, current_owner_id, target_username_or_id, owner_password)
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def _transfer_ownership(conn, current_owner_id, target_username_or_id, owner_password):
     owner = conn.execute(
         "SELECT * FROM users WHERE id = ? AND is_owner = 1", (current_owner_id,)
     ).fetchone()
@@ -373,6 +395,8 @@ def transfer_ownership(
         raise ValueError("Target user not found.")
     if target["id"] == current_owner_id:
         raise ValueError("User is already the owner.")
+    if target["disabled"]:
+        raise ValueError("Target user is disabled.")
 
     conn.execute("UPDATE users SET is_owner = 0 WHERE id = ?", (current_owner_id,))
     conn.execute("UPDATE users SET is_owner = 1 WHERE id = ?", (target["id"],))

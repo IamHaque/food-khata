@@ -13,6 +13,8 @@ from ..providers.base import get_provider, provider_names
 from ..storage import Storage
 
 HANDLE_TTL_SECONDS = 600
+MAX_HANDLES = 200
+MAX_PENDING_PER_USER = 3
 
 
 class LinkExpiredError(KhataError):
@@ -54,6 +56,13 @@ class LinkingService:
             self.storage = Storage(root) if root is not None else Storage()
         self._handles = {}
 
+    def sweep(self) -> None:
+        # shortcut: swept on each new login, not on a timer; PR-09's scheduler can call this every minute.
+        now = time.time()
+        for key, entry in list(self._handles.items()):
+            if entry.used or now > entry.expires_at:
+                self._handles.pop(key, None)
+
     # ---------- login ----------
     def _provider_name(self, provider: Any) -> str:
         if hasattr(provider, "name") and isinstance(provider.name, str):
@@ -76,6 +85,11 @@ class LinkingService:
         if not isinstance(phone, str) or not phone.strip():
             raise KhataError("Invalid phone number")
         phone = phone.strip()
+        self.sweep()
+        if len(self._handles) >= MAX_HANDLES or (
+            user is not None and sum(h.user == user for h in self._handles.values()) >= MAX_PENDING_PER_USER
+        ):
+            raise KhataError("Too many pending logins; finish or wait for the earlier ones to expire.")
         # basic phone validation delegated to provider
         instance = provider if hasattr(provider, "start_login") else get_provider(name)
         try:
