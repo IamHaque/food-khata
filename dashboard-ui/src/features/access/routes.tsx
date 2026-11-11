@@ -1,6 +1,6 @@
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { RedirectIfAuthed, RequireAuth } from "./auth";
 
 function RouteSkeleton() {
@@ -13,7 +13,6 @@ const Login = lazy(() => import("./welcome/Login"));
 const Register = lazy(() => import("./welcome/Register"));
 
 const Home = lazy(() => import("./accounts/Home"));
-const Accounts = lazy(() => import("./accounts/Home"));
 const LinkAccount = lazy(() => import("./accounts/LinkAccount"));
 const Sync = lazy(() => import("./sync/Sync"));
 const Settings = lazy(() => import("./owner"));
@@ -27,7 +26,7 @@ export function AccessRoutes() {
         <Route path="/setup" element={<Setup />} />
         <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
         <Route path="/register" element={<RedirectIfAuthed><Register /></RedirectIfAuthed>} />
-        <Route path="/accounts" element={<RequireAuth><Accounts /></RequireAuth>} />
+        <Route path="/accounts" element={<Navigate to="/home" replace />} />
         <Route path="/accounts/link" element={<RequireAuth><LinkAccount /></RequireAuth>} />
         <Route path="/sync" element={<RequireAuth><Sync /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />

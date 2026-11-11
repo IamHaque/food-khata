@@ -78,7 +78,7 @@ export function Setup({ onSuccess }: SetupProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        navigate("/login?setup=complete", { replace: true });
+        navigate("/home", { replace: true }); // the server already created the session
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {

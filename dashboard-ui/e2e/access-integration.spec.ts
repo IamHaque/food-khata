@@ -34,6 +34,8 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Username').fill('B');
     await page.getByLabel('Password').fill('password');
     await page.getByRole('button', { name: /log in/i }).click();
+    await expect(page).toHaveURL(/home/);
+    await page.getByRole('link', { name: 'Open dashboard' }).click();
     await expect(page.getByText('Account: Fake ••••nt B', { exact: false })).toBeVisible();
     release();
     await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toHaveCount(0);
@@ -66,9 +68,7 @@ test('guards routes and handles an empty user', async ({ page }) => {
   await expect(page).toHaveURL(/login/);
   signedIn = true;
   await page.goto('/');
-  await expect(page.getByText('No linked accounts yet.', { exact: false })).toBeVisible();
-  await page.getByRole('link', { name: 'Go to Home to link an account' }).click();
-  await expect(page).toHaveURL(/home/);
+  await expect(page).toHaveURL(/home/); // no accounts: the dashboard sends the user to Home
   await expect(page.getByRole('link', { name: 'Link your first account' })).toBeVisible();
 });
 

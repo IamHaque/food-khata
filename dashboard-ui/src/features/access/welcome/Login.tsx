@@ -40,7 +40,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
   }, [retryCountdown]);
 
   const searchParams = new URLSearchParams(location.search);
-  const returnUrl = searchParams.get("return") || "/";
+  const returnUrl = searchParams.get("return") || "/home";
   const justRegistered = searchParams.get("registered") === "true";
   const sessionExpired = searchParams.get("reason") === "expired";
   const setupComplete = searchParams.get("setup") === "complete";
