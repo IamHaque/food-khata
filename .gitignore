@@ -54,3 +54,5 @@ orchestration/state.json
 # server runtime files
 .server.lock
 logs/
+.venv
+node_modules

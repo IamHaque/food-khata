@@ -61,7 +61,7 @@ The CLI entrypoint is `food-khata` (or `python -m food_khata`). Every flag also 
   Migrates all saved order JSONs across accounts into `food_analytics.db` without network requests.
 
 - **`food-khata export`**:
-  Exports complete dashboard data into `dashboard.json` for offline viewing in the `/legacy` view.
+  Exports complete dashboard data into `dashboard.json` (offline dashboard JSON; kept as a standalone export).
 
 - **`food-khata backup --out FILE --data-dir DIR`**:
   Hot snapshot of all SQLite databases (using SQLite's online backup API), archives, vaults, and a SHA-256 manifest. Safe to run while the server is active.
@@ -111,7 +111,7 @@ See [Architecture & Storage](docs/architecture.md) for complete schema, database
 
 ## Security Baseline
 
-- **Cookie-Only Authentication**: Authentication uses `food_khata_session` cookies only (`HttpOnly`, `SameSite=Lax`). `Secure` is enabled under TLS or with `--behind-https-proxy`. Bearer tokens and header sessions are rejected.
+- **Cookie-Only Authentication**: Authentication uses `session_id` cookies only (`HttpOnly`, `SameSite=Lax`). `Secure` is enabled under TLS or with `--behind-https-proxy`. Bearer tokens and header sessions are rejected.
 - **CSRF Protection**: State-changing operations require matching `x-csrf-token` header and cookie.
 - **Headers & Limits**: CSP (`default-src 'self'`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`. Request bodies are limited to 64 KB.
 - **Passwords & Lifetimes**: Minimum 10 characters. Sessions have an 8-hour idle timeout and 7-day absolute lifetime. All sessions are deleted on server start (re-login required after restart).
