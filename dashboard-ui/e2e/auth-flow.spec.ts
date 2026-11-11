@@ -4,8 +4,9 @@ import net from "node:net";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(__dirname, "..", "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SERVER = path.join(ROOT, "tests", "e2e_access", "server.py");
 const UI = "http://127.0.0.1:4173";
 
@@ -29,8 +30,8 @@ async function startBackend(switchOn: boolean): Promise<{ base: string; dataDir:
   if (switchOn) env.FOOD_KHATA_ENABLE_FAKE_PROVIDER = "1";
   const args = [SERVER, dataDir, String(port)];
   if (switchOn) args.push("--enable-fake-provider");
-  const pythonBin = process.env.PYTHON || path.join(ROOT, "venv", "bin", "python");
-  const proc: ChildProcess = spawn(pythonBin, args, { cwd: ROOT, env: { ...env, PATH: path.join(ROOT, "venv", "bin") + ":" + (env.PATH || "") }, stdio: "ignore" });
+  const pythonBin = process.env.PYTHON || path.join(ROOT, ".venv", "bin", "python");
+  const proc: ChildProcess = spawn(pythonBin, args, { cwd: ROOT, env: { ...env, PATH: path.join(ROOT, ".venv", "bin") + ":" + (env.PATH || "") }, stdio: "ignore" });
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try {
