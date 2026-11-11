@@ -16,6 +16,7 @@ const Home = lazy(() => import("./accounts/Home"));
 const LinkAccount = lazy(() => import("./accounts/LinkAccount"));
 const Sync = lazy(() => import("./sync/Sync"));
 const Settings = lazy(() => import("./owner"));
+const Password = lazy(() => import("./account/Password"));
 
 export function AccessRoutes() {
   return (
@@ -28,6 +29,7 @@ export function AccessRoutes() {
         <Route path="/register" element={<RedirectIfAuthed><Register /></RedirectIfAuthed>} />
         <Route path="/accounts" element={<Navigate to="/home" replace />} />
         <Route path="/accounts/link" element={<RequireAuth><LinkAccount /></RequireAuth>} />
+        <Route path="/account/password" element={<RequireAuth><Password /></RequireAuth>} />
         <Route path="/sync" element={<RequireAuth><Sync /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
       </Routes>

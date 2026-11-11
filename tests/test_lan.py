@@ -260,15 +260,16 @@ def test_tls_options_and_secure_cookies(tmp_path, monkeypatch):
     # Register user over HTTP
     csrf_token = http_client.get("/api/auth/csrf").json()["csrf_token"]
     reg_res = http_client.post(
-        "/api/auth/register",
-        json={"username": "alice", "password": "password1234"},
+        "/api/owner/setup",
+        json={"username": "alice", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: csrf_token},
     )
     assert reg_res.status_code == 200
+    csrf_token = http_client.get("/api/auth/csrf").json()["csrf_token"]
 
     login_res_http = http_client.post(
         "/api/auth/login",
-        json={"username": "alice", "password": "password1234"},
+        json={"username": "alice", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: csrf_token},
     )
     assert login_res_http.status_code == 200
@@ -285,7 +286,7 @@ def test_tls_options_and_secure_cookies(tmp_path, monkeypatch):
     https_csrf = https_client.get("/api/auth/csrf").json()["csrf_token"]
     login_res_https = https_client.post(
         "/api/auth/login",
-        json={"username": "alice", "password": "password1234"},
+        json={"username": "alice", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: https_csrf},
     )
     assert login_res_https.status_code == 200

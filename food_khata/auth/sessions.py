@@ -11,6 +11,7 @@ from .csrf import CSRF_COOKIE_NAME, generate_csrf_token
 SESSION_COOKIE_NAME = "session_id"
 IDLE_TIMEOUT_SECONDS = 8 * 3600  # 8 hours idle timeout (DEC-010)
 TOUCH_INTERVAL_SECONDS = 60
+ABSOLUTE_LIFETIME_SECONDS = 7 * 86400  # a session ends 7 days after login even if it stays active
 
 
 def init_app_db(db_path: Path | str) -> None:
@@ -126,6 +127,10 @@ def get_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | N
     now = time.time()
     # Check 8h idle timeout (DEC-010)
     if now - row["last_active"] > IDLE_TIMEOUT_SECONDS or now > row["expires_at"]:
+        delete_session(conn, session_id)
+        return None
+
+    if now - row["created_at"] > ABSOLUTE_LIFETIME_SECONDS:
         delete_session(conn, session_id)
         return None
 

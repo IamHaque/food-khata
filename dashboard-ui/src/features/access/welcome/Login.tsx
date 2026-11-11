@@ -103,7 +103,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
       {justRegistered && (
         <StatusBanner variant="success">Account registered successfully. Please log in.</StatusBanner>
       )}
-      {sessionExpired && <StatusBanner variant="warning">Your session ended. Sign in again.</StatusBanner>}
+      {sessionExpired && <StatusBanner variant="warning">Your session ended. Sign in again. Sessions end after 8 hours idle or 7 days.</StatusBanner>}
       {setupComplete && (
         <StatusBanner variant="success">Server owner claimed successfully. Please log in.</StatusBanner>
       )}

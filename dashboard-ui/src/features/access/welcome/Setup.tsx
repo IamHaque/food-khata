@@ -46,8 +46,8 @@ export function Setup({ onSuccess }: SetupProps) {
 
     if (!password) {
       nextErrors.password = "Password is required.";
-    } else if (password.length < 8) {
-      nextErrors.password = "Password must be at least 8 characters.";
+    } else if (password.length < 10) {
+      nextErrors.password = "Password must be at least 10 characters.";
     }
 
     if (!confirmPassword) {

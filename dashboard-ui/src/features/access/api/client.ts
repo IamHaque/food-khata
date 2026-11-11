@@ -138,6 +138,17 @@ export const authApi = {
     if (data?.csrf_token) setCsrfToken(data.csrf_token);
     return data;
   },
+  async changePassword(current_password: string, new_password: string) {
+    const data = await request<{ user: components["schemas"]["food_khata__serve__routes_auth__UserResponse"]; csrf_token: string }>("/api/auth/password", {
+      method: "POST",
+      body: { current_password, new_password },
+    });
+    if (data?.csrf_token) setCsrfToken(data.csrf_token);
+    return data;
+  },
+  async logoutAll() {
+    return request("/api/auth/logout-all", { method: "POST" });
+  },
   async logout() {
     return request("/api/auth/logout", { method: "POST" });
   },
