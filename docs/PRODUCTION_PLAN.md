@@ -486,7 +486,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-03 | Landing on Home and navigation rules | P0 | P0 | DONE | 2026-11-11 | browser suite 84 pass incl. [PR-03] at 1440 and 390; vitest 1024; verify on trunk after merge | W2 |
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
 | PR-05 | Account scope and no shared database | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-05; trunk re-run after merge; browser not run | W1 |
-| G0 | User findings closed | P0 | P0 | TODO | | | W2 |
+| G0 | User findings closed | P0 | P0 | IN_PROGRESS | 2026-11-11 | automated checks green; waiting for your hand test of login, register and link | W2 |
 | PR-06 | One account, several providers | P1 | P1 | DONE | 2026-11-11 | test_one_account_several_providers; browser 84 pass; verify on trunk after merge | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | TODO | | | W3 |
 | PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
@@ -588,6 +588,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | G0 | `verify . --backend --browser` (twice), `npm run build`, `check-bundle.mjs` on trunk | all PASS; browser 84 pass at 1440 and 390; entry chunk 102.4 kB gzip (budget 250) | 125 s | trunk |
 | 2026-11-11 | PR-06 | `verify . --backend`, `npx playwright test` on branch pr-06 | all PASS | — | pr-06 |
 | 2026-11-11 | PR-10 | `verify . --backend` on branch pr-10 | all PASS | — | pr-10 |
 | 2026-11-11 | PR-03 | `npx playwright test` (all) and `verify . --backend` on branch pr-03 | all PASS | — | pr-03 |
