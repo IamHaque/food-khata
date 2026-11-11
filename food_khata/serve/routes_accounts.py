@@ -12,6 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from food_khata.contracts import KhataError
+from food_khata.providers.base import provider_names
 from food_khata.services.linking import LinkingService
 from food_khata.storage import Storage, provider_identity, read_json
 from food_khata.users.context import ensure_private_dir, user_database, user_root
@@ -163,6 +164,11 @@ def list_accounts(
     return accounts_out
 
 
+@router.get("/providers")
+def providers(_: Annotated[str, Depends(get_current_user_id)]):
+    return {"providers": list(provider_names())}
+
+
 @router.post("/link/start", response_model=LinkStartResponse)
 def link_start(
     data: LinkStartRequest,
@@ -172,7 +178,7 @@ def link_start(
     """Start provider linking: delegates to LinkingService and returns opaque handle. Never returns OTP code."""
     get_user_cipher(request, user_id)
     provider_name = data.provider.strip().lower()
-    if provider_name not in ("zomato", "swiggy", "fake"):
+    if provider_name not in provider_names():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={

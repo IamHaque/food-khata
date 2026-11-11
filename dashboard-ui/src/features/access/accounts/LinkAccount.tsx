@@ -2,7 +2,7 @@ import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { accountsApi, ApiError } from "../api";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +14,8 @@ export function LinkAccount() {
   const timer = React.useRef<ReturnType<typeof setTimeout>>();
   React.useEffect(() => () => clearTimeout(timer.current), []);
   const queryClient = useQueryClient();
-  const [provider, setProvider] = React.useState("fake");
+  const providers = useQuery({ queryKey: ["accounts", "providers"], queryFn: accountsApi.providers });
+  const [provider, setProvider] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [code, setCode] = React.useState("");
   const [handle, setHandle] = React.useState<string | null>(null);
@@ -84,11 +85,11 @@ export function LinkAccount() {
             <div className="space-y-1">
               <label htmlFor="provider" className="block text-sm font-medium">Provider</label>
               <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger id="provider"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="provider"><SelectValue placeholder="Choose a provider" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fake">Fake (testing)</SelectItem>
-                  <SelectItem value="zomato">Zomato</SelectItem>
-                  <SelectItem value="swiggy">Swiggy</SelectItem>
+                  {providers.data?.providers.map((p) => (
+                    <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -105,7 +106,7 @@ export function LinkAccount() {
             </div>
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !provider}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               {submitting ? "Sending…" : "Send code"}
