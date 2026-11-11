@@ -498,7 +498,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-14 | Owner claim, passwords and session lifetime | P3 | P1 | DONE | 2026-11-11 | tests/test_pr14.py 9 pass; vitest 1026; browser 84 pass (one load flake, passes alone); verify on trunk after merge | W4 |
 | PR-15 | HTTP hardening and audit trail | P3 | P1 | DONE | 2026-11-11 | tests/test_pr15.py 5 pass; e2e/csp.spec.ts passes (claim, Home, `/` under the CSP, no violations); vitest 1026; verify on trunk after merge | W5 |
 | PR-16 | Operability | P3 | P1 | DONE | 2026-11-11 | tests/test_pr16.py 7 pass (real second process exits 2, backup then restore then login); verify on trunk after merge | W5 |
-| PR-17 | Dead code and duplication purge | P4 | P2 | TODO | | | W6 |
+| PR-17 | Dead code and duplication purge | P4 | P2 | DONE | 2026-11-11 | 7 files, 69 insertions and 129 deletions; verify green on trunk | W6 |
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | TODO | | | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | TODO | | | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
@@ -512,7 +512,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEC-P2 | 2026-11-11 | PR-02 | Delete all sessions at server start | Keys live only in memory, so a surviving session is unusable and causes the half-logged-in state | One re-login after each restart | Proposed |
 | DEC-P3 | 2026-11-11 | PR-07 | Remove the mid-sync code route; recovery is Verify again then auto-resume | A code cannot repair an expired provider session without a new login | C-2 breaking change, logged as DEV | Proposed |
 | DEC-P4 | 2026-11-11 | PR-11 | Default provider concurrency stays 1 each, configurable | Raising it risks provider blocks; queue visibility fixes the wait | Config flag | Proposed |
-| DEC-P5 | 2026-11-11 | PR-17 | Decide whether to keep `/legacy` and `export` | Nothing in Phase B uses them; they add a second UI to maintain | Docs and tests | Proposed |
+| DEC-P5 | 2026-11-11 | PR-17 | Keep `food-khata export` (there is no `/legacy` route in the code any more); README gets one line in PR-19 | Removing it means deleting its tests, which verify forbids, and it has a test | Docs and tests | Approved by owner |
 | DEC-P6 | 2026-11-11 | PR-08 | Add `source_hash` and refresh recent non-final orders | Without it the dashboard can never show refunds or fix repaired orders | Additive migration | Proposed |
 | DEC-P7 | 2026-11-11 | PR-14 | Password minimum 10 characters; session absolute lifetime 7 days | Household server, possibly on a LAN | UI copy | Proposed |
 | DEC-P8 | 2026-11-11 | Plan | The main agent writes all high-risk code; sub-agents get only the work in 3.2 | One reviewer holds the whole auth, storage and runner picture | Wave plan | Proposed |
@@ -546,6 +546,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-20 | 2026-11-11 | PR-14 | List of the 1,000 most common passwords; audit rows; lifetime message | No list exists on this machine and none may be fetched, so the bundled list holds about 250 well-known passwords of 10 or more characters (shorter ones already fail the length rule), BL-211 extends it; audit rows for admin actions arrive with PR-15; the login banner names both limits (8 hours idle, 7 days) instead of the exact cause; vault rewrap and the hash update are two steps, so a crash between them could leave a user needing the old password for the vault (rare, logged); tests moved to longer passwords and now claim the owner through `/api/owner/setup` | Weaker common-password check for now | Open |
 | DEV-21 | 2026-11-11 | PR-15 | Owns; CSP check of the full dashboard; no-secrets-in-logs | Also edited `index.html`, `public/theme-init.js` (an inline script cannot run under `script-src 'self'`), `routes_auth.py`, `routes_owner.py`, `cli.py`, `serve/cli.py`, `migrations.py`, `OwnerSettings.tsx`; the CSP browser test covers claim, Home and the empty dashboard only, not the charts with data (inline styles stay allowed: `style-src 'unsafe-inline'`); the log test greps one journey with debug logging on, and the app logs no request bodies by design | CSP on a populated dashboard unchecked | Open |
 | DEV-22 | 2026-11-11 | PR-16 | Owns; DEV-02 closed | Also edited `serve/app.py` (readiness, request id), `serve/cli.py`, `cli.py` (new actions and a second positional), `maintenance` state; `purge-fake` is in `cli.py` and uses the PR-09 wipe helper, which closes DEV-02; the runbook says there is no UI button to remove a user | None | Closed |
+| DEV-23 | 2026-11-11 | PR-17 | Remove the `sync()` keyword aliases; `routes.tsx` duplicates | `event_callback` stays (the one real name); the `Home` duplicate was already removed in PR-03; `LinkingService._cached_status` now calls the shared helper, a small services-to-serve import | None | Closed |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -603,6 +604,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-17 | `verify . --backend` on trunk after merge | see below | — | pr-17-review |
 | 2026-11-11 | PR-13 | `npm test`, `check-bundle.mjs`, `npx playwright test` on trunk | all PASS; entry chunk 102.9 kB (budget 250) | — | pr-13-review |
 | 2026-11-11 | PR-16 | `verify . --backend` on branch pr-16 | all PASS | — | pr-16 |
 | 2026-11-11 | PR-15 | `verify . --backend`, `npx playwright test e2e/csp.spec.ts e2e/auth-flow.spec.ts` on branch pr-15 | all PASS | — | pr-15 |
@@ -627,6 +629,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-17 | Deleted `SyncService`, `use_partial_import` and aliases, `ProviderLinkingService`, `Linking`, `JobControl.submit` and `enqueue`, `start_linking`; one copy each of the client address, loopback, secure, session status and app.db helpers in `serve/deps.py` | pr-17-review |
 | 2026-11-11 | PR-13 | Job list polls every 3 s only while a job is active, every 30 s otherwise, never while the tab is hidden, and refetches once on return (one shared hook); QueryClient defaults (30 s stale, retry once on network errors, never on 4xx, no refetch on focus); error boundary with Reload and Go to Home | pr-13-review |
 | 2026-11-11 | PR-16 | `.server.lock` (second server exits 2); `GET /health/ready`; `FOOD_KHATA_<FLAG>` for every flag and `--print-config`; JSON logs with request id and user id, redacted, rotating; `food-khata backup` and `restore` (SQLite backup API, checksums, non-empty folder refused); `purge-fake`; `docs/RUNBOOK.md` | pr-16 |
 | 2026-11-11 | PR-15 | Session from the cookie only; `Secure` from TLS or `--behind-https-proxy`, never a header; `--trusted-proxy ADDR` for X-Forwarded-For; CSP, nosniff, DENY, no-referrer on every response (HSTS over HTTPS); 413 above 64 KB; `audit_log` (migration 5) for logins, claim, window, join code, disable, enable, reset, remove, transfer, password change, log out everywhere, readable as the last 200 rows in Settings; the inline theme script moved to `theme-init.js` for the CSP | pr-15 |
