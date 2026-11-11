@@ -1,23 +1,24 @@
 # Food Khata runbook
 
 For the person who runs the server. Assumes one household, one machine, one data folder.
+See [architecture.md](architecture.md) for architecture and [PERFORMANCE.md](PERFORMANCE.md) for performance benchmarks.
 
 ## Rules to know first
 
 - **One server per data folder.** A second `serve` on the same folder exits with code 2. The lock (`<data>/.server.lock`) is released when the process dies, so a crash never leaves a stale lock.
 - **Backups are not encrypted** for archives and analytics. Provider sessions and vaults stay encrypted. Keep backup files private.
-- **After every restart everyone logs in again** (sessions are not kept; their keys live in memory only).
-- Provider APIs are unofficial and may block accounts. Default is one sync per provider at a time.
+- **After every restart everyone logs in again** (sessions are deleted on server start; their keys live in memory only).
+- Provider APIs are unofficial and may block accounts. Default is one sync per provider at a time (`--provider-concurrency swiggy=1,zomato=1`).
 
 ## Run
 
 ```
 food-khata serve --data-dir /srv/food-khata            # this machine only
-food-khata serve --data-dir /srv/food-khata --lan      # household network; prints a one-time setup code at start
+food-khata serve --data-dir /srv/food-khata --lan      # household network; prints a 10-char setup code (valid 30 min) at start
 food-khata serve --print-config                        # show the effective settings
 ```
 
-Every flag also reads an environment variable `FOOD_KHATA_<FLAG>` (for example `FOOD_KHATA_PORT=9000`, `FOOD_KHATA_LAN=1`, `FOOD_KHATA_ALLOW_HOSTS=home.lan,nas.lan`). A flag on the command line wins. Behind an HTTPS proxy add `--behind-https-proxy` and `--trusted-proxy <proxy address>`.
+Every flag also reads an environment variable `FOOD_KHATA_<FLAG>` (for example `FOOD_KHATA_PORT=9000`, `FOOD_KHATA_LAN=1`, `FOOD_KHATA_ALLOW_HOSTS=home.lan,nas.lan`). A flag on the command line wins. Behind an HTTPS proxy add `--behind-https-proxy` and `--trusted-proxy <proxy address>`. Non-loopback setup requires the setup code; 5 wrong attempts in 10 minutes return 429.
 
 Health: `GET /health` (alive), `GET /health/ready` (database opens, migrations current, housekeeping thread alive; 200 or 503, no details).
 Logs: `<data>/logs/food-khata.log`, one JSON line per event, passwords, codes and phone numbers scrubbed, 10 MB x 5 files.

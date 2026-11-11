@@ -60,3 +60,5 @@ Memory ends 10% below minute 5 and thread and file counts stay in a band (fds 33
 | Memory, idle | under 200 MB | 93 MB |
 | Zero 5xx under load | 0 | 0 of 3,303 requests |
 | Zero "database is locked" | 0 | 0 |
+
+See also: [RUNBOOK](RUNBOOK.md) and [architecture](architecture.md).
