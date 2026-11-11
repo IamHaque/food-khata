@@ -1,10 +1,8 @@
 """Authentication routes for Food Khata API (AC-06)."""
 
-import ipaddress
 import re
 import sqlite3
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -20,7 +18,6 @@ from food_khata.auth import (
     check_registration_throttle,
     check_throttle,
     clear_session_cookies,
-    connect_app_db,
     create_session,
     delete_session,
     dummy_verify,
@@ -39,19 +36,9 @@ from food_khata.auth import (
 )
 from food_khata.auth.passwords import check_password_rules
 
-from .security import client_ip, is_secure
+from .deps import _get_client_ip, _is_loopback_client, _is_secure_request, get_auth_db
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-
-def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
-    """Dependency that yields a connection to app.db."""
-    app_db_path = getattr(request.app.state, "app_db_path", "app.db")
-    conn = connect_app_db(app_db_path)
-    try:
-        yield conn
-    finally:
-        conn.close()
 
 
 class SetupStatusResponse(BaseModel):
@@ -93,22 +80,6 @@ class StatusResponse(BaseModel):
     status: str
 
 
-def _get_client_ip(request: Request) -> str:
-    return client_ip(request)
-
-
-def _is_loopback_client(request: Request) -> bool:
-    host = request.client.host if request.client else "127.0.0.1"
-    if host in {"testclient", "localhost", "127.0.0.1", "::1"}:
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
-
-
-def _is_secure_request(request: Request) -> bool:
-    return is_secure(request)
 
 
 @router.get("/setup-status", response_model=SetupStatusResponse)

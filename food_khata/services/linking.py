@@ -10,6 +10,7 @@ from typing import Any
 
 from ..contracts import KhataError
 from ..providers.base import get_provider, provider_names
+from ..serve.deps import _cached_status as _shared_cached_status
 from ..storage import Storage
 
 HANDLE_TTL_SECONDS = 600
@@ -109,7 +110,6 @@ class LinkingService:
         )
         return handle
 
-    start_linking = start_login
 
     def verify_otp(self, handle: str, code: str, *, user: Any = None, storage: Any = None) -> dict[str, Any]:
         entry = self._handles.get(handle)
@@ -156,18 +156,7 @@ class LinkingService:
 
     # ---------- status / listing ----------
     def _cached_status(self, session: dict[str, Any] | None) -> str:
-        if not isinstance(session, dict):
-            return "expired"
-        now = time.time()
-        expires = session.get("expires_at") or session.get("expiry") or session.get("exp")
-        if isinstance(expires, (int, float)):
-            if now > float(expires):
-                return "expired"
-            if now > float(expires) - 86400:
-                return "expiring"
-            return "ok"
-        # heuristic: session present -> ok
-        return "ok"
+        return _shared_cached_status(session)
 
     def list_accounts(self, provider: str | None = None, *, user: Any = None) -> list[dict[str, Any]]:
         providers = [provider] if provider else ["zomato", "swiggy", "fake"]
@@ -261,5 +250,4 @@ class LinkingService:
         return "pending"
 
 
-ProviderLinkingService = LinkingService
-Linking = LinkingService
+
