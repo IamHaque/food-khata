@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ..contracts import KhataError
-from ..providers.base import get_provider
+from ..providers.base import get_provider, provider_names
 from ..storage import Storage
 
 HANDLE_TTL_SECONDS = 600
@@ -71,7 +71,7 @@ class LinkingService:
 
     def start_login(self, provider: Any, phone: str, *, user: Any = None) -> str:
         name = self._provider_name(provider)
-        if name not in ("zomato", "swiggy", "fake"):
+        if name not in provider_names():
             raise KhataError("Invalid provider")
         if not isinstance(phone, str) or not phone.strip():
             raise KhataError("Invalid phone number")

@@ -484,7 +484,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-01 | Reproduction harness for the reported bugs | P0 | P0 | TODO | | | W0 |
 | PR-02 | Session consistency and login without bounce | P0 | P0 | TODO | | | W1 |
 | PR-03 | Landing on Home and navigation rules | P0 | P0 | TODO | | | W2 |
-| PR-04 | Remove the fake provider from the product | P0 | P0 | TODO | | | W1 |
+| PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
 | PR-05 | Account scope and no shared database | P0 | P0 | TODO | | | W1 |
 | G0 | User findings closed | P0 | P0 | TODO | | | W2 |
 | PR-06 | One account, several providers | P1 | P1 | TODO | | | W2 |
@@ -525,6 +525,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | ID | Date | Story | Original requirement | What was done instead | Reason | Impact | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | DEV-01 | 2026-11-11 | PR-01, PR-04 | U-3 check and the switch-on list on one test server | Two server configurations: switch off for the production-UI check, switch on for the list test; test provider injected through the test hook only | One server cannot both include and exclude `fake` | Browser suite has two server setups | Approved by owner |
+| DEV-02 | 2026-11-11 | PR-04 | Leftover `fake` accounts: dashboards-never-count test, `purge-fake` | Home keeps the existing Disconnect action for them; `purge-fake` stays in PR-16; no ingest filter by name exists in code, so a count test needs real fake-account data and is left to PR-16 | Leftover fake accounts can still be listed and disconnected, not purged by CLI yet | Open |
+| DEV-03 | 2026-11-11 | All | Strongest Gemini model for high-risk stories | Only Gemini 3.8 Flash is in the catalog; the main agent (Claude Sonnet 5.5) writes high-risk code itself, as DEC-P8 says | None on scope | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -575,7 +577,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, R-13 | `TestClient` with cookies kept across a new app instance (server restart) | `/api/auth/me` 200, `/api/accounts` 401, `/api/sync/jobs` 200; relogin 200, then accounts 200. Half-authenticated state confirmed | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
-| 2026-11-11 | Baseline | pytest, vitest, Playwright, load | not run | — | 30d2a6c |
+| 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-04 | `verify . --backend` on branch pr-04 | all PASS (pytest 88 s) | 106 s | pr-04 |
 
 ### 5.9 Changelog
 
@@ -583,8 +586,10 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-04 | Fake provider off unless `FOOD_KHATA_ENABLE_FAKE_PROVIDER=1`; `GET /api/accounts/providers`; Link screen server-driven, nothing preselected; tests/conftest.py fixture turns the switch on except `no_fake` tests | pr-04 |
 
 ### 5.10 Delegation ledger
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
-| --- | --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | running | — |
+| 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | running | — |

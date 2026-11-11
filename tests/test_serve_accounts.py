@@ -277,3 +277,23 @@ def test_authorization_user_isolation(tmp_path):
     disc = client.delete(f"/api/accounts/{alice_acc_id}")
     assert disc.status_code == 404
     assert disc.json()["error"]["code"] == "NOT_FOUND"
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.no_fake
+def test_fake_provider_off_by_default(tmp_path):
+    """PR-04: switch off -> `fake` is an unknown provider, absent from the list, no test hook on a normal app."""
+    client, _, _ = _make_client(tmp_path)
+    assert not hasattr(create_app(tmp_path / "d.db", data_root=tmp_path / "data").state, "provider_factory")
+    authenticate_client(client, username="alice", is_owner=True)
+    assert client.get("/api/accounts/providers").json() == {"providers": ["zomato", "swiggy"]}
+    res = client.post("/api/accounts/link/start", json={"provider": "fake", "phone": "9876543210"})
+    assert (res.status_code, res.json()["error"]["code"] if "error" in res.json() else res.json()["detail"]["code"]) == (400, "INVALID_PROVIDER")
+
+
+def test_fake_provider_switch_on(tmp_path):
+    client, _, _ = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    assert "fake" in client.get("/api/accounts/providers").json()["providers"]

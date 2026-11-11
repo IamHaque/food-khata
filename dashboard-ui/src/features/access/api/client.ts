@@ -154,6 +154,9 @@ export const accountsApi = {
   async list() {
     return request<components["schemas"]["AccountOut"][]>("/api/accounts");
   },
+  async providers() {
+    return request<{ providers: string[] }>("/api/accounts/providers");
+  },
   async linkStart(provider: string, phone: string) {
     return request<components["schemas"]["LinkStartResponse"]>("/api/accounts/link/start", {
       method: "POST",

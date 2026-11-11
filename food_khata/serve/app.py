@@ -29,6 +29,7 @@ from food_khata.auth import (
     init_app_db,
     validate_csrf_token,
 )
+from food_khata.providers.base import fake_enabled
 
 from .behavior import behavior
 from .charts import kpi_history, overview, remaining
@@ -56,6 +57,9 @@ def create_app(
     allow_hosts: list[str] | set[str] | None = None,
     is_https: bool = False,
 ) -> FastAPI:
+    if fake_enabled():
+        logging.getLogger(__name__).warning("FOOD_KHATA_ENABLE_FAKE_PROVIDER is on: fake provider enabled (testing only)")
+
     @asynccontextmanager
     async def lifespan(app):
         app.state.job_runner.start()
