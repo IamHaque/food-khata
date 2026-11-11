@@ -17,13 +17,17 @@ from starlette.exceptions import HTTPException
 from ..contracts import AuthenticationError, KhataError
 from ..db import AnalyticsDB
 from ..providers.base import get_provider
+from ..providers.http import set_cancel_check
 from ..services.sync import CancelToken, sync
 from ..storage import CredentialsRevoked, Storage, provider_identity, read_json, save_json
 from ..users.context import user_database, user_root
 from .db import (
     add_job_event,
+    avg_job_seconds,
+    connect_job_db,
     count_user_active_jobs,
     create_job,
+    fair_order,
     get_db_conn,
     get_job,
     get_job_events,
@@ -47,6 +51,8 @@ from .states import (
 )
 
 logger = logging.getLogger(__name__)
+
+PROGRESS_INTERVAL = 1.0  # seconds between progress writes for one job
 
 # DEC-010 Per-user limits
 MAX_RUNNING_PER_USER = 1
@@ -107,26 +113,27 @@ class ActiveJob:
 class PacedProvider:
     """Wraps any provider to enforce inter-request pacing (e.g. Swiggy ~1 req/s)."""
 
-    def __init__(self, provider: Any, runner: JobRunner, provider_name: str) -> None:
+    def __init__(self, provider: Any, runner: JobRunner, provider_name: str, cancel_token: Any = None) -> None:
         self._provider = provider
         self._runner = runner
         self._name = provider_name
+        self._cancel = cancel_token
         self.name = getattr(provider, "name", provider_name)
 
     def profile(self) -> str:
-        self._runner._pace_provider(self._name)
+        self._runner._pace_provider(self._name, self._cancel)
         return self._provider.profile()
 
     def pages(self) -> Any:
         for page in self._provider.pages():
-            self._runner._pace_provider(self._name)
+            self._runner._pace_provider(self._name, self._cancel)
             yield page
 
     def valid_details(self, order_id: str, details: Any) -> bool:
         return self._provider.valid_details(order_id, details)
 
     def details(self, order_id: str) -> Any:
-        self._runner._pace_provider(self._name)
+        self._runner._pace_provider(self._name, self._cancel)
         return self._provider.details(order_id)
 
     def __getattr__(self, name: str) -> Any:
@@ -141,6 +148,7 @@ class JobRunner:
         app_db_path: Path | str,
         data_root: Path | str | None = None,
         swiggy_pacing_seconds: float = 1.0,
+        provider_concurrency: dict[str, int] | None = None,
     ) -> None:
         self.app_db_path = Path(app_db_path)
         self.data_root = Path(data_root) if data_root is not None else None
@@ -150,9 +158,12 @@ class JobRunner:
         self.active_jobs: dict[str, ActiveJob] = {}
         self.registered_payloads: dict[str, JobPayload] = {}
         self.pacing_interval: dict[str, float] = {"swiggy": swiggy_pacing_seconds}
-        self.last_request_time: dict[str, float] = {}
+        self.next_slot: dict[str, float] = {}
         self.pacing_lock = threading.Lock()
+        # How many jobs may run per provider at once (default 1 each, DEC-P4); others default to 1.
+        self.provider_concurrency = {"swiggy": 1, "zomato": 1, **(provider_concurrency or {})}
         self._stopped = False
+        self._shutdown = False
         self._cleanup_stop = threading.Event()
         self._cleanup_thread: threading.Thread | None = None
 
@@ -173,8 +184,10 @@ class JobRunner:
         while not self._cleanup_stop.wait(60):
             self.drop_expired_keys()
 
-    def stop(self, wait: bool = True, timeout: float = 5.0) -> None:
+    def stop(self, wait: bool = True, timeout: float = 10.0) -> None:
+        """Graceful shutdown: running jobs checkpoint and become interrupted/SHUTDOWN within `timeout` seconds."""
         self._stopped = True
+        self._shutdown = True
         self._cleanup_stop.set()
         if self._cleanup_thread and self._cleanup_thread is not threading.current_thread():
             self._cleanup_thread.join()
@@ -183,63 +196,55 @@ class JobRunner:
         for aj in active_list:
             aj.cancel_token.cancel()
         if wait:
+            deadline = time.monotonic() + timeout
             for aj in active_list:
-                aj.finished_event.wait(timeout=timeout)
+                aj.finished_event.wait(timeout=max(0.0, deadline - time.monotonic()))
 
-    def _pace_provider(self, provider_name: str) -> None:
+    def _pace_provider(self, provider_name: str, cancel_token: Any = None) -> None:
+        """Reserve the provider's next request slot, then wait for it outside the lock in 250 ms steps."""
         interval = self.pacing_interval.get(provider_name, 0.0)
         if interval <= 0.0:
             return
         with self.pacing_lock:
             now = time.monotonic()
-            last = self.last_request_time.get(provider_name, 0.0)
-            elapsed = now - last
-            if elapsed < interval:
-                time.sleep(interval - elapsed)
-            self.last_request_time[provider_name] = time.monotonic()
+            slot = max(now, self.next_slot.get(provider_name, 0.0))
+            self.next_slot[provider_name] = slot + interval
+        while (left := slot - time.monotonic()) > 0:
+            if cancel_token is not None and cancel_token.is_cancelled():
+                return
+            time.sleep(min(0.25, left))
 
     def register_job(self, payload: JobPayload) -> None:
         with self.lock:
             self.registered_payloads[payload.job_id] = payload
 
     def process_queue(self) -> None:
-        """Find candidate queued jobs and launch ready ones according to queue rules.
+        """Start queued jobs that may run now: one per user, `provider_concurrency` per provider.
 
-        Rules:
-        - 1 running job per user (DEC-010)
-        - at most 1 running job per provider across all users
-        - fair FIFO order
+        Candidates are read before the lock is taken (the lock only guards starting threads) and are
+        ordered fairly: round robin by user, oldest first within a user.
         """
         if self._stopped:
             return
+        queued = fair_order(list_jobs(self.app_db_path, status=QUEUED, limit=200))
 
         with self.lock:
             running_users = {aj.payload.user_id for aj in self.active_jobs.values()}
-            running_providers = {aj.payload.provider for aj in self.active_jobs.values()}
+            running_per_provider: dict[str, int] = {}
+            for aj in self.active_jobs.values():
+                running_per_provider[aj.payload.provider] = running_per_provider.get(aj.payload.provider, 0) + 1
 
-            all_queued = list_jobs(self.app_db_path, status=QUEUED, limit=100)
-            # Sort FIFO by created_at
-            all_queued.sort(key=lambda j: j.get("created_at", 0))
-
-            for job in all_queued:
-                job_id = job["id"]
-                user_id = job["user_id"]
-                provider = job["provider"]
-
+            for job in queued:
+                user_id, provider = job["user_id"], job["provider"]
                 if user_id in running_users:
-                    # User already has 1 running job
                     continue
-                if provider in running_providers:
-                    # Provider already running across users
+                if running_per_provider.get(provider, 0) >= self.provider_concurrency.get(provider, 1):
                     continue
-
-                payload = self.registered_payloads.get(job_id)
+                payload = self.registered_payloads.get(job["id"])
                 if payload is None:
-                    # If payload was not registered (e.g. from previous run without credentials)
-                    continue
-
+                    continue  # no credentials in memory (e.g. left over from before a restart)
                 running_users.add(user_id)
-                running_providers.add(provider)
+                running_per_provider[provider] = running_per_provider.get(provider, 0) + 1
                 self._start_job_locked(payload)
 
     def _start_job_locked(self, payload: JobPayload) -> None:
@@ -266,6 +271,8 @@ class JobRunner:
         job_id = payload.job_id
         session_copy = payload.session_copy
         cipher_copy = payload.cipher_copy
+        job_conn = None
+        set_cancel_check(active_job.cancel_token.is_cancelled)  # provider retry sleeps stop within 250 ms of a cancel
 
         try:
             # 1. Setup per-user storage
@@ -281,10 +288,13 @@ class JobRunner:
             raw_provider = payload.provider_instance
             if raw_provider is None:
                 raw_provider = get_provider(payload.provider, session=session_copy)
-            provider = PacedProvider(raw_provider, self, payload.provider)
+            provider = PacedProvider(raw_provider, self, payload.provider, active_job.cancel_token)
             provider_id = payload.provider_id or provider.profile()
 
             # 3. Setup progress and checkpoint callbacks
+            job_conn = connect_job_db(self.app_db_path)  # one connection for this job thread's progress writes
+            progress = {"at": 0.0, "phase": None}
+
             def on_progress(event: Any) -> None:
                 phase = getattr(event, "phase", None) or event.get("phase")
                 page = getattr(event, "page", None) or event.get("page")
@@ -292,9 +302,14 @@ class JobRunner:
                 code = getattr(event, "code", None) or event.get("code")
                 msg = getattr(event, "message", None) or event.get("message")
 
-                update_job(self.app_db_path, job_id, phase=phase, page=page, counts=counts)
+                # At most one write per second per job, except phase changes and events that carry a code.
+                now_m = time.monotonic()
+                if phase == progress["phase"] and not code and now_m - progress["at"] < PROGRESS_INTERVAL:
+                    return
+                progress["at"], progress["phase"] = now_m, phase
+                update_job(job_conn, job_id, phase=phase, page=page, counts=counts)
                 add_job_event(
-                    self.app_db_path,
+                    job_conn,
                     job_id,
                     status=RUNNING,
                     phase=phase,
@@ -327,7 +342,17 @@ class JobRunner:
 
             # 5. Handle outcome
             now = time.time()
-            if active_job.cancel_token.is_cancelled() or report.get("cancelled"):
+            if self._shutdown and (active_job.cancel_token.is_cancelled() or report.get("cancelled")):
+                update_job(
+                    self.app_db_path, job_id, status=INTERRUPTED, resumable=1, error_code="SHUTDOWN",
+                    error_message="Interrupted by server shutdown; checkpoint saved", finished_at=now,
+                    counts=report.get("counts"),
+                )
+                add_job_event(
+                    self.app_db_path, job_id, status=INTERRUPTED, code="SHUTDOWN",
+                    message="Interrupted by server shutdown; checkpoint saved", counts=report.get("counts"),
+                )
+            elif active_job.cancel_token.is_cancelled() or report.get("cancelled"):
                 update_job(
                     self.app_db_path,
                     job_id,
@@ -467,6 +492,9 @@ class JobRunner:
                 message=str(exc),
             )
         finally:
+            if job_conn is not None:
+                job_conn.close()
+            set_cancel_check(None)
             cur_job = get_job(self.app_db_path, job_id)
             final_status = cur_job.get("status") if cur_job else None
 
@@ -669,11 +697,24 @@ class JobControl:
     submit = submit_sync
     enqueue = submit_sync
 
+    def _with_queue_info(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Add queue_position (1 = next) and eta_seconds (None without history) to queued jobs."""
+        if not any(j["status"] == QUEUED for j in jobs):
+            return jobs
+        order = {j["id"]: n for n, j in enumerate(fair_order(list_jobs(self.app_db_path, status=QUEUED, limit=500)), 1)}
+        for job in jobs:
+            if job["status"] == QUEUED and job["id"] in order:
+                job["queue_position"] = order[job["id"]]
+                avg = avg_job_seconds(self.app_db_path, job["provider"])
+                slots = self.runner.provider_concurrency.get(job["provider"], 1)
+                job["eta_seconds"] = round(order[job["id"]] * avg / slots) if avg else None
+        return jobs
+
     def get_job(self, job_id: str, user_id: str | None = None) -> dict[str, Any]:
         job = get_job(self.app_db_path, job_id, user_id=user_id)
         if job is None:
             raise JobNotFoundError(f"Job {job_id} not found.")
-        return job
+        return self._with_queue_info([job])[0]
 
     def list_jobs(
         self,
@@ -681,7 +722,7 @@ class JobControl:
         status: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
-        return list_jobs(self.app_db_path, user_id=user_id, status=status, limit=limit)
+        return self._with_queue_info(list_jobs(self.app_db_path, user_id=user_id, status=status, limit=limit))
 
     def get_events(
         self,

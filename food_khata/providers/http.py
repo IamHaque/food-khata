@@ -1,12 +1,30 @@
 """Bounded requests and archive redaction shared by provider clients."""
 
 import re
+import threading
 import time
 from typing import Any
 
 import requests
 
 from ..contracts import AuthenticationError, KhataError
+
+_cancel = threading.local()
+
+
+def set_cancel_check(check) -> None:
+    """The job runner installs, per job thread, a function that says whether the job was cancelled."""
+    _cancel.check = check
+
+
+def wait(seconds: float) -> None:
+    """Sleep in 250 ms steps; return early once the job is cancelled, so cancel is never blind to a sleep."""
+    end = time.monotonic() + seconds
+    check = getattr(_cancel, "check", None)
+    while (left := end - time.monotonic()) > 0:
+        if check is not None and check():
+            return
+        time.sleep(min(0.25, left))
 
 
 def redact(value: Any) -> Any:
@@ -47,7 +65,7 @@ def request_json(
             response = session.request(method, url, timeout=25, allow_redirects=False, **kwargs)
         except requests.RequestException:
             if retry and attempt < 2:
-                time.sleep(2**attempt)
+                wait(2**attempt)
                 continue
             raise KhataError("Network request failed; saved data is preserved.") from None
         if response.status_code in (429, 500, 502, 503, 504) and retry and attempt < 2:
@@ -55,7 +73,7 @@ def request_json(
                 delay = float(response.headers.get("Retry-After", 2**attempt))
             except ValueError:
                 delay = 2**attempt
-            time.sleep(max(0, min(delay, 30)))
+            wait(max(0, min(delay, 30)))
             continue
         if response.status_code == 401:
             raise AuthenticationError("Session expired; log in again.")

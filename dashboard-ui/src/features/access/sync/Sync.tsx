@@ -28,6 +28,10 @@ export function SyncChooser({ accountId, provider, onStarted }: { accountId: str
   </form>;
 }
 
+const ordinal = (n: number) => `${n}${["th", "st", "nd", "rd"][n % 100 >= 11 && n % 100 <= 13 ? 0 : Math.min(n % 10, 4) % 4]}`;
+export const queueText = (position: number, eta?: number | null) =>
+  `${ordinal(position)} in line${eta ? `, about ${eta >= 90 ? `${Math.round(eta / 60)} minutes` : `${eta} seconds`}` : ""}`;
+
 export function SyncJobScreen({ jobId }: { jobId: string }) {
   const client = useQueryClient();
   const key = ["access", "sync", jobId];
@@ -50,7 +54,7 @@ export function SyncJobScreen({ jobId }: { jobId: string }) {
     {query.error && <StatusBanner variant="error">{query.error.message}<Button variant="link" onClick={() => void query.refetch()}>Retry</Button></StatusBanner>}
     {!job && query.isLoading && <p role="status">Loading sync…</p>}
     {job && <>
-      <div role="status"><h2 className="font-semibold">{job.provider} · {job.status.replaceAll("_", " ")}</h2><p>Phase: {job.phase ?? "Waiting"}</p>
+      <div role="status"><h2 className="font-semibold">{job.provider} · {job.status.replaceAll("_", " ")}</h2><p>Phase: {job.phase ?? "Waiting"}</p>{job.status === "queued" && job.queue_position != null && <p>{queueText(job.queue_position, job.eta_seconds)}</p>}
         <dl>{Object.entries(job.counts ?? {}).filter(([, value]) => typeof value === "number").map(([label, value]) => <div key={label} className="flex gap-2"><dt>{label.replaceAll("_", " ")}:</dt><dd>{String(value)}</dd></div>)}</dl>
       </div>
       {job.error_message && <StatusBanner variant="warning">{job.error_message}</StatusBanner>}

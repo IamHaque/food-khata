@@ -37,6 +37,8 @@ class SyncJobResponse(BaseModel):
     created_at: float | None = Field(default=None, description="Timestamp job was enqueued")
     updated_at: float | None = Field(default=None, description="Timestamp job state was last updated")
     resumable: int | bool | None = Field(default=None, description="Whether job can be resumed")
+    queue_position: int | None = Field(default=None, description="Place in the queue for a queued job (1 = next)")
+    eta_seconds: int | None = Field(default=None, description="Estimated seconds until it finishes; null without history")
     import_pending: bool = Field(default=False, description="Fetched, but the import into analytics failed; retry it")
 
     @model_validator(mode="before")

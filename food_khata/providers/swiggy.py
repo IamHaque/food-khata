@@ -4,7 +4,6 @@ import gzip
 import json
 import platform
 import re
-import time
 import uuid
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -12,7 +11,7 @@ from typing import Any
 import requests
 
 from ..contracts import AuthenticationError, KhataError
-from .http import redact, request_json
+from .http import redact, request_json, wait
 
 ROUTES = {
     "bootstrap": ("POST", "https://disc.swiggy.com/api/v2/launch"),
@@ -281,7 +280,7 @@ class Swiggy:
             seen.update(ids)
             cursor = ids[-1]
             yield fresh
-            time.sleep(1)
+            wait(1)
 
     def valid_details(self, order_id: str, value: Any) -> bool:
         orders = value.get("orders") if isinstance(value, dict) else None
@@ -296,7 +295,7 @@ class Swiggy:
         if not isinstance(order_id, str) or not re.fullmatch(r"[0-9]{1,30}", order_id):
             raise KhataError("Invalid order ID.")
         value = order_details(self.client, order_id)
-        time.sleep(1)
+        wait(1)
         return value
 
     def close(self) -> None:
