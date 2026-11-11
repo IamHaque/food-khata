@@ -539,6 +539,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-204 | 2026-11-11 | Review | Two-factor login for the owner | P3 | Not needed for a household LAN; revisit if exposed to the internet |
 | BL-206 | 2026-11-11 | Owner | Reproduce the owner double login prompt (U-1) at Gate G0 with browser, URL and restart details; reopen only if it still occurs | P2 | Deferred by owner (DEC-P11) |
 | BL-205 | 2026-11-11 | Review | Move app state to a shared store so several workers can run | P3 | One worker is enough; PR-16 enforces it |
+| BL-207 | 2026-11-11 | PR-20 verify | `tests/test_serve_sync.py::test_discard_partial_api_persists_across_restart` fails about 2 runs in 5 (KeyError `partial_decision`), passes alone; the test races the job thread it starts | P1 | Pre-existing; look at it in PR-07 (job runner) |
 
 ### 5.5 Blockers
 
