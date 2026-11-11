@@ -210,7 +210,7 @@ All endpoints are registered under `food_khata.serve`:
 
 ## Security Architecture
 
-- **Session Authentication**: Browser session cookie (`food_khata_session`) only; no bearer headers accepted. Cookie flags: `HttpOnly`, `SameSite=Lax`. `Secure` attribute is set when served over TLS or when `--behind-https-proxy` is passed.
+- **Session Authentication**: Browser session cookie (`session_id`) only; no bearer headers accepted. Cookie flags: `HttpOnly`, `SameSite=Lax`. `Secure` attribute is set when served over TLS or when `--behind-https-proxy` is passed.
 - **CSRF Protection**: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require an `x-csrf-token` header matching the `food_khata_csrf` cookie.
 - **Reverse Proxy Support**: Client IP extraction for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
 - **Security Headers**: All HTTP responses include `Content-Security-Policy` (`default-src 'self' ...`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
@@ -244,4 +244,4 @@ All endpoints are registered under `food_khata.serve`:
 
 - **Hot Backup**: `food-khata backup --out backup.tar.gz --data-dir <DIR>` safely captures all SQLite databases via SQLite's online backup API, archives, vaults, and a manifest with SHA-256 checksums while the server is live.
 - **Safe Restore**: `food-khata restore backup.tar.gz --data-dir <EMPTY_DIR>` verifies every checksum against the manifest and extracts only into a clean, empty folder.
-- **Offline JSON Export**: `food-khata export` dumps static aggregated analytics to `.food-khata/dashboard.json` for offline viewing via `/legacy`.
+- **Offline JSON Export**: `food-khata export` dumps static aggregated analytics to `.food-khata/dashboard.json` (offline dashboard JSON, kept as a standalone export).

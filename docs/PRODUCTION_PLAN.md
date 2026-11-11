@@ -500,7 +500,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-16 | Operability | P3 | P1 | DONE | 2026-11-11 | tests/test_pr16.py 7 pass (real second process exits 2, backup then restore then login); verify on trunk after merge | W5 |
 | PR-17 | Dead code and duplication purge | P4 | P2 | DONE | 2026-11-11 | 7 files, 69 insertions and 129 deletions; verify green on trunk | W6 |
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | DONE | 2026-11-11 | mixed load 0 5xx of 3,303; kill 20 of 20 runs identical; soak 30 min flat; tests/stress 9 pass; numbers in docs/PERFORMANCE.md | W6 |
-| PR-19 | Documentation and runbooks | P4 | P2 | TODO | | | W6 |
+| PR-19 | Documentation and runbooks | P4 | P2 | DONE | 2026-11-11 | README first-hour path, architecture with system and job-state diagrams, honest limits; commands checked with --help and a throwaway folder; verify green | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
 | GC | Production acceptance | P4 | P0 | TODO | | | W7 |
 
@@ -605,6 +605,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-19 | `verify . --backend` on trunk after merge | all PASS | — | pr-19-review |
 | 2026-11-11 | PR-18 | `load_test.py --duration 300`; `kill --runs 20`; `--soak --duration 1800` | 0 5xx and 0 locked of 3,303; kill 20 of 20 ok (300 orders, 0 duplicates); RSS 93 MB idle, 438 MB peak, 368 MB at minute 30, threads 21 to 23 | 5 + 10 + 30 min | pr-18 |
 | 2026-11-11 | PR-17 | `verify . --backend` on trunk after merge | see below | — | pr-17-review |
 | 2026-11-11 | PR-13 | `npm test`, `check-bundle.mjs`, `npx playwright test` on trunk | all PASS; entry chunk 102.9 kB (budget 250) | — | pr-13-review |
@@ -631,6 +632,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-19 | README, architecture, access security notes and runbook rewritten against the code | pr-19-review |
 | 2026-11-11 | PR-18 | `scripts/load_test.py` (mixed, kill, soak), `tests/stress` (matrix, failure injection, kill wrapper; skipped by default with `-m stress`), `docs/PERFORMANCE.md`; found and fixed three bugs: `app.db` connections used across worker threads (503 on login under load), database errors swallowed without a log line, and six cold dashboard builds thrashing the GIL (27 s to 7 s with a two-at-a-time gate) | pr-18 |
 | 2026-11-11 | PR-17 | Deleted `SyncService`, `use_partial_import` and aliases, `ProviderLinkingService`, `Linking`, `JobControl.submit` and `enqueue`, `start_linking`; one copy each of the client address, loopback, secure, session status and app.db helpers in `serve/deps.py` | pr-17-review |
 | 2026-11-11 | PR-13 | Job list polls every 3 s only while a job is active, every 30 s otherwise, never while the tab is hidden, and refetches once on return (one shared hook); QueryClient defaults (30 s stale, retry once on network errors, never on 4xx, no refetch on focus); error boundary with Reload and Go to Home | pr-13-review |
@@ -659,4 +661,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |
 | 2026-11-11 | G0 sign-off | Claude Haiku 5.5 (session switched via /model) | 1 | Owner approved G0 by hand; W3 not started | Haiku is last resort for high-risk stories (PR-07, PR-09, PR-12); switch back to Sonnet 5.5 before PR-07 |
 | 2026-11-11 | PR-18 | W6 harness | opencode/beam-free | 1 | quota ended mid-story; main agent finished and fixed it | Gemini rung not used; main agent took over |
-| 2026-11-11 | PR-19 | W6 docs | antigravity gemini-3.8-flash | 1 | review pending | opencode quota ended |
+| 2026-11-11 | PR-19 | W6 docs | antigravity gemini-3.8-flash | 1 | merged after review; I fixed the cookie name (`session_id`) and a `/legacy` mention that does not exist | opencode quota ended |
