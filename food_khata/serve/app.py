@@ -57,7 +57,7 @@ from .schemas import (
     Orders,
     Slim,
 )
-from .security import get_allowed_hosts, validate_host_and_origin
+from .security import MAX_BODY_BYTES, SECURITY_HEADERS, get_allowed_hosts, validate_host_and_origin
 from .spending import spending
 
 
@@ -72,6 +72,8 @@ def create_app(
     is_https: bool = False,
     legacy_single_db: bool = False,
     provider_concurrency: dict[str, int] | None = None,
+    trusted_proxy: str | None = None,
+    behind_https_proxy: bool = False,
 ) -> FastAPI:
     if fake_enabled():
         logging.getLogger(__name__).warning(
@@ -126,7 +128,8 @@ def create_app(
     app.state.legacy_db_path = legacy_db
     app.state.lan = lan
     app.state.allow_hosts = get_allowed_hosts(allow_hosts, lan=lan)
-    app.state.is_https = is_https
+    app.state.is_https = is_https or behind_https_proxy
+    app.state.trusted_proxy = trusted_proxy
     app.state.unlocked_sessions = {}
     init_app_db(resolved_app_db)
     run_migrations(resolved_app_db, resolved_data_root)
@@ -152,6 +155,13 @@ def create_app(
     cache = app.state.dashboard_cache = {}
     cache_lock = threading.Lock()
 
+    def secured(response):
+        for name, value in SECURITY_HEADERS.items():
+            response.headers[name] = value
+        if app.state.is_https:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
+        return response
+
     @app.middleware("http")
     async def safety(request: Request, call_next):
         security_error = validate_host_and_origin(
@@ -161,6 +171,14 @@ def create_app(
         )
         if security_error is not None:
             return security_error
+        # Request bodies are small JSON; refuse anything over 64 KB before it is read.
+        if request.method in {"POST", "PUT", "PATCH"}:
+            length = request.headers.get("content-length")
+            too_big = int(length) > MAX_BODY_BYTES if (length or "").isdigit() else len(await request.body()) > MAX_BODY_BYTES
+            if too_big:
+                return JSONResponse(
+                    {"error": {"code": "payload_too_large", "message": "Request body is too large."}}, status_code=413
+                )
         started = time.monotonic()
         try:
             response = await call_next(request)
@@ -195,7 +213,7 @@ def create_app(
         path = raw_path.rstrip("/") if raw_path != "/" else "/"
         is_api = path.startswith("/api/") or path == "/api"
 
-        session_id = request.cookies.get(SESSION_COOKIE_NAME) or request.headers.get("x-session-id")
+        session_id = request.cookies.get(SESSION_COOKIE_NAME)  # the cookie only, never a header
         session = None
         if session_id:
             conn = connect_app_db(app.state.app_db_path)
@@ -237,6 +255,11 @@ def create_app(
                 )
 
         return await call_next(request)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        # Registered last, so it wraps every response, including 401, 403 and 413 from the other middlewares.
+        return secured(await call_next(request))
 
     @app.exception_handler(RequestValidationError)
     @app.exception_handler(ValidationError)
@@ -857,7 +880,7 @@ def create_app(
                         ".ttf",
                     }
                 )
-                or (target.parent == root and target.name in {"favicon.ico", "vite.svg"})
+                or (target.parent == root and target.name in {"favicon.ico", "vite.svg", "theme-init.js"})
             )
             if not allowed:
                 raise HTTPException(404, "Not found.")

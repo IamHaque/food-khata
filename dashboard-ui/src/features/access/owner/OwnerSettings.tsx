@@ -23,6 +23,7 @@ export function OwnerSettings() {
 
 function OwnerControls() {
   const status = useQuery({ queryKey: ["owner", "status"], queryFn: () => request<OwnerStatus>("/api/owner/status"), retry: false });
+  const audit = useQuery({ queryKey: ["owner", "audit"], queryFn: () => request<{ rows: { at: number; actor: string | null; action: string; target: string | null; ip: string | null }[] }>("/api/owner/audit"), retry: false });
   const users = useQuery({ queryKey: ["owner", "users"], queryFn: () => request<User[]>("/api/owner/users"), retry: false });
   const [deadline, setDeadline] = React.useState<number | null>(null);
   const [now, setNow] = React.useState(Date.now());
@@ -84,6 +85,10 @@ function OwnerControls() {
         {!user.is_owner && <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => void run(async () => { await request(`/api/owner/users/${encodeURIComponent(user.id)}/disable`, { method: "POST", body: { disabled: !user.disabled } }); await users.refetch(); })}>{user.disabled ? "Enable" : "Disable"}</Button>
           <Button variant="outline" disabled={busy} onClick={() => { setPassword(""); setTarget(user); }}>Reset password</Button></div>}
       </div>)}</div>
+    </section>
+    <section className="space-y-3"><h2 className="text-lg font-semibold">Audit trail</h2>
+      <p className="text-sm text-muted-foreground">The last 200 logins and admin actions. No passwords, codes or phone numbers are kept.</p>
+      <div className="max-h-64 overflow-auto rounded border text-xs"><table className="w-full"><tbody>{audit.data?.rows.map((row, i) => <tr key={i} className="border-b"><td className="p-1">{new Date(row.at * 1000).toLocaleString()}</td><td className="p-1">{row.action}</td><td className="p-1">{row.target ?? ""}</td><td className="p-1">{row.ip ?? ""}</td></tr>)}</tbody></table></div>
     </section>
     {temporaryPassword && <div role="status" className="rounded border p-3"><p>Temporary password (shown once): <strong>{temporaryPassword}</strong></p><p className="text-sm text-muted-foreground">Share it securely with the user.</p><Button variant="ghost" onClick={() => setTemporaryPassword("")}>Dismiss</Button></div>}
     <Dialog open={!!target} onOpenChange={open => { if (!open && !busy) { setTarget(null); setPassword(""); } }}><DialogContent>

@@ -297,6 +297,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Jobs allowed to run at once per provider (default 1 each)",
     )
     parser.add_argument(
+        "--trusted-proxy",
+        default=None,
+        metavar="ADDR",
+        help="Take the client address from X-Forwarded-For only when the connection comes from ADDR",
+    )
+    parser.add_argument(
+        "--behind-https-proxy",
+        action="store_true",
+        help="Mark cookies Secure because an HTTPS proxy terminates TLS in front of this server",
+    )
+    parser.add_argument(
         "--tls-cert",
         type=Path,
         default=None,
@@ -317,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
 
         host = args.host if args.host is not None else ("0.0.0.0" if args.lan else "127.0.0.1")
         db_file = args.db_path or (args.data_dir.expanduser().resolve() / "food_analytics.db")
-        if args.lan or args.allow_hosts or args.tls_cert or args.tls_key or args.provider_concurrency:
+        if args.lan or args.allow_hosts or args.tls_cert or args.tls_key or args.provider_concurrency or args.trusted_proxy or args.behind_https_proxy:
             return serve(
                 host,
                 args.port,
@@ -329,6 +340,8 @@ def main(argv: list[str] | None = None) -> int:
                 tls_key=args.tls_key,
                 data_root=args.data_dir.expanduser().resolve(),
                 provider_concurrency=args.provider_concurrency,
+                trusted_proxy=args.trusted_proxy,
+                behind_https_proxy=args.behind_https_proxy,
             )
         return serve(
             host,
