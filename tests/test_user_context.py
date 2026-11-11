@@ -196,7 +196,7 @@ def test_dashboard_is_isolated_and_cache_is_keyed_by_user(tmp_path):
     _seed_database(alice_db, "acct-a", "9000000001", 1)
 
     bob = TestClient(app, base_url="http://127.0.0.1")
-    bob_session, _ = authenticate_client(bob, username="bob")
+    bob_session, _ = authenticate_client(bob, username="bob", is_owner=False)
     bob_id = _session_user_id(app, bob_session)
     bob_db = user_database(data_root, bob_id)
     bob_db.parent.mkdir(parents=True, exist_ok=True)
@@ -222,7 +222,7 @@ def test_dashboard_is_isolated_and_cache_is_keyed_by_user(tmp_path):
 
     # A user without their own database gets 503, never another user's data.
     charlie = TestClient(app, base_url="http://127.0.0.1")
-    authenticate_client(charlie, username="charlie")
+    authenticate_client(charlie, username="charlie", is_owner=False)
     missing = charlie.get("/api/meta/filters")
     assert missing.status_code == 503
     assert missing.json()["error"]["code"] == "database_not_found"

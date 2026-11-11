@@ -30,6 +30,7 @@ from food_khata.auth import (
     init_app_db,
     validate_csrf_token,
 )
+from food_khata.migrations import run_migrations
 from food_khata.providers.base import fake_enabled
 from food_khata.users.context import user_root
 
@@ -113,6 +114,7 @@ def create_app(
     app.state.is_https = is_https
     app.state.unlocked_sessions = {}
     init_app_db(resolved_app_db)
+    run_migrations(resolved_app_db, resolved_data_root)
     # Vault keys live only in memory, so a session that survived a restart can never be unlocked (DEC-P2).
     _conn = connect_app_db(resolved_app_db)
     try:

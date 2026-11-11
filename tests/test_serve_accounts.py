@@ -151,17 +151,10 @@ def test_quota_max_5_accounts_409(tmp_path):
         )
         assert ver.status_code == 200
 
-    # 6th account exceeds quota
-    st_sixth = client.post(
-        "/api/accounts/link/start",
-        json={"provider": "zomato", "phone": "9999999999"},
-    ).json()
-    ver_sixth = client.post(
-        "/api/accounts/link/verify",
-        json={"handle": st_sixth["handle"], "code": "123456"},
-    )
-    assert ver_sixth.status_code == 409
-    assert ver_sixth.json()["error"]["code"] == "QUOTA"
+    # 6th account exceeds quota: refused at Send code, before any SMS is requested
+    sixth = client.post("/api/accounts/link/start", json={"provider": "zomato", "phone": "9999999999"})
+    assert sixth.status_code == 409
+    assert sixth.json()["error"]["code"] == "QUOTA"
 
 
 def test_verify_again_reuses_stored_phone(tmp_path):

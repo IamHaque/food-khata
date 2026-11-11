@@ -11,6 +11,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from food_khata.auth import connect_app_db
 from food_khata.contracts import KhataError
 from food_khata.providers.base import provider_names
 from food_khata.services.linking import LinkingService
@@ -74,6 +75,30 @@ def get_linking_service(request: Request) -> LinkingService:
     if not hasattr(request.app.state, "reverify_handles"):
         request.app.state.reverify_handles = {}
     return svc
+
+
+def _user_accounts(user_storage: Storage) -> list[dict[str, Any]]:
+    found = []
+    if user_storage.accounts_dir.exists():
+        for p in user_storage.accounts_dir.iterdir():
+            if p.is_dir() and (p / "account.json").is_file():
+                meta = _get_account_meta(user_storage, p.name)
+                if meta:
+                    found.append(meta)
+    return found
+
+
+def _release_link(request: Request, provider: str, identity: str) -> None:
+    conn = connect_app_db(request.app.state.app_db_path)
+    try:
+        conn.execute("DELETE FROM provider_links WHERE provider = ? AND identity_hash = ?", (provider, identity))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _quota_exceeded(existing: list[dict[str, Any]], phone: str) -> bool:
+    return len(existing) >= DEC_010_MAX_ACCOUNTS and not any(a.get("phone") == phone for a in existing)
 
 
 def _cached_status(session: dict[str, Any] | None) -> str:
@@ -197,6 +222,15 @@ def link_start(
             },
         )
 
+    if _quota_exceeded(_user_accounts(get_user_storage(request, user_id)), phone):
+        raise HTTPException(  # before any SMS is requested
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "QUOTA",
+                "message": f"Account quota exceeded (maximum {DEC_010_MAX_ACCOUNTS} accounts allowed).",
+            },
+        )
+
     svc = get_linking_service(request)
     # Check if a custom fake provider instance was attached to app.state
     factory = getattr(request.app.state, "provider_factory", None)
@@ -255,13 +289,7 @@ def link_verify(
     user_storage = get_user_storage(request, user_id)
 
     # 1. Quota Check: DEC-010 limit is 5 accounts per user
-    existing_accounts = []
-    if user_storage.accounts_dir.exists():
-        for p in user_storage.accounts_dir.iterdir():
-            if p.is_dir() and (p / "account.json").is_file():
-                meta = _get_account_meta(user_storage, p.name)
-                if meta:
-                    existing_accounts.append(meta)
+    existing_accounts = _user_accounts(user_storage)
 
     # 2. Verify OTP with provider
     try:
@@ -299,52 +327,29 @@ def link_verify(
                 },
             )
 
-    # 4. Exclusivity Check: "one owner per provider account"
-    # Search all other users in <data_root>/users/
-    data_root = getattr(request.app.state, "data_root", None)
-    if data_root is not None:
-        users_dir = Path(data_root) / "users"
-        if users_dir.is_dir():
-            for other_u_dir in users_dir.iterdir():
-                if not other_u_dir.is_dir() or other_u_dir.name == user_id:
-                    continue
-                other_accounts = other_u_dir / "accounts"
-                if not other_accounts.is_dir():
-                    continue
-                for other_acc in other_accounts.iterdir():
-                    acc_json_file = other_acc / "account.json"
-                    if not acc_json_file.is_file():
-                        continue
-                    try:
-                        other_data = read_json(acc_json_file)
-                        if isinstance(other_data, dict):
-                            other_provs = other_data.get("providers", {})
-                            if other_provs.get(entry.provider) == provider_id or other_data.get(
-                                "provider_identities", {}
-                            ).get(entry.provider) == provider_identity(provider_id):
-                                raise HTTPException(
-                                    status_code=status.HTTP_409_CONFLICT,
-                                    detail={
-                                        "code": "PROVIDER_ACCOUNT_TAKEN",
-                                        "message": "This provider account is already linked to another user.",
-                                    },
-                                )
-                            # Plaintext phone check if present
-                            if (
-                                other_data.get("phone") == entry.phone
-                                and entry.provider in other_provs
-                            ):
-                                raise HTTPException(
-                                    status_code=status.HTTP_409_CONFLICT,
-                                    detail={
-                                        "code": "PROVIDER_ACCOUNT_TAKEN",
-                                        "message": "This provider account is already linked to another user.",
-                                    },
-                                )
-                    except HTTPException:
-                        raise
-                    except Exception:
-                        pass
+    # 4. Exclusivity: the provider_links primary key decides, so two simultaneous links cannot both win.
+    identity = provider_identity(provider_id)
+    links = connect_app_db(request.app.state.app_db_path)
+    try:
+        claimed = links.execute(
+            "INSERT OR IGNORE INTO provider_links (provider, identity_hash, user_id) VALUES (?, ?, ?)",
+            (entry.provider, identity, user_id),
+        ).rowcount == 1
+        links.commit()
+        owner = links.execute(
+            "SELECT user_id FROM provider_links WHERE provider = ? AND identity_hash = ?",
+            (entry.provider, identity),
+        ).fetchone()
+    finally:
+        links.close()
+    if owner is None or owner["user_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "PROVIDER_ACCOUNT_TAKEN",
+                "message": "This provider account is already linked to another user.",
+            },
+        )
 
     # 5. Bind account and save encrypted session
     try:
@@ -356,6 +361,16 @@ def link_verify(
         if data.account_name:
             account["name"] = data.account_name.strip()
             user_storage._write_account(account)
+
+        links = connect_app_db(request.app.state.app_db_path)
+        try:
+            links.execute(
+                "UPDATE provider_links SET account_id = ? WHERE provider = ? AND identity_hash = ?",
+                (account["local_id"], entry.provider, identity),
+            )
+            links.commit()
+        finally:
+            links.close()
 
         entry.used = True
         svc._handles.pop(handle, None)
@@ -370,6 +385,8 @@ def link_verify(
             name=account.get("name"),
         )
     except KhataError as exc:
+        if claimed:
+            _release_link(request, entry.provider, identity)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "BIND_FAILED", "message": str(exc)},
@@ -511,6 +528,13 @@ def disconnect_account(
             user_storage.remove_session(account_id, prov)
         acc["has_session"] = False
         user_storage._write_account(acc)
+
+    links = connect_app_db(request.app.state.app_db_path)
+    try:  # the provider account is free for any user to link again
+        links.execute("DELETE FROM provider_links WHERE user_id = ? AND account_id = ?", (user_id, account_id))
+        links.commit()
+    finally:
+        links.close()
 
     return DisconnectResponse(
         status="ok",
