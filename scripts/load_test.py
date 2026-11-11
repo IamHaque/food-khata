@@ -7,6 +7,7 @@ import random
 import shutil
 import socket
 import sqlite3
+import statistics
 import sys
 import tempfile
 import threading
@@ -432,10 +433,13 @@ def mixed_load(args):
             print(f"t+{s['t']-start_t:.0f}s rss={s['rss']}KB threads={s['threads']} fds={s['fds']}")
         if min5["rss"] and last["rss"]:
             assert last["rss"] <= 1.10 * min5["rss"], (last["rss"], min5["rss"])
-        if min5["fds"] and last["fds"]:
-            assert last["fds"] <= 1.10 * min5["fds"], (last["fds"], min5["fds"])
-        if min5["threads"] and last["threads"]:
-            assert last["threads"] <= 1.10 * min5["threads"], (last["threads"], min5["threads"])
+        # fds and threads wobble by a few between samples (open sockets): compare medians, not single samples
+        def med(key, rows):
+            return statistics.median(r[key] for r in rows)
+
+        base, tail = samples[min5_idx : min5_idx + 10], samples[-10:]
+        for key in ("fds", "threads"):
+            assert med(key, tail) <= 1.10 * med(key, base) + 2, (key, med(key, tail), med(key, base))
 
     # write docs table
     try:
