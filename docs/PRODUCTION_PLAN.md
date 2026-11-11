@@ -494,7 +494,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | DONE | 2026-11-11 | tests/test_pr10.py 7 pass (20 threads claim, 2 threads link); verify on trunk after merge | W2 |
 | PR-11 | Job runner throughput and write cost | P2 | P1 | DONE | 2026-11-11 | tests/test_pr11.py 6 pass (threads); 8 users x 1,000 orders: 10.9 s to 3.7 s, connections 27,498 to 389, progress writes 8,824 to 40; verify on trunk after merge | W4 |
 | PR-12 | Dashboard and read-path performance | P2 | P1 | DONE | 2026-11-11 | cold dashboard 5240 to 796 ms (all sections), 276 to 361 ms per page section, cached 43 ms, on 20,000 orders; test_read_path_budgets_and_sections; browser 84 pass; DEVs 15 to 17 | W3 |
-| PR-13 | Frontend load and polling | P2 | P2 | TODO | | | W5 |
+| PR-13 | Frontend load and polling | P2 | P2 | DONE | 2026-11-11 | polling.test.tsx 4 pass; vitest 1030; browser 85 pass; entry chunk 102.9 kB gzip | W5 |
 | PR-14 | Owner claim, passwords and session lifetime | P3 | P1 | DONE | 2026-11-11 | tests/test_pr14.py 9 pass; vitest 1026; browser 84 pass (one load flake, passes alone); verify on trunk after merge | W4 |
 | PR-15 | HTTP hardening and audit trail | P3 | P1 | DONE | 2026-11-11 | tests/test_pr15.py 5 pass; e2e/csp.spec.ts passes (claim, Home, `/` under the CSP, no violations); vitest 1026; verify on trunk after merge | W5 |
 | PR-16 | Operability | P3 | P1 | DONE | 2026-11-11 | tests/test_pr16.py 7 pass (real second process exits 2, backup then restore then login); verify on trunk after merge | W5 |
@@ -603,6 +603,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-13 | `npm test`, `check-bundle.mjs`, `npx playwright test` on trunk | all PASS; entry chunk 102.9 kB (budget 250) | — | pr-13-review |
 | 2026-11-11 | PR-16 | `verify . --backend` on branch pr-16 | all PASS | — | pr-16 |
 | 2026-11-11 | PR-15 | `verify . --backend`, `npx playwright test e2e/csp.spec.ts e2e/auth-flow.spec.ts` on branch pr-15 | all PASS | — | pr-15 |
 | 2026-11-11 | PR-14 | `verify . --backend` and `npx playwright test` on branch pr-14 | all PASS | — | pr-14 |
@@ -626,6 +627,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-13 | Job list polls every 3 s only while a job is active, every 30 s otherwise, never while the tab is hidden, and refetches once on return (one shared hook); QueryClient defaults (30 s stale, retry once on network errors, never on 4xx, no refetch on focus); error boundary with Reload and Go to Home | pr-13-review |
 | 2026-11-11 | PR-16 | `.server.lock` (second server exits 2); `GET /health/ready`; `FOOD_KHATA_<FLAG>` for every flag and `--print-config`; JSON logs with request id and user id, redacted, rotating; `food-khata backup` and `restore` (SQLite backup API, checksums, non-empty folder refused); `purge-fake`; `docs/RUNBOOK.md` | pr-16 |
 | 2026-11-11 | PR-15 | Session from the cookie only; `Secure` from TLS or `--behind-https-proxy`, never a header; `--trusted-proxy ADDR` for X-Forwarded-For; CSP, nosniff, DENY, no-referrer on every response (HSTS over HTTPS); 413 above 64 KB; `audit_log` (migration 5) for logins, claim, window, join code, disable, enable, reset, remove, transfer, password change, log out everywhere, readable as the last 200 rows in Settings; the inline theme script moved to `theme-init.js` for the CSP | pr-15 |
 | 2026-11-11 | PR-14 | Only `/api/owner/setup` claims (register needs an owner and a join code); wrong network setup codes locked out after 5 in 10 minutes (429 Retry-After); setup code is 10 characters from 32 symbols, valid 30 minutes, fresh at every `--lan` start; `POST /api/auth/password` (vault re-wrapped, other sessions ended, new session) and `POST /api/auth/logout-all`; password rule (10 or more, not the username, not common); 7-day absolute session lifetime; Password screen and rule text on Register | pr-14 |
@@ -645,6 +647,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 ### 5.10 Delegation ledger
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
-| --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | merged; spec could not start (ESM path, cross-origin proxy, restart used a new data folder), so I rewrote it | main agent took over after the sub-agent could not run a browser |
+| --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-13 | W5 frontend | opencode/beam-free | 1 | merged after review; it shipped no tests, so I added `polling.test.tsx` and changed Go to Home to `/home` | main agent finished it |
+| 2026-11-11 | PR-12 | Query plan report | opencode/beam-free | 1 | report accepted as written | — |
+| 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | merged; spec could not start (ESM path, cross-origin proxy, restart used a new data folder), so I rewrote it | main agent took over after the sub-agent could not run a browser |
 | 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |
 | 2026-11-11 | G0 sign-off | Claude Haiku 5.5 (session switched via /model) | 1 | Owner approved G0 by hand; W3 not started | Haiku is last resort for high-risk stories (PR-07, PR-09, PR-12); switch back to Sonnet 5.5 before PR-07 |
