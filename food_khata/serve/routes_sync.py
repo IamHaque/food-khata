@@ -19,7 +19,6 @@ from food_khata.serve.routes_accounts import (
 from food_khata.serve.schemas_sync import (
     CreateSyncJobRequest,
     JobEventOut,
-    SubmitCodeRequest,
     SyncJobResponse,
     UsePartialResponse,
 )
@@ -111,7 +110,7 @@ def create_sync_job(
     except JobLimitExceeded as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "LIMIT_EXCEEDED", "message": str(exc)},
+            detail={"code": exc.code, "message": str(exc)},
         ) from exc
 
     return SyncJobResponse(**job)
@@ -229,29 +228,6 @@ def resume_sync_job(
         provider_id=provider_id,
     )
     return SyncJobResponse(**resumed)
-
-
-@router.post("/jobs/{job_id}/code", response_model=SyncJobResponse)
-def submit_sync_job_code(
-    job_id: str,
-    data: SubmitCodeRequest,
-    user_id: Annotated[str, Depends(get_current_user_id)],
-    control: Annotated[JobControl, Depends(get_job_control)],
-):
-    """Submit OTP code for a job paused in needs_code state."""
-    try:
-        job = control.submit_code(job_id, data.code.strip(), user_id=user_id)
-    except JobNotFoundError as err:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "NOT_FOUND", "message": f"Job '{job_id}' not found."},
-        ) from err
-    except KhataError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "INVALID_CODE", "message": str(exc)},
-        ) from exc
-    return SyncJobResponse(**job)
 
 
 @router.post("/jobs/{job_id}/use-partial", response_model=UsePartialResponse)

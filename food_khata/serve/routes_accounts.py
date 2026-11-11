@@ -415,6 +415,19 @@ def link_verify(
         entry.used = True
         svc._handles.pop(handle, None)
 
+        if reverify_info:  # a sync that stopped on the expired session continues with the fresh one
+            control = request.app.state.job_control
+            for job in control.list_jobs(user_id=user_id, status="needs_code"):
+                if job["account_id"] == account["local_id"] and job["provider"] == entry.provider:
+                    control.resume_job(
+                        job["id"],
+                        user_id=user_id,
+                        session=session_value,
+                        cipher=get_user_cipher(request, user_id),
+                        provider_instance=entry.provider_instance,
+                        provider_id=provider_id,
+                    )
+
         return LinkVerifyResponse(
             id=account["local_id"],
             local_id=account["local_id"],

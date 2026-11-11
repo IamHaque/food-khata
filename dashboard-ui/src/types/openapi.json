@@ -3484,59 +3484,6 @@
         }
       }
     },
-    "/api/sync/jobs/{job_id}/code": {
-      "post": {
-        "tags": [
-          "sync"
-        ],
-        "summary": "Submit Sync Job Code",
-        "description": "Submit OTP code for a job paused in needs_code state.",
-        "operationId": "submit_sync_job_code_api_sync_jobs__job_id__code_post",
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubmitCodeRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncJobResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/sync/jobs/{job_id}/use-partial": {
       "post": {
         "tags": [
@@ -6932,20 +6879,6 @@
           "status"
         ],
         "title": "StatusResponse"
-      },
-      "SubmitCodeRequest": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code",
-            "description": "Verification code / OTP from provider"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code"
-        ],
-        "title": "SubmitCodeRequest"
       },
       "SyncJobResponse": {
         "properties": {

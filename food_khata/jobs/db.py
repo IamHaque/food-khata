@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..storage import provider_identity
-from .states import INTERRUPTED, QUEUED, RUNNING
+from .states import INTERRUPTED, NEEDS_CODE, PAUSED, QUEUED, RUNNING
 
 JOBS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -338,29 +338,34 @@ def count_user_active_jobs(
 def mark_interrupted_on_startup(
     conn_or_path: sqlite3.Connection | Path | str,
 ) -> list[str]:
-    """Mark all running jobs as interrupted when server starts (AC-09 restart scenario)."""
+    """Every unfinished job (running, queued, needs_code, paused) becomes interrupted/RESTART at start.
+
+    Their in-memory payloads and keys died with the old process, so none can run or count against limits.
+    """
     now = time.time()
+    open_states = (RUNNING, QUEUED, NEEDS_CODE, PAUSED)
+    marks = ",".join("?" for _ in open_states)
     with get_db_conn(conn_or_path) as conn:
-        cursor = conn.execute("SELECT id FROM jobs WHERE status = ?", (RUNNING,))
+        cursor = conn.execute(f"SELECT id FROM jobs WHERE status IN ({marks})", open_states)
         interrupted_ids = [row["id"] for row in cursor.fetchall()]
         if not interrupted_ids:
             return []
 
         conn.execute(
-            """
+            f"""
             UPDATE jobs
-            SET status = ?, error_code = 'INTERRUPTED',
+            SET status = ?, error_code = 'RESTART',
                 error_message = 'Interrupted by server restart',
                 finished_at = ?, updated_at = ?, resumable = 1
-            WHERE status = ?
+            WHERE status IN ({marks})
             """,
-            (INTERRUPTED, now, now, RUNNING),
+            (INTERRUPTED, now, now, *open_states),
         )
         for job_id in interrupted_ids:
             conn.execute(
                 """
                 INSERT INTO job_events (job_id, status, code, message, created_at)
-                VALUES (?, ?, 'INTERRUPTED', 'Interrupted by server restart', ?)
+                VALUES (?, ?, 'RESTART', 'Interrupted by server restart', ?)
                 """,
                 (job_id, INTERRUPTED, now),
             )

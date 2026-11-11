@@ -44,11 +44,21 @@ def _backfill_provider_links(conn, data_root):
                 )
 
 
+def _one_active_job(conn, data_root):
+    live = "status IN ('queued', 'running')"
+    conn.execute(  # keep the newest of any duplicates so the index can be built
+        f"UPDATE jobs SET status = 'interrupted', error_code = 'RESTART' WHERE {live} AND rowid NOT IN "
+        f"(SELECT MAX(rowid) FROM jobs WHERE {live} GROUP BY account_id, provider)"
+    )
+    conn.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_one_active ON jobs(account_id, provider) WHERE {live}")
+
+
 # (version, function, needs the data root)
 MIGRATIONS = [
     (1, _one_owner, False),
     (2, _provider_links, False),
     (3, _backfill_provider_links, True),
+    (4, _one_active_job, False),
 ]
 
 

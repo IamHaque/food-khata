@@ -39,9 +39,9 @@ describe("sync screens", () => {
     expect(cancel).toHaveBeenCalledWith("synthetic-job");
     expect(state.set).toHaveBeenCalledWith(["access", "sync", "synthetic-job"], job("cancelled"));
   });
-  it("prompts for a code and offers resume after login for interrupted jobs", async () => {
+  it("asks to verify again and offers resume after login for interrupted jobs", async () => {
     state.data = job("needs_code");
-    expect(html(<SyncJobScreen jobId="synthetic-job" />)).toContain('autoComplete="one-time-code"');
+    expect(html(<SyncJobScreen jobId="synthetic-job" />)).toContain("Verify again on Home");
     state.data = job("interrupted");
     const resume = vi.spyOn(syncApi, "resume").mockResolvedValue(job("queued"));
     const output = html(<SyncJobScreen jobId="synthetic-job" />);
@@ -75,9 +75,8 @@ describe("local sync client", () => {
   it("uses authenticated client endpoints and trimmed code", async () => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(job("running")))));
     vi.stubGlobal("fetch", fetch);
-    await syncApi.list(); await syncApi.get("job/id"); await syncApi.create("synthetic-account", "all"); await syncApi.code("job/id", " 123456 "); await syncApi.cancel("job/id"); await syncApi.resume("job/id"); await syncApi.usePartial("job/id"); await syncApi.discardPartial("job/id");
-    expect(fetch.mock.calls.map(c => c[0])).toEqual(["/api/sync/jobs", "/api/sync/jobs/job%2Fid", "/api/sync/jobs", "/api/sync/jobs/job%2Fid/code", "/api/sync/jobs/job%2Fid/cancel", "/api/sync/jobs/job%2Fid/resume", "/api/sync/jobs/job%2Fid/use-partial", "/api/sync/jobs/job%2Fid/discard-partial"]);
-    expect(JSON.parse(fetch.mock.calls[3][1].body)).toEqual({ code: "123456" });
+    await syncApi.list(); await syncApi.get("job/id"); await syncApi.create("synthetic-account", "all"); await syncApi.cancel("job/id"); await syncApi.resume("job/id"); await syncApi.usePartial("job/id"); await syncApi.discardPartial("job/id");
+    expect(fetch.mock.calls.map(c => c[0])).toEqual(["/api/sync/jobs", "/api/sync/jobs/job%2Fid", "/api/sync/jobs", "/api/sync/jobs/job%2Fid/cancel", "/api/sync/jobs/job%2Fid/resume", "/api/sync/jobs/job%2Fid/use-partial", "/api/sync/jobs/job%2Fid/discard-partial"]);
     expect(fetch.mock.calls[3][1].headers["x-csrf-token"]).toBe("synthetic-csrf");
     vi.unstubAllGlobals();
   });

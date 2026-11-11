@@ -126,19 +126,11 @@ def test_pause_and_resume_job(tmp_path):
     assert resume_res.status_code == 200
 
 
-def test_needs_code_and_submit_code(tmp_path):
-    """Scenario: needs code. Submitting code transitions job."""
+def test_code_route_is_gone(tmp_path):
+    """PR-07: a code cannot repair an expired provider session; the route returns 404."""
     client, _, _ = _make_client(tmp_path)
     authenticate_client(client, username="alice", is_owner=True)
-    acc_id = _link_account(client, "9876543210")
-
-    job = client.post("/api/sync/jobs", json={"account_id": acc_id, "mode": "new"}).json()
-    job_id = job["id"]
-
-    # Submit verification code
-    code_res = client.post(f"/api/sync/jobs/{job_id}/code", json={"code": "123456"})
-    # If job was not in NEEDS_CODE, returns 400 with INVALID_CODE
-    assert code_res.status_code in (200, 400)
+    assert client.post("/api/sync/jobs/any/code", json={"code": "123456"}).status_code in (404, 405)
 
 
 def test_use_partial_ingest(tmp_path):
@@ -231,3 +223,57 @@ def test_job_limits_enforced_409(tmp_path, monkeypatch):
     res = client.post("/api/sync/jobs", json={"account_id": acc_id, "mode": "new"})
     assert res.status_code == 409
     assert res.json()["error"]["code"] == "LIMIT_EXCEEDED"
+
+
+def test_restart_recovery_account_busy_and_auto_resume(tmp_path):
+    """PR-07: open jobs become interrupted/RESTART; one active job per account and provider; verify-again resumes needs_code."""
+    from food_khata.auth import connect_app_db
+    from food_khata.jobs.db import create_job, update_job
+
+    client, data_root, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    account_id = _link_account(client)
+    uid = client.get("/api/sync/jobs").json()  # no jobs yet
+    assert uid == []
+    conn = connect_app_db(app_db)
+    user_id = conn.execute("SELECT id FROM users").fetchone()["id"]
+
+    # Orphans from before a restart: queued and needs_code, plus one running
+    for job_id, state in (("q1", "queued"), ("n1", "needs_code"), ("r1", "running")):
+        create_job(app_db, job_id=job_id, user_id=user_id, account_id=f"{account_id}-{job_id}", provider="zomato", status=state)
+    restarted = TestClient(create_app(tmp_path / "dummy.db", app_db_path=app_db, data_root=data_root), base_url="http://127.0.0.1:8765")
+    restarted.app.state.job_runner.mark_interrupted_on_startup()
+    rows = {r["id"]: r for r in conn.execute("SELECT id, status, error_code FROM jobs")}
+    assert all(rows[j]["status"] == "interrupted" and rows[j]["error_code"] == "RESTART" for j in ("q1", "n1", "r1"))
+
+    # A needs_code job on this account, then a second submit is refused
+    authenticate_client(restarted, username="alice", is_owner=True)
+    create_job(app_db, job_id="busy", user_id=user_id, account_id=account_id, provider="zomato", status="queued")
+    res = restarted.post("/api/sync/jobs", json={"account_id": account_id})
+    assert (res.status_code, res.json()["error"]["code"]) == (409, "ACCOUNT_BUSY")
+    update_job(app_db, "busy", status="needs_code")
+    assert restarted.post("/api/sync/jobs/busy/code", json={"code": "1"}).status_code in (404, 405)
+
+
+def test_verify_again_resumes_needs_code_job_and_expiry_is_db_driven(tmp_path):
+    from food_khata.auth import connect_app_db
+    from food_khata.jobs.db import create_job, get_job
+
+    client, _, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    account_id = _link_account(client)
+    user_id = connect_app_db(app_db).execute("SELECT id FROM users").fetchone()["id"]
+    create_job(app_db, job_id="nc", user_id=user_id, account_id=account_id, provider="zomato", status="needs_code")
+    handle = client.post(f"/api/accounts/{account_id}/verify-again", json={}).json()["handle"]
+    assert client.post("/api/accounts/link/verify", json={"handle": handle, "code": "123456"}).status_code == 200
+    for _ in range(50):
+        if get_job(app_db, "nc")["status"] in ("done", "failed"):
+            break
+        time.sleep(0.1)
+    assert get_job(app_db, "nc")["status"] != "needs_code"
+
+    # No in-memory payload at all: a stale needs_code job still expires
+    create_job(app_db, job_id="old", user_id=user_id, account_id="other-account", provider="zomato", status="needs_code")
+    client.app.state.job_runner.registered_payloads.clear()
+    assert "old" in client.app.state.job_runner.drop_expired_keys(max_age_seconds=-1)
+    assert get_job(app_db, "old")["status"] == "interrupted"

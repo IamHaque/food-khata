@@ -709,26 +709,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sync/jobs/{job_id}/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit Sync Job Code
-         * @description Submit OTP code for a job paused in needs_code state.
-         */
-        post: operations["submit_sync_job_code_api_sync_jobs__job_id__code_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/sync/jobs/{job_id}/use-partial": {
         parameters: {
             query?: never;
@@ -1924,14 +1904,6 @@ export interface components {
         StatusResponse: {
             /** Status */
             status: string;
-        };
-        /** SubmitCodeRequest */
-        SubmitCodeRequest: {
-            /**
-             * Code
-             * @description Verification code / OTP from provider
-             */
-            code: string;
         };
         /** SyncJobResponse */
         SyncJobResponse: {
@@ -3477,41 +3449,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SyncJobResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    submit_sync_job_code_api_sync_jobs__job_id__code_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitCodeRequest"];
-            };
-        };
         responses: {
             /** @description Successful Response */
             200: {

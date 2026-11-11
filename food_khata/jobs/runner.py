@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import sqlite3
 import threading
 import time
 import uuid
@@ -61,6 +62,14 @@ class JobLimitExceeded(HTTPException, KhataError):
         self.status_code = 409
         self.code = "LIMIT_EXCEEDED"
         self.message = detail
+
+
+class AccountBusy(JobLimitExceeded):
+    """Another job is already queued or running for this account and provider (PR-07)."""
+
+    def __init__(self) -> None:
+        super().__init__("A sync is already queued or running for this account and provider.")
+        self.code = "ACCOUNT_BUSY"
 
 
 class JobNotFoundError(HTTPException, KhataError):
@@ -540,8 +549,8 @@ class JobRunner:
             # A running job's cancellation clears its payload before pause is recorded.
             with get_db_conn(self.app_db_path) as conn:
                 stale = conn.execute(
-                    "SELECT id FROM jobs WHERE status = ? AND updated_at < ?",
-                    (PAUSED, cutoff),
+                    "SELECT id FROM jobs WHERE status IN (?, ?) AND updated_at < ?",
+                    (PAUSED, NEEDS_CODE, cutoff),
                 ).fetchall()
                 for row in stale:
                     job_id = row["id"]
@@ -550,9 +559,9 @@ class JobRunner:
                     now = time.time()
                     changed = conn.execute(
                         "UPDATE jobs SET status = ?, error_code = ?, error_message = ?, "
-                        "finished_at = ?, updated_at = ? WHERE id = ? AND status = ? AND updated_at < ?",
+                        "finished_at = ?, updated_at = ? WHERE id = ? AND status IN (?, ?) AND updated_at < ?",
                         (INTERRUPTED, "INTERRUPTED", "Paused job expired; key dropped",
-                         now, now, job_id, PAUSED, cutoff),
+                         now, now, job_id, PAUSED, NEEDS_CODE, cutoff),
                     ).rowcount
                     if changed:
                         conn.execute(
@@ -626,7 +635,18 @@ class JobControl:
             provider_instance=provider_instance,
         )
 
-        job = create_job(
+        try:
+            job = self._create_job(job_id, user_id, account_id, provider, provider_id, mode)
+        except sqlite3.IntegrityError as exc:  # partial unique index: one active job per account and provider
+            raise AccountBusy() from exc
+
+        self.runner.register_job(payload)
+        self.runner.process_queue()
+
+        return job
+
+    def _create_job(self, job_id, user_id, account_id, provider, provider_id, mode):
+        return create_job(
             self.app_db_path,
             job_id=job_id,
             user_id=user_id,
@@ -636,11 +656,6 @@ class JobControl:
             mode=mode,
             status=QUEUED,
         )
-
-        self.runner.register_job(payload)
-        self.runner.process_queue()
-
-        return job
 
     submit = submit_sync
     enqueue = submit_sync
@@ -764,40 +779,12 @@ class JobControl:
             provider_instance=provider_instance,
         )
         self.runner.register_job(payload)
-        update_job(self.app_db_path, job_id, status=QUEUED, error_code=None, error_message=None)
+        try:
+            update_job(self.app_db_path, job_id, status=QUEUED, error_code=None, error_message=None)
+        except sqlite3.IntegrityError as exc:
+            self.runner.registered_payloads.pop(job_id, None)
+            raise AccountBusy() from exc
         add_job_event(self.app_db_path, job_id, status=QUEUED, message="Job resumed")
-        self.runner.process_queue()
-        return self.get_job(job_id)
-
-    def submit_code(
-        self,
-        job_id: str,
-        code: str,
-        user_id: str | None = None,
-    ) -> dict[str, Any]:
-        """Submit verification code for a job paused in needs_code state."""
-        job = self.get_job(job_id, user_id=user_id)
-        if job["status"] != NEEDS_CODE:
-            raise KhataError(f"Job {job_id} is not waiting for a verification code.")
-
-        with self.runner.lock:
-            payload = self.runner.registered_payloads.get(job_id)
-
-        if payload is not None and payload.provider_instance is not None:
-            provider = payload.provider_instance
-            if hasattr(provider, "verify_otp"):
-                provider.verify_otp(code)
-            elif hasattr(provider, "verify_code"):
-                provider.verify_code(code)
-
-        update_job(self.app_db_path, job_id, status=QUEUED, error_code=None, error_message=None)
-        add_job_event(
-            self.app_db_path,
-            job_id,
-            status=QUEUED,
-            code="CODE_VERIFIED",
-            message="Verification code accepted; resumed",
-        )
         self.runner.process_queue()
         return self.get_job(job_id)
 
