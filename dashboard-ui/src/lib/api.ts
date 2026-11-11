@@ -36,3 +36,9 @@ export const bill = (id: string, filters: Filters = {}, signal?: AbortSignal) =>
 export const restaurants = (params: RestaurantsParams = {}, signal?: AbortSignal) => request(url("/api/restaurants", params), LeadersSchema, signal);
 export const items = (params: ItemsParams = {}, signal?: AbortSignal) => request(url("/api/items", params), LeadersSchema, signal);
 export const slim = (filters: Filters = {}, signal?: AbortSignal) => request(url("/api/orders/slim", filters), SlimSchema, signal);
+
+export function pollInterval(jobs: { status: string }[] | null | undefined, hidden: boolean): number | false {
+  if (hidden) return false;
+  const list = jobs ?? [];
+  return list.some(job => ["queued", "running", "paused", "needs_code"].includes(job.status)) ? 3000 : 30000;
+}

@@ -1,9 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { userStorageKey } from "../../../lib/user-storage";
 import { useAccounts } from "../api";
-import { isSyncActive, syncApi } from "../sync/api";
+import { isSyncActive } from "../sync/api";
+import { useSyncJobs } from "../../../hooks/api";
+export { pollInterval } from "../../../lib/api";
+export { useSyncJobs } from "../../../hooks/api";
 
 export function AccessBanners() {
   const accounts = useAccounts();
@@ -11,7 +14,7 @@ export function AccessBanners() {
   const previous = useRef<Record<string, string>>({});
   const [dismissed, setDismissed] = useState("");
   const initialCutoff = useRef(Date.now() / 1000 - 300);
-  const jobs = useQuery({ queryKey: ["access", "sync", "list"], queryFn: syncApi.list, refetchInterval: 3000, retry: false });
+  const jobs = useSyncJobs();
   useEffect(() => {
     if (!jobs.data) return;
     const finished = jobs.data.some(job => job.status === "done" && previous.current[job.id] && previous.current[job.id] !== "done");
