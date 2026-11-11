@@ -22,7 +22,7 @@ for (const width of [1440, 390]) {
     });
     await page.goto('/');
     await expect(page.getByText('Fetching your first orders.', { exact: false })).toBeVisible();
-    await expect(page.getByText('Account: Account A', { exact: false })).toBeVisible();
+    await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
     hold = true;
     await page.evaluate(() => { void (window as any).__queryClient.invalidateQueries({ queryKey: ['accounts'] }); });
@@ -34,9 +34,9 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Username').fill('B');
     await page.getByLabel('Password').fill('password');
     await page.getByRole('button', { name: /log in/i }).click();
-    await expect(page.getByText('Account: Account B', { exact: false })).toBeVisible();
+    await expect(page.getByText('Account: Fake ••••nt B', { exact: false })).toBeVisible();
     release();
-    await expect(page.getByText('Account: Account A', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toHaveCount(0);
     orders = 1;
     await page.reload();
     await expect(page.getByText('Syncing orders in the background.', { exact: false })).toBeVisible();
@@ -80,8 +80,8 @@ test('linked accounts drive the filter and data health', async ({ page }) => {
   ] }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Account', exact: true }).click();
-  await expect(page.getByRole('option', { name: /First linked/ })).toBeVisible();
-  await page.getByRole('option', { name: /Second linked/ }).click();
+  await expect(page.getByRole('option', { name: /Fake ••••nked/ }).first()).toBeVisible();
+  await page.getByRole('option', { name: /Fake ••••nked.*3 orders/ }).click();
   await expect(page).toHaveURL(/account_ids=b/);
   await page.getByRole('button', { name: /Open data health and sync panel/ }).click();
   await expect(page.getByText('fake · First linked · 2 orders · ok')).toBeVisible();
@@ -96,11 +96,12 @@ test('cross-tab login clears filters and delayed data', async ({ context, page }
   const requests: string[] = [];
   const setup = async (tab: typeof page) => {
     await mockApi(tab);
+    let signedOut = tab !== page; // the second tab starts at the login form
     await tab.route('**/api/**', async (route, request) => {
       const url = new URL(request.url());
       if (user === 'B') requests.push(url.pathname + url.search);
-      if (url.pathname === '/api/auth/me') return route.fulfill({ json: { id: user, username: user, is_owner: false, created_at: '' } });
-      if (url.pathname === '/api/auth/login') { user = 'B'; return route.fulfill({ json: { user: { id: user }, csrf_token: 'fake' } }); }
+      if (url.pathname === '/api/auth/me') return signedOut ? route.fulfill({ status: 401 }) : route.fulfill({ json: { id: user, username: user, is_owner: false, created_at: '' } });
+      if (url.pathname === '/api/auth/login') { signedOut = false; user = 'B'; return route.fulfill({ json: { user: { id: user }, csrf_token: 'fake' } }); }
       if (url.pathname === '/api/accounts') {
         const captured = user;
         if (hold && captured === 'A') { pending(); await delayed; }
@@ -111,7 +112,7 @@ test('cross-tab login clears filters and delayed data', async ({ context, page }
   };
   await setup(page);
   await page.goto('/?restaurant_ids=A-private&account_ids=A');
-  await expect(page.getByText('Account: Account A', { exact: false })).toBeVisible();
+  await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toBeVisible();
   hold = true;
   await page.evaluate(() => { void (window as any).__queryClient.invalidateQueries({ queryKey: ['accounts'] }); });
   await waiting;
@@ -125,9 +126,9 @@ test('cross-tab login clears filters and delayed data', async ({ context, page }
   await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4173\/(?:\?|$)/);
   expect(other.url()).not.toContain('A-private');
   expect(page.url()).not.toContain('A-private');
-  await expect(page.getByText('Account: Account B', { exact: false })).toBeVisible();
+  await expect(page.getByText('Account: Fake ••••nt B', { exact: false })).toBeVisible();
   release();
-  await expect(page.getByText('Account: Account A', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toHaveCount(0);
   expect(requests.join('\n')).not.toContain('A-private');
   expect(requests.join('\n')).not.toContain('account_ids=A');
 });

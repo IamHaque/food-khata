@@ -10,6 +10,7 @@ from .csrf import CSRF_COOKIE_NAME, generate_csrf_token
 
 SESSION_COOKIE_NAME = "session_id"
 IDLE_TIMEOUT_SECONDS = 8 * 3600  # 8 hours idle timeout (DEC-010)
+TOUCH_INTERVAL_SECONDS = 60
 
 
 def init_app_db(db_path: Path | str) -> None:
@@ -130,13 +131,17 @@ def get_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | N
         delete_session(conn, session_id)
         return None
 
-    # Touch session to reset idle timeout
-    new_expires = now + IDLE_TIMEOUT_SECONDS
-    conn.execute(
-        "UPDATE sessions SET last_active = ?, expires_at = ? WHERE id = ?",
-        (now, new_expires, session_id),
-    )
-    conn.commit()
+    # Touch at most once per TOUCH_INTERVAL_SECONDS so most requests do not write (R-14).
+    if now - row["last_active"] < TOUCH_INTERVAL_SECONDS:
+        new_expires = row["expires_at"]
+        now = row["last_active"]
+    else:
+        new_expires = now + IDLE_TIMEOUT_SECONDS
+        conn.execute(
+            "UPDATE sessions SET last_active = ?, expires_at = ? WHERE id = ?",
+            (now, new_expires, session_id),
+        )
+        conn.commit()
 
     return {
         "id": row["id"],

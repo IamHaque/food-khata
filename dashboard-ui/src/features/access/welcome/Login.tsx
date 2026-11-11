@@ -42,6 +42,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
   const searchParams = new URLSearchParams(location.search);
   const returnUrl = searchParams.get("return") || "/";
   const justRegistered = searchParams.get("registered") === "true";
+  const sessionExpired = searchParams.get("reason") === "expired";
   const setupComplete = searchParams.get("setup") === "complete";
 
   const validate = (): boolean => {
@@ -70,7 +71,8 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
     try {
       await client.cancelQueries();
       client.clear();
-      await authApi.login(username.trim(), password);
+      const { user } = await authApi.login(username.trim(), password);
+      client.setQueryData(["auth", "me"], user);
       notifyAuthChange();
       if (onSuccess) {
         onSuccess();
@@ -101,6 +103,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
       {justRegistered && (
         <StatusBanner variant="success">Account registered successfully. Please log in.</StatusBanner>
       )}
+      {sessionExpired && <StatusBanner variant="warning">Your session ended. Sign in again.</StatusBanner>}
       {setupComplete && (
         <StatusBanner variant="success">Server owner claimed successfully. Please log in.</StatusBanner>
       )}

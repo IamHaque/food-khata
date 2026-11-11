@@ -66,11 +66,16 @@ async function loginOwner(page: Page) {
   await page.getByRole("button", { name: "Log in", exact: true }).click();
 }
 
-// Claim, then log in if the app asks for it (today it does; PR-03 changes that).
+// After a claim the server has already created a session; log in only if the app still shows the form.
+async function afterClaim(page: Page): Promise<boolean> {
+  const form = page.locator("#login-username");
+  await Promise.race([form.waitFor({ timeout: 10000 }), page.waitForURL((u) => !["/welcome", "/setup", "/login"].includes(u.pathname), { timeout: 10000 })]).catch(() => undefined);
+  return form.isVisible();
+}
+
 async function signedIn(page: Page, base: string) {
   await claimOwner(page, base);
-  await page.waitForURL(/\/(login|home)/, { timeout: 10000 });
-  if (page.url().includes("/login")) await loginOwner(page);
+  if (await afterClaim(page)) await loginOwner(page);
   await page.waitForURL((u) => u.pathname !== "/login", { timeout: 10000 });
 }
 
@@ -109,8 +114,7 @@ for (const width of [1440, 390]) {
       srv = await startBackend(false);
       const rec = record(page);
       await claimOwner(page, srv.base);
-      await page.waitForURL(/\/(login|home)/, { timeout: 10000 });
-      if (page.url().includes("/login")) {
+      if (await afterClaim(page)) {
         const startedAt = Date.now();
         const before = rec.logins();
         await loginOwner(page);

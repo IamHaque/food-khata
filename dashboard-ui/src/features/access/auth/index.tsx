@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { authApi, setCsrfToken } from "../api";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { ApiError, authApi, setCsrfToken, setUnauthorizedHandler } from "../api";
 import { queryClient } from "../../../app/providers";
 import { clearCrossFilterHistory } from "../../../lib/crossfilter";
 
@@ -14,23 +14,44 @@ export function useAuth() {
   });
 }
 
-export function isAuthenticated(): boolean {
-  // best-effort synchronous check; prefer useAuth in components
-  try {
-    return Boolean(localStorage.getItem("access_token"));
-  } catch {
-    return false;
-  }
+const ACCESS_PAGES = ["/login", "/welcome", "/setup", "/register"];
+
+// Any 401 from the API sends the user to /login once, through the router (no page reload).
+function useSessionExpiry() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const location = useLocation();
+  const path = React.useRef(location.pathname + location.search);
+  path.current = location.pathname + location.search;
+  React.useEffect(() => {
+    setUnauthorizedHandler(() => {
+      if (ACCESS_PAGES.some((p) => path.current.startsWith(p))) return;
+      qc.clear();
+      navigate(`/login?return=${encodeURIComponent(path.current)}&reason=expired`, { replace: true });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [navigate, qc]);
 }
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { data, isLoading, isError } = useAuth();
+  const { data, isLoading, isError, error } = useAuth();
   const location = useLocation();
+  useSessionExpiry();
   if (isLoading) return null;
   if (isError || !data) {
     const returnTo = location.pathname + location.search;
-    return <Navigate to={`/login?return=${encodeURIComponent(returnTo)}`} replace />;
+    const expired = error instanceof ApiError && error.code === "SESSION_EXPIRED" ? "&reason=expired" : "";
+    return <Navigate to={`/login?return=${encodeURIComponent(returnTo)}${expired}`} replace />;
   }
+  return <>{children}</>;
+}
+
+// Login, welcome and register skip straight to the landing page when a session is already valid.
+export function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
+  const { data, isLoading } = useAuth();
+  const location = useLocation();
+  if (isLoading) return null;
+  if (data) return <Navigate to={safeReturnPath(new URLSearchParams(location.search).get("return") || "/")} replace />;
   return <>{children}</>;
 }
 

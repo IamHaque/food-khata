@@ -40,13 +40,22 @@ async function refreshCsrf(): Promise<string | null> {
   }
 }
 
+// Set by the router (useSessionExpiry); a 401 is handled once, without a page reload.
+let onUnauthorized: ((code?: string) => void) | null = null;
+let expiryHandled = false;
+
+export function setUnauthorizedHandler(fn: ((code?: string) => void) | null) {
+  onUnauthorized = fn;
+  expiryHandled = false;
+}
+
 export interface RequestOptions {
   method?: string;
   body?: unknown;
   signal?: AbortSignal;
 }
 
-export async function request<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
+export async function request<T = unknown>(path: string, opts: RequestOptions = {}, csrfRetried = false): Promise<T> {
   const method = (opts.method ?? "GET").toUpperCase();
   const needsCsrf = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
   if (needsCsrf && !csrfToken) {
@@ -63,21 +72,6 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
   });
-
-  if (res.status === 401 && path !== "/api/auth/login") {
-    const isAccessPage =
-      typeof window !== "undefined" &&
-      (window.location.pathname.startsWith("/login") ||
-        window.location.pathname.startsWith("/welcome") ||
-        window.location.pathname.startsWith("/setup") ||
-        window.location.pathname.startsWith("/register"));
-
-    if (typeof window !== "undefined" && !isAccessPage) {
-      const returnPath = window.location.pathname + window.location.search;
-      window.location.href = `/login?return=${encodeURIComponent(returnPath)}`;
-    }
-    throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
-  }
 
   let data: unknown = null;
   const text = await res.text();
@@ -102,6 +96,16 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
       (data as any)?.detail ??
       (data as any)?.message ??
       res.statusText;
+
+    if (res.status === 403 && needsCsrf && !csrfRetried && code === "forbidden") {
+      csrfToken = null; // stale token (e.g. after a restart): refresh once and retry once
+      return request<T>(path, opts, true);
+    }
+    // /auth/me is handled by RequireAuth and a failed login by its form.
+    if (res.status === 401 && path !== "/api/auth/login" && path !== "/api/auth/me" && !expiryHandled) {
+      expiryHandled = true;
+      onUnauthorized?.(code ? String(code) : undefined);
+    }
 
     const retryHeader = res.headers.get("retry-after") ?? res.headers.get("Retry-After");
     const parsedRetry = retryHeader ? parseInt(retryHeader, 10) : undefined;
@@ -130,6 +134,7 @@ export const authApi = {
       method: "POST",
       body: { username, password },
     });
+    expiryHandled = false;
     if (data?.csrf_token) setCsrfToken(data.csrf_token);
     return data;
   },
