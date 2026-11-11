@@ -46,7 +46,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
     # First claim from LAN without setup code gets 403
     forbidden_res = lan_client.post(
         "/api/owner/setup",
-        json={"username": "network_owner", "password": "password1234"},
+        json={"username": "network_owner", "password": "synthetic-pass-14"},
         headers=lan_headers,
     )
     assert forbidden_res.status_code == 403
@@ -56,7 +56,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
         "/api/owner/setup",
         json={
             "username": "network_owner",
-            "password": "password1234",
+            "password": "synthetic-pass-14",
             "setup_code": "WRONG-CODE",
         },
         headers=lan_headers,
@@ -74,7 +74,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
         "/api/owner/setup",
         json={
             "username": "network_owner",
-            "password": "password1234",
+            "password": "synthetic-pass-14",
             "setup_code": setup_code,
         },
         headers=lan_headers,
@@ -90,7 +90,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
     # After a claim, the setup endpoint returns 404
     post_claim_res = lan_client.post(
         "/api/owner/setup",
-        json={"username": "another_owner", "password": "password1234"},
+        json={"username": "another_owner", "password": "synthetic-pass-14"},
         headers=lan_headers,
     )
     assert post_claim_res.status_code == 404
@@ -108,7 +108,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
     # Loopback claim requires no setup code
     loop_claim = loop_client.post(
         "/api/owner/setup",
-        json={"username": "local_owner", "password": "password1234"},
+        json={"username": "local_owner", "password": "synthetic-pass-14"},
         headers=loop_headers,
     )
     assert loop_claim.status_code == 200
@@ -119,7 +119,7 @@ def test_first_claim_loopback_and_setup_code(tmp_path):
     assert (
         loop_client.post(
             "/api/owner/setup",
-            json={"username": "local_owner2", "password": "password1234"},
+            json={"username": "local_owner2", "password": "synthetic-pass-14"},
             headers=loop_headers,
         ).status_code
         == 404
@@ -143,12 +143,13 @@ def test_registration_closed_by_default(tmp_path):
     csrf_token = client.get("/api/auth/csrf").json()["csrf_token"]
     headers = {CSRF_HEADER_NAME: csrf_token}
     reg_owner = client.post(
-        "/api/auth/register",
-        json={"username": "owner_user", "password": "password1234"},
+        "/api/owner/setup",
+        json={"username": "owner_user", "password": "synthetic-pass-14"},
         headers=headers,
     )
     assert reg_owner.status_code == 200
     assert reg_owner.json()["is_owner"] is True
+    headers = {CSRF_HEADER_NAME: client.get("/api/auth/csrf").json()["csrf_token"]}
 
     # Check setup status: owner exists, registration is closed
     status_res = client.get("/api/auth/setup-status")
@@ -159,7 +160,7 @@ def test_registration_closed_by_default(tmp_path):
     # 2. Someone registers with no window and no code -> Refused (403)
     reg_refused = client.post(
         "/api/auth/register",
-        json={"username": "alice", "password": "password1234"},
+        json={"username": "alice", "password": "synthetic-pass-14"},
         headers=headers,
     )
     assert reg_refused.status_code == 403
@@ -207,7 +208,7 @@ def test_window_and_join_code(tmp_path):
 
     reg_win = visitor_client.post(
         "/api/auth/register",
-        json={"username": "window_user", "password": "password1234"},
+        json={"username": "window_user", "password": "synthetic-pass-14"},
         headers=v_headers,
     )
     assert reg_win.status_code == 200
@@ -224,7 +225,7 @@ def test_window_and_join_code(tmp_path):
     # Registration now refused
     reg_after_close = visitor_client.post(
         "/api/auth/register",
-        json={"username": "blocked_user", "password": "password1234"},
+        json={"username": "blocked_user", "password": "synthetic-pass-14"},
         headers=v_headers,
     )
     assert reg_after_close.status_code == 403
@@ -241,7 +242,7 @@ def test_window_and_join_code(tmp_path):
 
     reg_expired = visitor_client.post(
         "/api/auth/register",
-        json={"username": "expired_win_user", "password": "password1234"},
+        json={"username": "expired_win_user", "password": "synthetic-pass-14"},
         headers=v_headers,
     )
     assert reg_expired.status_code == 403
@@ -269,7 +270,7 @@ def test_window_and_join_code(tmp_path):
     # Registration with valid join code succeeds even when window is closed
     reg_jc1 = visitor_client.post(
         "/api/auth/register",
-        json={"username": "join_code_user1", "password": "password1234", "join_code": code1},
+        json={"username": "join_code_user1", "password": "synthetic-pass-14", "join_code": code1},
         headers=v_headers,
     )
     assert reg_jc1.status_code == 200
@@ -283,7 +284,7 @@ def test_window_and_join_code(tmp_path):
     # Old code is now refused (403)
     reg_old_code = visitor_client.post(
         "/api/auth/register",
-        json={"username": "join_code_user2", "password": "password1234", "join_code": code1},
+        json={"username": "join_code_user2", "password": "synthetic-pass-14", "join_code": code1},
         headers=v_headers,
     )
     assert reg_old_code.status_code == 403
@@ -292,7 +293,7 @@ def test_window_and_join_code(tmp_path):
     # New code succeeds
     reg_new_code = visitor_client.post(
         "/api/auth/register",
-        json={"username": "join_code_user2", "password": "password1234", "join_code": code2},
+        json={"username": "join_code_user2", "password": "synthetic-pass-14", "join_code": code2},
         headers=v_headers,
     )
     assert reg_new_code.status_code == 200
@@ -321,7 +322,7 @@ def test_limits_rate_limit_and_user_cap(tmp_path):
     for i in range(1, 8):
         res = visitor.post(
             "/api/auth/register",
-            json={"username": f"user_{i}", "password": "password1234"},
+            json={"username": f"user_{i}", "password": "synthetic-pass-14"},
             headers=headers,
         )
         assert res.status_code == 200
@@ -333,7 +334,7 @@ def test_limits_rate_limit_and_user_cap(tmp_path):
     # 9th user attempt is rejected by 8-user cap (DEC-010)
     cap_res = visitor.post(
         "/api/auth/register",
-        json={"username": "user_overflow", "password": "password1234"},
+        json={"username": "user_overflow", "password": "synthetic-pass-14"},
         headers=headers,
     )
     assert cap_res.status_code == 403
@@ -353,7 +354,7 @@ def test_limits_rate_limit_and_user_cap(tmp_path):
     # Setup owner first so registration is closed by default
     throttled_client.post(
         "/api/owner/setup",
-        json={"username": "throttle_owner", "password": "password1234"},
+        json={"username": "throttle_owner", "password": "synthetic-pass-14"},
         headers=t_headers,
     )
     t_headers[CSRF_HEADER_NAME] = throttled_client.cookies.get("csrf_token")
@@ -362,14 +363,14 @@ def test_limits_rate_limit_and_user_cap(tmp_path):
     for i in range(5):
         throttled_client.post(
             "/api/auth/register",
-            json={"username": f"bad_user_{i}", "password": "password1234", "join_code": "WRONG_CODE"},
+            json={"username": f"bad_user_{i}", "password": "synthetic-pass-14", "join_code": "WRONG_CODE"},
             headers=t_headers,
         )
 
     # 6th attempt is throttled (429) with Retry-After header
     throttled_res = throttled_client.post(
         "/api/auth/register",
-        json={"username": "good_user", "password": "password1234"},
+        json={"username": "good_user", "password": "synthetic-pass-14"},
         headers=t_headers,
     )
     assert throttled_res.status_code == 429
@@ -396,10 +397,11 @@ def test_admin_actions(tmp_path):
     # Register owner
     csrf = owner_client.get("/api/auth/csrf").json()["csrf_token"]
     owner_client.post(
-        "/api/auth/register",
+        "/api/owner/setup",
         json={"username": "owner_admin", "password": owner_pw},
         headers={CSRF_HEADER_NAME: csrf},
     )
+    csrf = owner_client.get("/api/auth/csrf").json()["csrf_token"]  # the claim started a session and rotated it
     owner_login = owner_client.post(
         "/api/auth/login",
         json={"username": "owner_admin", "password": owner_pw},

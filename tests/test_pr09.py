@@ -94,12 +94,12 @@ def test_owner_removes_user(tmp_path):
     conn = connect_app_db(tmp_path / "app.db")
     bob = conn.execute("SELECT id FROM users WHERE username = 'bob'").fetchone()["id"]
     owner = conn.execute("SELECT id FROM users WHERE username = 'owner1'").fetchone()["id"]
-    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password("password123"), owner))
+    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password("synthetic-pass-1"), owner))
     conn.commit()
     bob_dir = tmp_path / "data" / "users" / bob
     bob_dir.mkdir(parents=True)
     (bob_dir / "x").write_text("data")
-    body = {"owner_password": "password123"}
+    body = {"owner_password": "synthetic-pass-1"}
     assert client.post(f"/api/owner/users/{bob}/remove", json={"owner_password": "wrong"}).status_code == 403
     assert client.post(f"/api/owner/users/{owner}/remove", json=body).status_code == 400  # not yourself
     assert client.post(f"/api/owner/users/{bob}/remove", json=body).status_code == 200

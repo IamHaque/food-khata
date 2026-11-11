@@ -31,7 +31,7 @@ def test_uvicorn_ignores_rotating_forwarded_for(tmp_path):
             else:
                 raise AssertionError("server did not start")
             client.headers["X-CSRF-Token"] = csrf
-            assert client.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+            assert client.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
             client.headers["X-CSRF-Token"] = client.cookies["csrf_token"]
             assert client.post("/api/auth/logout").status_code == 200
             client.headers["X-CSRF-Token"] = client.get("/api/auth/csrf").json()["csrf_token"]
@@ -62,7 +62,7 @@ def test_uvicorn_logout_running_job_continues(tmp_path):
                     time.sleep(0.1)
             else:
                 raise AssertionError("server did not start")
-            assert client.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+            assert client.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
             client.headers["X-CSRF-Token"] = client.cookies["csrf_token"]
             start = client.post("/api/accounts/link/start", json={"provider": "fake", "phone": "9876543210"})
             assert start.status_code == 200
@@ -73,7 +73,7 @@ def test_uvicorn_logout_running_job_continues(tmp_path):
             job_id = job.json()["id"]
             assert client.post("/api/auth/logout").status_code == 200
             client.headers["X-CSRF-Token"] = client.get("/api/auth/csrf").json()["csrf_token"]
-            login = client.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+            login = client.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
             assert login.status_code == 200
             client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
             for _ in range(100):
@@ -107,14 +107,14 @@ def test_uvicorn_owner_revokes_active_user_job(tmp_path, action):
                     time.sleep(0.1)
             else:
                 raise AssertionError("server did not start")
-            assert owner.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+            assert owner.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
             owner.headers["X-CSRF-Token"] = owner.cookies["csrf_token"]
             assert owner.post("/api/owner/window", json={"action": "open"}).status_code == 200
             member.headers["X-CSRF-Token"] = member.get("/api/auth/csrf").json()["csrf_token"]
-            registered = member.post("/api/auth/register", json={"username": "member", "password": "password123"})
+            registered = member.post("/api/auth/register", json={"username": "member", "password": "synthetic-pass-1"})
             assert registered.status_code == 200, registered.text
             user_id = registered.json()["id"]
-            login = member.post("/api/auth/login", json={"username": "member", "password": "password123"})
+            login = member.post("/api/auth/login", json={"username": "member", "password": "synthetic-pass-1"})
             assert login.status_code == 200
             member.headers["X-CSRF-Token"] = login.json()["csrf_token"]
             assert member.get("/api/owner/users").status_code == 403
@@ -133,7 +133,7 @@ def test_uvicorn_owner_revokes_active_user_job(tmp_path, action):
             assert member.get(f"/api/sync/jobs/{owner_job['id']}").status_code == 404
             assert member.post("/api/sync/jobs", json={"account_id": owner_account["id"]}).status_code == 404
             assert member.post(f"/api/owner/users/{user_id}/disable", json={"disabled": True}).status_code == 403
-            body = {"owner_password": "password123", "new_password": "password456"} if action == "reset-password" else {"disabled": True}
+            body = {"owner_password": "synthetic-pass-1", "new_password": "password456"} if action == "reset-password" else {"disabled": True}
             response = owner.post(f"/api/owner/users/{user_id}/{action}", json=body)
             assert response.status_code == 200, response.text
             assert member.get("/api/accounts").status_code == 401
@@ -167,7 +167,7 @@ def test_uvicorn_scheduled_expiry(tmp_path, phone, paused):
                     time.sleep(0.1)
             else:
                 raise AssertionError("server did not start")
-            assert client.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+            assert client.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
             client.headers["X-CSRF-Token"] = client.cookies["csrf_token"]
             link = client.post("/api/accounts/link/start", json={"provider": "fake", "phone": phone})
             account = client.post("/api/accounts/link/verify", json={"handle": link.json()["handle"], "code": "123456"})
@@ -219,7 +219,7 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
     try:
         with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=10) as client:
             csrf(client)
-            assert client.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+            assert client.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
             client.headers["X-CSRF-Token"] = client.cookies["csrf_token"]
             link = client.post("/api/accounts/link/start", json={"provider": "zomato", "phone": "9876543210"})
             account = client.post("/api/accounts/link/verify", json={"handle": link.json()["handle"], "code": "123456"}).json()
@@ -246,7 +246,7 @@ def test_uvicorn_cancel_partial_import_and_resume_after_restart(tmp_path):
             server = start_server()
             client.cookies.clear()
             csrf(client)
-            login = client.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+            login = client.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
             assert login.status_code == 200
             client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
             from food_khata.storage import provider_identity

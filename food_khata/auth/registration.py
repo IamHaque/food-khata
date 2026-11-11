@@ -8,7 +8,6 @@ from food_khata.auth.owner import (
     has_owner,
     is_registration_window_open,
     verify_join_code,
-    verify_setup_code,
 )
 
 MAX_USERS = 8  # 8 users cap (DEC-010)
@@ -73,15 +72,9 @@ def can_register(
 
     Returns (allowed, error_message, status_code).
     """
-    # 1. When no owner exists, check loopback / setup code for first claim
+    # 1. Only /api/owner/setup creates the owner; register is for users of an existing server.
     if not has_owner(conn):
-        if is_loopback or verify_setup_code(conn, setup_code or join_code):
-            return True, None, 200
-        return (
-            False,
-            "First claim from network requires the one-time setup code printed at start.",
-            403,
-        )
+        return False, "This server has no owner yet; claim it first.", 403
 
     # 2. When owner exists, check 8 user cap (DEC-010)
     count = get_user_count(conn)

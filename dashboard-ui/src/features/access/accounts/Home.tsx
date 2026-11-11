@@ -74,6 +74,7 @@ export function Home() {
         <div className="flex gap-4 text-sm">
           <Link className="underline" to="/">Open dashboard</Link>
           <Link className="underline" to="/sync">Sync now</Link>
+          <Link className="underline" to="/account/password">Password</Link>
         </div>
         <SessionControls />
         {message && <StatusBanner variant="info">{message}</StatusBanner>}

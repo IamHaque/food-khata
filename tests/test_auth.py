@@ -73,17 +73,18 @@ def test_sessions_lifecycle_and_cookies(tmp_path):
 
     # Register first user (becomes owner)
     reg_res = client.post(
-        "/api/auth/register",
-        json={"username": "owner_user", "password": "password1234"},
+        "/api/owner/setup",
+        json={"username": "owner_user", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: csrf_token},
     )
     assert reg_res.status_code == 200
     assert reg_res.json()["is_owner"] is True
+    csrf_token = client.get("/api/auth/csrf").json()["csrf_token"]  # the claim rotated it
 
     # First login: check session cookie attributes
     login_res = client.post(
         "/api/auth/login",
-        json={"username": "owner_user", "password": "password1234"},
+        json={"username": "owner_user", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: csrf_token},
     )
     assert login_res.status_code == 200
@@ -108,7 +109,7 @@ def test_sessions_lifecycle_and_cookies(tmp_path):
     new_csrf = login_res.json()["csrf_token"]
     login_res2 = client.post(
         "/api/auth/login",
-        json={"username": "owner_user", "password": "password1234"},
+        json={"username": "owner_user", "password": "synthetic-pass-14"},
         headers={CSRF_HEADER_NAME: new_csrf},
     )
     assert login_res2.status_code == 200

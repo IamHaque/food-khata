@@ -16,7 +16,7 @@ def test_http_vault_restart_and_throttle(tmp_path):
     c.headers["X-CSRF-Token"] = csrf
     setup = c.post(
         "/api/owner/setup",
-        json={"username": "owner", "password": "password123", "adopt_data": False},
+        json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False},
     )
     assert setup.status_code == 200
     user_id = setup.json()["id"]
@@ -52,16 +52,16 @@ def test_http_vault_restart_and_throttle(tmp_path):
     c = client()
     csrf = c.get("/api/auth/csrf").json()["csrf_token"]
     c.headers["X-CSRF-Token"] = csrf
-    login = c.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+    login = c.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
     assert login.status_code == 200
     c.headers["X-CSRF-Token"] = login.json()["csrf_token"]
     assert c.get("/api/accounts").json()[0]["phone"] == "9876543210"
-    reset = c.post(f"/api/owner/users/{user_id}/reset-password", json={"owner_password": "password123", "new_password": "password123"})
+    reset = c.post(f"/api/owner/users/{user_id}/reset-password", json={"owner_password": "synthetic-pass-1", "new_password": "synthetic-pass-1"})
     assert reset.status_code == 200
     assert not c.app.state.unlocked_sessions
     assert c.get("/api/accounts").status_code == 401
     c.headers["X-CSRF-Token"] = c.get("/api/auth/csrf").json()["csrf_token"]
-    login = c.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+    login = c.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
     assert login.status_code == 200
     c.headers["X-CSRF-Token"] = login.json()["csrf_token"]
     recovered = c.get("/api/accounts").json()[0]
@@ -80,7 +80,7 @@ def test_http_vault_restart_and_throttle(tmp_path):
         assert response.status_code == 401
     response = c.post(
         "/api/auth/login",
-        json={"username": "owner", "password": "password123"},
+        json={"username": "owner", "password": "synthetic-pass-1"},
         headers={"X-Forwarded-For": "192.0.2.99"},
     )
     assert response.status_code == 429
@@ -141,7 +141,7 @@ def test_analytics_stores_only_phone_suffix(tmp_path):
     from food_khata.db import AnalyticsDB
     from food_khata.users.context import UserContext
 
-    context = UserContext(tmp_path, "alice").unlock("password123")
+    context = UserContext(tmp_path, "alice").unlock("synthetic-pass-1")
     account = context.storage.bind("9876543210", "fake", "9876543210")
     metadata = context.storage.account_path(account["local_id"]) / "account.json"
     assert "9876543210" not in metadata.read_text()
@@ -152,7 +152,7 @@ def test_analytics_stores_only_phone_suffix(tmp_path):
         assert conn.execute("SELECT phone FROM accounts").fetchone()[0] == "3210"
 
 
-@pytest.mark.parametrize("endpoint", ["/api/owner/setup", "/api/auth/register"])
+@pytest.mark.parametrize("endpoint", ["/api/owner/setup"])
 def test_adoption_failure_is_visible_and_owner_login_resumes(tmp_path, monkeypatch, endpoint):
     from contextlib import closing
 
@@ -175,14 +175,14 @@ def test_adoption_failure_is_visible_and_owner_login_resumes(tmp_path, monkeypat
 
     with monkeypatch.context() as patch:
         patch.setattr(storage_module, "save_json", interrupted)
-        response = client.post(endpoint, json={"username": "owner", "password": "password123"})
+        response = client.post(endpoint, json={"username": "owner", "password": "synthetic-pass-1"})
     assert response.status_code == 500
     with closing(connect_app_db(app.state.app_db_path)) as conn:
         users = conn.execute("SELECT id, is_owner FROM users").fetchall()
         assert len(users) == 1 and users[0]["is_owner"]
         user_id = users[0]["id"]
         assert conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 0
-    login = client.post("/api/auth/login", json={"username": "owner", "password": "password123"})
+    login = client.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
     assert login.status_code == 200
     assert login.json()["user"]["id"] == user_id
     client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
@@ -209,21 +209,21 @@ def test_revocation_serializes_delayed_checkpoint(tmp_path, monkeypatch, action,
     app.state.provider_factory = lambda *args, **kwargs: FakeProvider(name="fake")
     owner = TestClient(app, base_url="http://127.0.0.1")
     owner.headers["X-CSRF-Token"] = owner.get("/api/auth/csrf").json()["csrf_token"]
-    assert owner.post("/api/owner/setup", json={"username": "owner", "password": "password123", "adopt_data": False}).status_code == 200
+    assert owner.post("/api/owner/setup", json={"username": "owner", "password": "synthetic-pass-1", "adopt_data": False}).status_code == 200
     owner.headers["X-CSRF-Token"] = owner.cookies["csrf_token"]
     assert owner.post("/api/owner/window", json={"action": "open"}).status_code == 200
     member = TestClient(app, base_url="http://127.0.0.1")
     member.headers["X-CSRF-Token"] = member.get("/api/auth/csrf").json()["csrf_token"]
-    registration = member.post("/api/auth/register", json={"username": "alice", "password": "password123"})
+    registration = member.post("/api/auth/register", json={"username": "alice", "password": "synthetic-pass-1"})
     assert registration.status_code == 200
     user_id = registration.json()["id"]
-    login = member.post("/api/auth/login", json={"username": "alice", "password": "password123"})
+    login = member.post("/api/auth/login", json={"username": "alice", "password": "synthetic-pass-1"})
     assert login.status_code == 200
     member.headers["X-CSRF-Token"] = login.json()["csrf_token"]
     start = member.post("/api/accounts/link/start", json={"provider": "fake", "phone": "9876543210"})
     linked = member.post("/api/accounts/link/verify", json={"handle": start.json()["handle"], "code": "123456"})
     account_id = linked.json()["id"]
-    context = UserContext(tmp_path, user_id).unlock("password123")
+    context = UserContext(tmp_path, user_id).unlock("synthetic-pass-1")
     other = UserContext(tmp_path, "other").unlock("other-password")
     other_account = other.storage.bind("9876543211", "fake", "other")
     entered, release, cancellation_finished = Event(), Event(), Event()
@@ -255,7 +255,7 @@ def test_revocation_serializes_delayed_checkpoint(tmp_path, monkeypatch, action,
     job = control.submit_sync(user_id=user_id, account_id=account_id, provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
     assert entered.wait(10)
     queued = control.submit_sync(user_id=user_id, account_id=account_id + "-queued", provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
-    body = {"owner_password": "password123", "new_password": "new-password"} if action == "reset-password" else {"disabled": True}
+    body = {"owner_password": "synthetic-pass-1", "new_password": "new-password"} if action == "reset-password" else {"disabled": True}
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
             response = pool.submit(owner.post, f"/api/owner/users/{user_id}/{action}", json=body)
@@ -278,7 +278,7 @@ def test_revocation_serializes_delayed_checkpoint(tmp_path, monkeypatch, action,
     assert not list((context.root / "accounts" / account_id / "sessions").glob("*.json"))
     if action == "disable":
         assert owner.post(f"/api/owner/users/{user_id}/disable", json={"disabled": False}).status_code == 200
-    password = "new-password" if action == "reset-password" else "password123"
+    password = "new-password" if action == "reset-password" else "synthetic-pass-1"
     restarted_app = create_app(tmp_path, data_root=tmp_path)
     restarted_client = TestClient(restarted_app, base_url="http://127.0.0.1")
     restarted_client.headers["X-CSRF-Token"] = restarted_client.get("/api/auth/csrf").json()["csrf_token"]

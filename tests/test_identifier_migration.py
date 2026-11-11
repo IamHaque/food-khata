@@ -36,7 +36,7 @@ def test_existing_identifiers_retry_and_disk_scan(tmp_path, monkeypatch):
     init_app_db(app_db)
     assert get_job(app_db, "old")["provider_id"] == provider_identity(phone)
 
-    context = UserContext(tmp_path, user_id).unlock("password123")
+    context = UserContext(tmp_path, user_id).unlock("synthetic-pass-1")
     original = storage_module.save_json
     def fail_header(path, value):
         if path.name == "fake-history.json":
@@ -46,8 +46,8 @@ def test_existing_identifiers_retry_and_disk_scan(tmp_path, monkeypatch):
         patch.setattr(storage_module, "save_json", fail_header)
         with pytest.raises(OSError, match="interrupted"):
             context.adopt_legacy_root()
-    context = UserContext(tmp_path, user_id).unlock("password123")
-    context = UserContext(tmp_path, user_id).unlock("password123")
+    context = UserContext(tmp_path, user_id).unlock("synthetic-pass-1")
+    context = UserContext(tmp_path, user_id).unlock("synthetic-pass-1")
     assert get_job(backup / "app.db", "old")["provider_id"] == provider_identity(phone)
     assert context.storage.accounts("fake")[0]["providers"]["fake"] == phone
     assert context.storage.session(account["local_id"], "fake")["token"] == token

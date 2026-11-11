@@ -19,8 +19,8 @@ from food_khata.auth import (
     check_registration_throttle,
     check_throttle,
     clear_session_cookies,
-    clear_setup_code,
     connect_app_db,
+    create_session,
     delete_session,
     dummy_verify,
     generate_csrf_token,
@@ -36,6 +36,7 @@ from food_khata.auth import (
     set_session_cookie,
     verify_password,
 )
+from food_khata.auth.passwords import check_password_rules
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -155,12 +156,7 @@ def register(
 
     # 2. Check if registration is allowed (first claim, 8 user cap, window / join code)
     is_loop = _is_loopback_client(request)
-    allowed, err_msg, status_code = can_register(
-        conn,
-        join_code=data.join_code,
-        is_loopback=is_loop,
-        setup_code=data.join_code,
-    )
+    allowed, err_msg, status_code = can_register(conn, join_code=data.join_code, is_loopback=is_loop)
     if not allowed:
         raise HTTPException(
             status_code=status_code,
@@ -182,8 +178,9 @@ def register(
             detail="Username already exists.",
         )
 
-    has_own = has_owner(conn)
-    is_owner = 1 if not has_own else 0
+    if (problem := check_password_rules(data.password, username)) is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+    is_owner = 0
 
     user_id = str(uuid.uuid4())
     pw_hash = hash_password(data.password)
@@ -197,14 +194,6 @@ def register(
 
     # Successful registration resets attempt counter for this IP
     reset_registration_throttle(conn, ip)
-
-    if is_owner:
-        clear_setup_code(conn)
-        data_root = getattr(request.app.state, "data_root", None)
-        if data_root:
-            from food_khata.users import UserContext
-
-            UserContext(data_root, user_id).unlock(data.password).adopt_legacy_root()
 
     return UserResponse(
         id=user_id,
@@ -284,6 +273,83 @@ def login(
         ),
         csrf_token=csrf_token,
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/password", response_model=LoginResponse)
+def change_password(
+    data: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
+):
+    """Change the signed-in user's own password: the vault is re-wrapped (provider sessions stay readable),
+    every other session of the user ends, and a new session is issued."""
+    from food_khata.users.context import UserContext
+
+    user_id = request.state.session["user_id"]
+    user = conn.execute(
+        "SELECT id, username, password_hash, is_owner, created_at FROM users WHERE id = ?", (user_id,)
+    ).fetchone()
+    ip = _get_client_ip(request)
+    throttled, retry_after = check_throttle(conn, user["username"], ip)
+    if throttled:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=THROTTLE_ERROR_MESSAGE,
+            headers={"Retry-After": str(retry_after)},
+        )
+    if not verify_password(data.current_password, user["password_hash"]):
+        record_failed_login(conn, user["username"], ip)  # a wrong current password counts as a failed login
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "WRONG_PASSWORD", "message": "Current password is incorrect."},
+        )
+    if (problem := check_password_rules(data.new_password, user["username"])) is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+
+    context = UserContext(request.app.state.data_root, user_id).unlock(data.current_password)
+    context.change_password(data.current_password, data.new_password)
+    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(data.new_password), user_id))
+    conn.commit()
+    reset_failed_logins(conn, user["username"], ip)
+
+    _end_sessions(request, conn, user_id)
+    session_id, csrf_token = create_session(conn, user_id)
+    request.app.state.unlocked_sessions[session_id] = (user_id, context.cipher)
+    secure = _is_secure_request(request)
+    set_session_cookie(response, session_id, secure=secure)
+    set_csrf_cookie(response, csrf_token, secure=secure)
+    return LoginResponse(
+        user=UserResponse(
+            id=user_id, username=user["username"], is_owner=bool(user["is_owner"]), created_at=user["created_at"]
+        ),
+        csrf_token=csrf_token,
+    )
+
+
+def _end_sessions(request: Request, conn: sqlite3.Connection, user_id: str) -> None:
+    """Delete every session of the user and drop their keys from memory."""
+    for (session_id,) in conn.execute("SELECT id FROM sessions WHERE user_id = ?", (user_id,)).fetchall():
+        request.app.state.unlocked_sessions.pop(session_id, None)
+    conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    conn.commit()
+
+
+@router.post("/logout-all", response_model=StatusResponse)
+def logout_everywhere(
+    request: Request,
+    response: Response,
+    conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
+):
+    """End every session of the signed-in user, on every device."""
+    _end_sessions(request, conn, request.state.session["user_id"])
+    clear_session_cookies(response)
+    return StatusResponse(status="ok")
 
 
 @router.post("/logout", response_model=StatusResponse)

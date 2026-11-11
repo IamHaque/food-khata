@@ -12,6 +12,7 @@ from food_khata.auth import (
     MAX_USERS,
     OwnerAlreadyExistsError,
     SetupForbiddenError,
+    check_throttle,
     claim_owner,
     close_registration_window,
     connect_app_db,
@@ -21,6 +22,7 @@ from food_khata.auth import (
     has_owner,
     list_users,
     open_registration_window,
+    record_failed_login,
     remove_user,
     reset_user_password,
     rotate_join_code,
@@ -31,6 +33,7 @@ from food_khata.auth import (
     transfer_ownership,
 )
 
+SETUP_THROTTLE_KEY = "\0setup-code"
 router = APIRouter(prefix="/api/owner", tags=["owner"])
 
 
@@ -194,6 +197,15 @@ def post_setup(
 
     is_loop = _is_loopback_client(request)
     data_root = getattr(request.app.state, "data_root", None) if data.adopt_data else None
+    ip = _get_client_ip(request)
+    if not is_loop:  # a network claim needs the setup code: five wrong guesses in 10 minutes lock the address out
+        throttled, retry_after = check_throttle(conn, SETUP_THROTTLE_KEY, ip)
+        if throttled:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many wrong setup codes. Try again later.",
+                headers={"Retry-After": str(retry_after)},
+            )
 
     try:
         user = claim_owner(
@@ -210,6 +222,7 @@ def post_setup(
             detail="Setup already completed.",
         ) from exc
     except SetupForbiddenError as exc:
+        record_failed_login(conn, SETUP_THROTTLE_KEY, ip)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),

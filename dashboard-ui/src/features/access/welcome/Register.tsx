@@ -59,8 +59,8 @@ export function Register({ onSuccess, hideShell = false }: RegisterProps) {
 
     if (!password) {
       nextErrors.password = "Password is required.";
-    } else if (password.length < 8) {
-      nextErrors.password = "Password must be at least 8 characters.";
+    } else if (password.length < 10) {
+      nextErrors.password = "Password must be at least 10 characters.";
     }
 
     if (!confirmPassword) {
@@ -220,6 +220,9 @@ export function Register({ onSuccess, hideShell = false }: RegisterProps) {
             Password
             <span className="ml-0.5 text-destructive" aria-hidden="true">*</span>
           </label>
+          <p id="reg-password-rule" className="text-xs text-muted-foreground">
+            At least 10 characters, not your username, and not a common password.
+          </p>
           <input
             id="reg-password"
             name="password"

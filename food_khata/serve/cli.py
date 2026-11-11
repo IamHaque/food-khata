@@ -71,12 +71,12 @@ def serve(
     )
 
     if lan:
-        from food_khata.auth import connect_app_db, get_or_create_setup_code, has_owner
+        from food_khata.auth import connect_app_db, has_owner, rotate_setup_code
 
         conn = connect_app_db(app.state.app_db_path)
         try:
             if not has_owner(conn):
-                setup_code = get_or_create_setup_code(conn)
+                setup_code = rotate_setup_code(conn)  # each --lan start prints a fresh code
                 print(f"One-time setup code: {setup_code}")
         finally:
             conn.close()

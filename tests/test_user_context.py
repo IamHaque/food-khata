@@ -126,7 +126,7 @@ def test_adopt_legacy_root_moves_data_and_is_idempotent(tmp_path):
     _seed_database(tmp_path / "food_analytics.db", account["local_id"], "3210", 1)
     (tmp_path / "dashboard.json").write_text('{"accounts": []}', encoding="utf-8")
 
-    context = UserContext(tmp_path, "user-a").unlock("password123")
+    context = UserContext(tmp_path, "user-a").unlock("synthetic-pass-1")
     result = context.adopt_legacy_root()
     assert result["adopted"] is True
     destination = tmp_path / "users" / "user-a"
@@ -254,7 +254,7 @@ def test_live_sqlite_adoption_recovers_interruption_without_plaintext_backups(
         analytics.execute("INSERT INTO orders VALUES (?, ?)", ("order-1", account["local_id"]))
         analytics.commit()
         # Both handles remain open through failure and retry, as in the live server.
-        context = UserContext(tmp_path, "alice").unlock("password123")
+        context = UserContext(tmp_path, "alice").unlock("synthetic-pass-1")
         # An old raw copy can exist without the committed WAL orders.
         with closing(sqlite3.connect(context.database)) as stale:
             stale.execute("CREATE TABLE orders (id TEXT, account_id TEXT)")
@@ -282,7 +282,7 @@ def test_live_sqlite_adoption_recovers_interruption_without_plaintext_backups(
         for path in tmp_path.rglob("*.json"):
             assert b"9876543210" not in path.read_bytes()
             assert b"SYNTHETIC-TOKEN" not in path.read_bytes()
-        recovered = UserContext(tmp_path, "alice").unlock("password123")
+        recovered = UserContext(tmp_path, "alice").unlock("synthetic-pass-1")
         assert (recovered.root / ".adopted.json").exists()
         assert not (recovered.root / ".adoption-pending.json").exists()
         assert recovered.storage.accounts("fake")[0]["local_id"] == account["local_id"]

@@ -354,6 +354,6 @@ export function App() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/sync", "/settings"].includes(pathname)) return <AccessRoutes />;
+  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/account/password", "/sync", "/settings"].includes(pathname)) return <AccessRoutes />;
   return <RequireAuth><FilterProvider><Shell /></FilterProvider></RequireAuth>;
 }

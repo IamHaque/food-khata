@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from food_khata.auth.passwords import hash_password, verify_password
+from food_khata.auth.passwords import check_password_rules, hash_password, verify_password
 
 
 class OwnerError(Exception):
@@ -70,28 +70,40 @@ def get_owner(conn: sqlite3.Connection) -> dict[str, Any] | None:
     return dict(row)
 
 
+SETUP_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # 32 letters and digits without look-alikes
+SETUP_CODE_TTL_SECONDS = 30 * 60
+
+
 def generate_setup_code() -> str:
-    """Generate an 8-character uppercase setup code formatted as XXXX-XXXX."""
-    p1 = secrets.token_hex(2).upper()
-    p2 = secrets.token_hex(2).upper()
-    return f"{p1}-{p2}"
+    """A 10-character code (50 bits) formatted XXXXX-XXXXX."""
+    chars = "".join(secrets.choice(SETUP_CODE_ALPHABET) for _ in range(10))
+    return f"{chars[:5]}-{chars[5:]}"
+
+
+def rotate_setup_code(conn: sqlite3.Connection) -> str:
+    """Make a fresh setup code that expires in 30 minutes; the old one stops working."""
+    code = generate_setup_code()
+    _set_setting(conn, "setup_code", code)
+    _set_setting(conn, "setup_code_at", str(time.time()))
+    return code
 
 
 def get_or_create_setup_code(conn: sqlite3.Connection) -> str:
-    """Get the active one-time setup code, generating a new one if not present."""
+    """The active setup code, or a fresh one when there is none or it has expired."""
     code = _get_setting(conn, "setup_code")
-    if not code:
-        code = generate_setup_code()
-        _set_setting(conn, "setup_code", code)
+    made = _get_setting(conn, "setup_code_at")
+    if not code or not made or time.time() - float(made) > SETUP_CODE_TTL_SECONDS:
+        return rotate_setup_code(conn)
     return code
 
 
 def verify_setup_code(conn: sqlite3.Connection, code: str | None) -> bool:
-    """Verify setup code case-insensitively ignoring hyphens/spaces."""
+    """Verify the setup code (case-insensitive, hyphens and spaces ignored) while it is still valid."""
     if not code:
         return False
     stored = _get_setting(conn, "setup_code")
-    if not stored:
+    made = _get_setting(conn, "setup_code_at")
+    if not stored or not made or time.time() - float(made) > SETUP_CODE_TTL_SECONDS:
         return False
     norm_input = re.sub(r"[\s-]", "", code).upper()
     norm_stored = re.sub(r"[\s-]", "", stored).upper()
@@ -101,6 +113,7 @@ def verify_setup_code(conn: sqlite3.Connection, code: str | None) -> bool:
 def clear_setup_code(conn: sqlite3.Connection) -> None:
     """Invalidate / delete the one-time setup code."""
     _delete_setting(conn, "setup_code")
+    _delete_setting(conn, "setup_code_at")
 
 
 # --- Registration window management ---
@@ -219,8 +232,8 @@ def claim_owner(
         raise ValueError(
             "Username must be 3-50 characters with only alphanumeric characters, underscores, or hyphens."
         )
-    if len(password) < 8:
-        raise ValueError("Password must be at least 8 characters.")
+    if (problem := check_password_rules(password, username)) is not None:
+        raise ValueError(problem)
 
     import uuid
     from datetime import UTC, datetime
