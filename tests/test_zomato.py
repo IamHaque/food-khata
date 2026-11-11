@@ -54,7 +54,7 @@ class ZomatoTests(unittest.TestCase):
             patch.object(self.provider, "profile", return_value="account"),
             patch.object(self.provider, "_location", return_value={"address_id": "1"}),
             patch.object(self.provider, "_api", side_effect=[first, final]),
-            patch("food_khata.providers.zomato.time.sleep"),
+            patch("food_khata.providers.http.time.sleep"),
         ):
             report = sync(
                 self.provider, Path(directory) / "history.json", "account", lambda _: None
@@ -141,7 +141,7 @@ class ZomatoTests(unittest.TestCase):
             patch.object(
                 self.provider, "_api", side_effect=[page(["1", "2"], True), page(["2", "3"], False)]
             ),
-            patch("food_khata.providers.zomato.time.sleep"),
+            patch("food_khata.providers.http.time.sleep"),
         ):
             pages = list(self.provider.pages())
         self.assertEqual([[o["order_id"] for o in p] for p in pages], [["1", "2"], ["3"]])
@@ -149,7 +149,7 @@ class ZomatoTests(unittest.TestCase):
         with (
             patch.object(self.provider, "_location", return_value={"address_id": "1"}),
             patch.object(self.provider, "_api", return_value=page(["1"], True)),
-            patch("food_khata.providers.zomato.time.sleep"),
+            patch("food_khata.providers.http.time.sleep"),
             self.assertRaises(KhataError),
         ):
             list(self.provider.pages())

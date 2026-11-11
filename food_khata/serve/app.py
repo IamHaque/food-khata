@@ -71,6 +71,7 @@ def create_app(
     allow_hosts: list[str] | set[str] | None = None,
     is_https: bool = False,
     legacy_single_db: bool = False,
+    provider_concurrency: dict[str, int] | None = None,
 ) -> FastAPI:
     if fake_enabled():
         logging.getLogger(__name__).warning(
@@ -138,7 +139,9 @@ def create_app(
         _conn.close()
     from food_khata.jobs import JobControl, JobRunner
 
-    job_runner = JobRunner(resolved_app_db, data_root=resolved_data_root)
+    job_runner = JobRunner(
+        resolved_app_db, data_root=resolved_data_root, provider_concurrency=provider_concurrency
+    )
     job_runner.mark_interrupted_on_startup()
     app.state.job_runner = job_runner
     app.state.job_control = JobControl(

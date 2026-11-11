@@ -15,6 +15,7 @@ def serve(
     tls_key: Path | str | None = None,
     data_root: Path | str | None = None,
     app_db_path: Path | str | None = None,
+    provider_concurrency: dict[str, int] | None = None,
 ) -> int:
     is_https = False
     if tls_cert or tls_key:
@@ -66,6 +67,7 @@ def serve(
         lan=lan,
         allow_hosts=allow_hosts,
         is_https=is_https,
+        provider_concurrency=provider_concurrency,
     )
 
     if lan:

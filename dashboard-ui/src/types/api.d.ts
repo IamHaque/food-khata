@@ -2140,6 +2140,16 @@ export interface components {
              */
             resumable?: number | boolean | null;
             /**
+             * Queue Position
+             * @description Place in the queue for a queued job (1 = next)
+             */
+            queue_position?: number | null;
+            /**
+             * Eta Seconds
+             * @description Estimated seconds until it finishes; null without history
+             */
+            eta_seconds?: number | null;
+            /**
              * Import Pending
              * @description Fetched, but the import into analytics failed; retry it
              * @default false

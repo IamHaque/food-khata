@@ -7407,6 +7407,30 @@
             "title": "Resumable",
             "description": "Whether job can be resumed"
           },
+          "queue_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Position",
+            "description": "Place in the queue for a queued job (1 = next)"
+          },
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds",
+            "description": "Estimated seconds until it finishes; null without history"
+          },
           "import_pending": {
             "type": "boolean",
             "title": "Import Pending",

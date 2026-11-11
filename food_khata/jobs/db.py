@@ -76,6 +76,36 @@ def get_db_conn(conn_or_path: sqlite3.Connection | Path | str) -> Iterator[sqlit
             conn.close()
 
 
+def connect_job_db(path: Path | str) -> sqlite3.Connection:
+    """One long-lived connection for a job thread; the caller closes it."""
+    conn = sqlite3.connect(path, timeout=30.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA busy_timeout = 30000;")
+    return conn
+
+
+def fair_order(queued: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Round robin by user, oldest first within a user: A1, B1, C1, A2 (not first come across the table)."""
+    rank: dict[str, int] = {}
+    keyed = []
+    for job in sorted(queued, key=lambda j: j.get("created_at", 0)):
+        n = rank[job["user_id"]] = rank.get(job["user_id"], -1) + 1
+        keyed.append((n, job.get("created_at", 0), job))
+    return [job for _, _, job in sorted(keyed, key=lambda k: (k[0], k[1]))]
+
+
+def avg_job_seconds(conn_or_path, provider: str) -> float | None:
+    """Mean run time of the provider's last 20 finished jobs, or None with no history (for the queue ETA)."""
+    with get_db_conn(conn_or_path) as conn:
+        row = conn.execute(
+            "SELECT AVG(finished_at - started_at) FROM (SELECT started_at, finished_at FROM jobs WHERE provider = ? "
+            "AND status = 'done' AND started_at IS NOT NULL AND finished_at IS NOT NULL ORDER BY finished_at DESC LIMIT 20)",
+            (provider,),
+        ).fetchone()
+    return row[0]
+
+
 def migrate_job_identifiers(conn: sqlite3.Connection) -> None:
     """Replace legacy job identifiers inside the caller's transaction."""
     for job_id, provider_id in conn.execute(

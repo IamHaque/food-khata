@@ -2,7 +2,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SyncChooser, SyncJobScreen, SyncLogoutWarning } from "./Sync";
+import { SyncChooser, SyncJobScreen, SyncLogoutWarning, queueText } from "./Sync";
 import { syncApi, type SyncJob } from "./api";
 import { setCsrfToken } from "../api/client";
 
@@ -43,6 +43,12 @@ describe("sync screens", () => {
     state.data = { ...job("failed"), import_pending: true };
     const output = html(<SyncJobScreen jobId="synthetic-job" />);
     expect(output).toContain("Fetched, import failed"); expect(output).toContain("Retry import"); expect(output).not.toContain("Sync complete");
+  });
+  it("tells a queued job its place and wait", () => {
+    expect(queueText(3, 2400)).toBe("3rd in line, about 40 minutes");
+    expect(queueText(1, null)).toBe("1st in line");
+    state.data = { ...job("queued"), queue_position: 2, eta_seconds: 600 };
+    expect(html(<SyncJobScreen jobId="synthetic-job" />)).toContain("2nd in line, about 10 minutes");
   });
   it("asks to verify again and offers resume after login for interrupted jobs", async () => {
     state.data = job("needs_code");

@@ -228,6 +228,16 @@ def run(
         return 0
 
 
+def _provider_concurrency(text: str) -> dict[str, int]:
+    try:
+        pairs = {k.strip(): int(v) for k, v in (item.split("=") for item in text.split(","))}
+    except ValueError:
+        raise argparse.ArgumentTypeError("use name=number pairs, for example swiggy=1,zomato=2") from None
+    if not pairs or any(not k or v < 1 for k, v in pairs.items()):
+        raise argparse.ArgumentTypeError("each provider needs a limit of at least 1")
+    return pairs
+
+
 def main(argv: list[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
     if raw_args and raw_args[0] == "owner":
@@ -280,6 +290,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Allowed host header (can be repeated)",
     )
     parser.add_argument(
+        "--provider-concurrency",
+        type=_provider_concurrency,
+        default=None,
+        metavar="swiggy=1,zomato=1",
+        help="Jobs allowed to run at once per provider (default 1 each)",
+    )
+    parser.add_argument(
         "--tls-cert",
         type=Path,
         default=None,
@@ -300,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
 
         host = args.host if args.host is not None else ("0.0.0.0" if args.lan else "127.0.0.1")
         db_file = args.db_path or (args.data_dir.expanduser().resolve() / "food_analytics.db")
-        if args.lan or args.allow_hosts or args.tls_cert or args.tls_key:
+        if args.lan or args.allow_hosts or args.tls_cert or args.tls_key or args.provider_concurrency:
             return serve(
                 host,
                 args.port,
@@ -311,6 +328,7 @@ def main(argv: list[str] | None = None) -> int:
                 tls_cert=args.tls_cert,
                 tls_key=args.tls_key,
                 data_root=args.data_dir.expanduser().resolve(),
+                provider_concurrency=args.provider_concurrency,
             )
         return serve(
             host,

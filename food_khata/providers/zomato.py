@@ -4,7 +4,6 @@ import base64
 import hashlib
 import re
 import secrets
-import time
 from collections.abc import Callable, Iterator
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
@@ -13,7 +12,7 @@ import requests
 from curl_cffi import requests as curl_requests
 
 from ..contracts import AuthenticationError, KhataError
-from .http import redact, request_json
+from .http import redact, request_json, wait
 from .zomato_headers import AUTH_HEADERS, ZOMATO_CLIENT_ID
 
 CLIENT_ID = ZOMATO_CLIENT_ID
@@ -460,7 +459,7 @@ class Zomato:
             ):
                 if key in data:
                     body[key] = data[key]
-            time.sleep(0.25)
+            wait(0.25)
 
     def valid_details(self, order_id: str, value: Any) -> bool:
         return (
@@ -476,7 +475,7 @@ class Zomato:
         data = self._api("GET", "v2/order/tab.json/" + order_id).get("response")
         if not self.valid_details(order_id, data):
             raise KhataError("Zomato order details do not match or lack item data.")
-        time.sleep(0.25)
+        wait(0.25)
         return redact(data)
 
     def close(self) -> None:
