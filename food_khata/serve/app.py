@@ -25,6 +25,7 @@ from food_khata.auth import (
     STATE_CHANGING_METHODS,
     connect_app_db,
     create_test_user_session,
+    delete_session,
     get_session,
     init_app_db,
     validate_csrf_token,
@@ -112,6 +113,13 @@ def create_app(
     app.state.is_https = is_https
     app.state.unlocked_sessions = {}
     init_app_db(resolved_app_db)
+    # Vault keys live only in memory, so a session that survived a restart can never be unlocked (DEC-P2).
+    _conn = connect_app_db(resolved_app_db)
+    try:
+        _conn.execute("DELETE FROM sessions")
+        _conn.commit()
+    finally:
+        _conn.close()
     from food_khata.jobs import JobControl, JobRunner
 
     job_runner = JobRunner(resolved_app_db, data_root=resolved_data_root)
@@ -172,6 +180,11 @@ def create_app(
             conn = connect_app_db(app.state.app_db_path)
             try:
                 session = get_session(conn, session_id)
+                # A session without its in-memory key is half open: close it so /me and /accounts agree.
+                key = app.state.unlocked_sessions.get(session_id)
+                if session is not None and (key is None or key[0] != session["user_id"]):
+                    delete_session(conn, session_id)
+                    session = None
             finally:
                 conn.close()
 
@@ -182,8 +195,9 @@ def create_app(
 
         is_unauthenticated = (path in UNAUTHENTICATED_ROUTES) or (not is_api)
         if not is_unauthenticated and session is None:
+            code = "SESSION_EXPIRED" if session_id else "unauthorized"
             return JSONResponse(
-                {"error": {"code": "unauthorized", "message": "Authentication required."}},
+                {"error": {"code": code, "message": "Authentication required."}},
                 status_code=401,
             )
 

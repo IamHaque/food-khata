@@ -322,3 +322,66 @@ def test_contract_c0_committed(tmp_path):
     assert "/api/auth/login" in c0_data["paths"]
     assert "/api/auth/register" in c0_data["paths"]
     assert "/health" in c0_data["paths"]
+
+
+def test_locked_session_is_closed_and_touch_is_cheap(tmp_path):
+    """PR-02: a session row with no key is deleted (401 SESSION_EXPIRED); idle touch writes at most once a minute."""
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from food_khata.auth import connect_app_db, get_session
+    from food_khata.serve.app import authenticate_client, create_app
+
+    app_db = tmp_path / "app.db"
+    app = create_app(tmp_path / "dummy.db", app_db_path=app_db, data_root=tmp_path)
+    client = TestClient(app, base_url="http://127.0.0.1:8765")
+    session_id, _ = authenticate_client(client, username="alice", is_owner=True)
+    assert client.get("/api/accounts").status_code == 200
+    app.state.unlocked_sessions.clear()
+    for path in ("/api/auth/me", "/api/accounts"):
+        res = client.get(path)
+        assert (res.status_code, res.json()["error"]["code"]) == (401, "SESSION_EXPIRED"), path
+    assert connect_app_db(app_db).execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 0
+
+    session_id, _ = authenticate_client(client, username="alice", is_owner=True)
+    conn = connect_app_db(app_db)
+    conn.execute("UPDATE sessions SET last_active = ? WHERE id = ?", (time.time() - 120, session_id))
+    conn.commit()
+    writes = []
+    conn.set_trace_callback(lambda sql: writes.append(sql) if sql.startswith("UPDATE sessions") else None)
+    for _ in range(1000):
+        assert get_session(conn, session_id)
+    assert len(writes) <= 20
+
+
+def test_parallel_logins_do_not_stall_health(tmp_path):
+    """PR-02: scrypt runs in the threadpool, so /health stays responsive during 8 simultaneous logins."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from fastapi.testclient import TestClient
+
+    from food_khata.serve.app import create_app
+
+    app = create_app(tmp_path / "dummy.db", app_db_path=tmp_path / "app.db", data_root=tmp_path)
+    base = "http://127.0.0.1:8765"
+    with TestClient(app, base_url=base) as owner:
+        csrf = owner.get("/api/auth/csrf").json()["csrf_token"]
+        assert owner.post("/api/owner/setup", json={"username": "alice", "password": "synthetic-pass-1"},
+                          headers={"x-csrf-token": csrf}).status_code == 200
+
+        def login(_):
+            c = TestClient(app, base_url=base)
+            token = c.get("/api/auth/csrf").json()["csrf_token"]
+            return c.post("/api/auth/login", json={"username": "alice", "password": "synthetic-pass-1"},
+                          headers={"x-csrf-token": token}).status_code
+
+        with ThreadPoolExecutor(8) as pool:
+            futures = [pool.submit(login, i) for i in range(8)]
+            time.sleep(0.05)
+            started = time.monotonic()
+            assert owner.get("/health").status_code == 200
+            health = time.monotonic() - started
+            assert [f.result() for f in futures] == [200] * 8
+        assert health < 1.0

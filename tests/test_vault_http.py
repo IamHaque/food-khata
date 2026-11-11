@@ -44,9 +44,10 @@ def test_http_vault_restart_and_throttle(tmp_path):
         get_user_cipher(request, "another-user")
     restarted = client()
     restarted.cookies.update(c.cookies)
-    assert restarted.get("/api/accounts").status_code == 401
-    assert c.post("/api/auth/logout").status_code == 200
-    assert not c.app.state.unlocked_sessions
+    # PR-02: a restart deletes every session, so the old cookie gets one clean SESSION_EXPIRED.
+    gone = restarted.get("/api/accounts")
+    assert (gone.status_code, gone.json()["error"]["code"]) == (401, "SESSION_EXPIRED")
+    assert restarted.get("/api/auth/me").status_code == 401
 
     c = client()
     csrf = c.get("/api/auth/csrf").json()["csrf_token"]
