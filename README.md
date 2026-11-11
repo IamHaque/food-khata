@@ -1,216 +1,154 @@
 # Food Khata
 
 A local CLI and analytics web application for saving, normalizing, and visualizing your Zomato and Swiggy food order history.
-Log in or reuse active sessions, sync new orders incrementally, ingest order history into a local SQLite analytics database, and explore rich analytics through a modern 7-route web dashboard.
+Log in or reuse active sessions, sync new orders incrementally, ingest order history into a local SQLite analytics database, and explore rich analytics through an interactive web dashboard.
 
-## Install and run
+## First-Hour Path (Quickstart with Synthetic Data)
 
-Requires Python 3.11 or newer and an existing Indian Zomato or Swiggy account. Node.js 22+ is required to build the web dashboard.
+Test the complete install, build, claim, link, sync, and backup cycle locally without real credentials or network access:
 
-```powershell
+```bash
+# 1. Install dependencies and build dashboard UI
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -e ".[serve]"
-food-khata
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e ".[serve]"
+npm --prefix dashboard-ui ci && npm --prefix dashboard-ui run build
+
+# 2. Start server on a throwaway data directory with the fake provider switch
+FOOD_KHATA_ENABLE_FAKE_PROVIDER=1 food-khata serve --data-dir /tmp/fk-demo
+
+# 3. Open http://127.0.0.1:8765 in your browser and claim the owner account
+# (Passwords must be at least 10 characters long).
+
+# 4. Link an account: Choose "fake" provider, enter phone 9876543210 and OTP 123456.
+
+# 5. Sync orders: Click sync; background job fetches and imports synthetic orders.
+
+# 6. View dashboard: Explore Overview, Spending, Food, Behavior, Places, Ledger, and Data Health.
+
+# 7. Take a hot backup while the server runs:
+food-khata backup --out /tmp/demo-backup.tar.gz --data-dir /tmp/fk-demo
+
+# 8. (Optional) Verify restore into an empty directory and clean up test data:
+food-khata restore /tmp/demo-backup.tar.gz --data-dir /tmp/fk-restored
+food-khata purge-fake --data-dir /tmp/fk-demo --yes
 ```
 
-On macOS/Linux activate with `source .venv/bin/activate`. The installed
-`food-khata` command (or `python -m food_khata`) runs the flow.
+---
 
-### Commands & Subcommands
+## Commands & Configuration
 
-* **`food-khata serve`**:
-  Starts the FastAPI server and serves the built dashboard UI at `http://127.0.0.1:8765`.
-  Flags:
-  * `--host`: Host to bind to (loopback by default; non-loopback requires `--lan`).
-  * `--port`: Port to listen on (default: `8765`).
-  * `--db-path PATH`: Path to SQLite database (default: `.food-khata/food_analytics.db`).
-  * `--data-dir PATH`: Private data root (default: `.food-khata/`).
-  * `--lan`, `--allow-host`, `--tls-cert`, `--tls-key`: LAN and HTTPS options; see the access guide below.
-  * `--dev`: Log slow requests.
+The CLI entrypoint is `food-khata` (or `python -m food_khata`). Every flag also reads an environment variable named `FOOD_KHATA_<FLAG>` (for example `FOOD_KHATA_PORT=9000`, `FOOD_KHATA_LAN=1`); explicit CLI flags always win.
 
-* **`food-khata`** or **`food-khata sync`** *(Default)*:
-  Interactive account selection, login/refresh, smart order sync, automatic local
-  database update, and interactive prompt to export or view dashboard data.
+- **`food-khata serve`**:
+  Starts the FastAPI backend and serves the dashboard UI at `http://127.0.0.1:8765`.
+  - `--host`: Host to bind to (default: `127.0.0.1`; binds `0.0.0.0` when `--lan` is specified).
+  - `--port`: Port to listen on (default: `8765`).
+  - `--data-dir PATH`: Private data root (default: `.food-khata/`).
+  - `--lan`: Allow LAN access. Binds `0.0.0.0` and prints a one-time 10-character setup code (valid 30 minutes) at start; non-loopback claim requires it (5 wrong attempts in 10 minutes return HTTP 429).
+  - `--allow-host HOST`: Add allowed Host header (repeatable or comma-separated).
+  - `--provider-concurrency swiggy=1,zomato=1`: Maximum active sync jobs per provider (default 1 each).
+  - `--trusted-proxy ADDR`: Read client IP from `X-Forwarded-For` only when connected from `ADDR`.
+  - `--behind-https-proxy`: Mark session cookies `Secure` behind a TLS-terminating reverse proxy.
+  - `--tls-cert PATH`, `--tls-key PATH`: Paths to TLS certificate and private key for HTTPS.
+  - `--print-config`: Print effective runtime settings and exit.
+  - `--dev`: Log slow requests taking over 150 ms.
 
-* **`food-khata ingest`**:
-  Migrates all saved order JSONs across all accounts into the local SQLite database
-  (`food_analytics.db`) without performing any network or login requests.
+- **`food-khata`** or **`food-khata sync`**:
+  Interactive terminal sync: account selection, login/refresh, smart order sync, and SQLite update.
 
-* **`food-khata export`** (or **`food-khata dashboard`**, its alias):
-  Exports complete dashboard data from SQLite into `.food-khata/dashboard.json` for
-  offline file loading in the `/legacy` view.
-  Use `--output PATH` to choose a different export path.
+- **`food-khata ingest`**:
+  Migrates all saved order JSONs across accounts into `food_analytics.db` without network requests.
 
-General Flags:
-* `--data-dir PATH`: Override the private data directory (default: `.food-khata/`).
-* `--db-path PATH`: Override the SQLite database location (default: `.food-khata/food_analytics.db`).
-* `--no-dashboard`: Skip the post-sync dashboard prompt.
-* `--output PATH`: Write the dashboard JSON export to this path.
-* `--no-open`: Compatibility flag; export does not open a browser.
+- **`food-khata export`**:
+  Exports complete dashboard data into `dashboard.json` for offline viewing in the `/legacy` view.
 
-### Multi-Account & Session Management
+- **`food-khata backup --out FILE --data-dir DIR`**:
+  Hot snapshot of all SQLite databases (using SQLite's online backup API), archives, vaults, and a SHA-256 manifest. Safe to run while the server is active.
 
-Select a provider (`zomato` or `swiggy`). When saved accounts exist, the CLI displays
-all accounts with clear status indicators (`[Active session]` or `[Unauthenticated]`),
-along with the option to `"Log in to another account (add new)"`.
+- **`food-khata restore FILE --data-dir EMPTY_DIR`**:
+  Verifies all SHA-256 checksums from the backup manifest and unpacks into an empty directory (refuses non-empty folders).
 
-For any selected account:
-* **Reuse session**: Proceed directly to sync using the stored credentials.
-* **Refresh session**: Uses OAuth token refresh (Zomato) or silent profile verification (Swiggy)
-  to refresh credentials in-place without re-entering OTP.
-* **Reauthenticate (SMS OTP)**: Prompts for SMS OTP using the known phone number, updating
-  credentials without wiping history archives.
-* **Switch account**: Return to account selection without logging out.
-* **Logout and log in again**: Revokes credentials only when explicitly requested.
+- **`food-khata purge-fake --data-dir DIR`**:
+  Removes synthetic test accounts and associated database records created with `fake` provider (`--yes` skips prompt).
 
-### Sync Modes
+- **`food-khata owner reset-password`**:
+  Offline password reset for the instance owner or a specified user directly in `app.db` (stop server first).
 
-When pre-existing history is found for an account, choose your sync mode:
-1. **Sync new orders (incremental)** *(Default)*:
-   Scans newest orders first and stops immediately upon reaching previously saved orders,
-   fetching details only for newly discovered orders.
-2. **Check and repair missing details**:
-   Skips history pagination entirely and only scans existing saved orders to patch missing
-   or incomplete detail payloads.
-3. **Full history scan**:
-   Paginate to the very end for deep manual recovery.
+- **`food-khata owner transfer`**:
+  Offline ownership transfer directly in `app.db` (stop server first).
 
-## Web Dashboard
+---
 
-The web dashboard is an interactive, accessible React application built with Tailwind CSS, Lucide icons, and shadcn/ui components.
+## Data Layout & Multi-User Architecture
 
-```powershell
-python -m pip install -e ".[serve]"
-npm --prefix dashboard-ui ci
-npm --prefix dashboard-ui run build
-food-khata serve
-```
-
-Open `http://127.0.0.1:8765` and claim the owner account. Dashboard queries use read-only SQLite connections; account setup and synchronization write to the private data directory.
-
-### Dashboard Pages
-
-All pages share account selection, global date range, platform, status, city, locality, cuisine, dietary, and payment filters synchronized in the URL:
-
-1. **Overview**: Total spend, order count, AOV, separate explicit discounts and advertised savings, fee totals, interactive cost waterfall, and top restaurant/dish leaders.
-2. **Spending**: Cumulative daily spend curves, rolling 30-day pace, annual month-by-month spend, fee breakdown scatter, and discount distributions.
-3. **Food**: Dietary split (Veg / Non-Veg / Unknown), cuisine preferences, restaurant loyalty, monthly new vs repeat orders, and dish price trends.
-4. **Behavior**: Weekday x hour ordering heatmap, meal slots (Breakfast, Lunch, Snack, Dinner, Late night), order size histograms, and ordering streaks / gaps.
-5. **Places**: Spending distribution by delivery address and city, with order distance analysis.
-6. **Ledger**: Server-sorted, server-paginated full order history table with instant search, filter presets, CSV export, and accessible centered order receipt modal.
-7. **Data Health**: API-visible coverage tracking, data completeness checks, verified financial reconciliation ratios, and snapshot caveats.
-
-The original static export flow is retained at `/legacy` for offline JSON file viewing via `food-khata export`.
-
-## Your data
+Data is stored in the `--data-dir` directory (default `.food-khata/`):
 
 ```text
-food-khata/.food-khata/
-  food_analytics.db     <-- Normalized SQLite relational analytics database
-  dashboard.json       <-- Optional versioned export for legacy offline viewing
-  accounts/
-    <local-account-id>/
-      account.json
-      zomato-history.json
-      swiggy-history.json
-      sessions/
-        zomato.json
-        swiggy.json
+<data>/
+  .server.lock            <-- Exclusive OS file lock (exit code 2 if locked)
+  app.db                  <-- Global server database: users, sessions, jobs,
+                              job_events, provider_links, audit_log, schema_migrations
+  logs/
+    food-khata.log        <-- Structured JSON lines, redacted secrets (10 MB x 5)
+  users/
+    <user-id>/            <-- Isolated per-user directory (mode 0700)
+      vault.json          <-- ChaCha20-Poly1305 encrypted data key wrapped by password
+      food_analytics.db   <-- Relational SQLite database: orders, items, restaurants
+      accounts/
+        <local-account-id>/
+          account.json    <-- Encrypted phone metadata, SHA-256 provider digests
+          zomato-history.json  <-- Plain JSON order and detail archive
+          swiggy-history.json  <-- Plain JSON order and detail archive
+          sessions/
+            zomato.json   <-- ChaCha20-Poly1305 encrypted tokens
+            swiggy.json   <-- ChaCha20-Poly1305 encrypted cookies
 ```
 
-The same phone used successfully for both provider logins shares one local account
-folder. Provider account IDs remain separate in `account.json`; they are never
-assumed equal. Different phone numbers stay separate. Changing phone numbers or
-conflicting provider identities requires manual reconciliation; the CLI refuses
-to merge conflicting identities automatically.
+See [Architecture & Storage](docs/architecture.md) for complete schema, database migrations, and component details.
 
-Sessions contain reusable credentials. Metadata contains your phone number, and
-order payloads can contain addresses and other personal information. Keep this
-directory private and out of Git, cloud sharing, and public bug reports. Per-user
-provider sessions and phone numbers in account credential metadata are encrypted at rest with a random data key
-wrapped by the user's password (ChaCha20-Poly1305, DEC-P2). Order archives and
-the analytics SQLite database remain plain files and may retain phone numbers and other personal data. New analytics imports retain only the last four phone digits for account labels. On Windows the data directory
-inherits your ACLs; keep the checkout private or use `--data-dir` to select
-another private location.
+---
 
-**Honest limit:** host administrators can still read everything. Whoever controls
-the machine, the Python environment, or the running process can read decrypted
-data and capture the in-memory data key while a user is logged in. Encryption
-separates users of the application and protects data at rest; it is not a
-defence against the host owner.
+## Security Baseline
 
-For first-run access, LAN security, recovery commands and the risks of unofficial
-provider APIs, see [access security and recovery](docs/access/security-and-recovery.md).
-The [manual smoke checklist](docs/access/manual-smoke.md) is for the user to run;
-automated tests use synthetic providers only.
+- **Cookie-Only Authentication**: Authentication uses `food_khata_session` cookies only (`HttpOnly`, `SameSite=Lax`). `Secure` is enabled under TLS or with `--behind-https-proxy`. Bearer tokens and header sessions are rejected.
+- **CSRF Protection**: State-changing operations require matching `x-csrf-token` header and cookie.
+- **Headers & Limits**: CSP (`default-src 'self'`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`. Request bodies are limited to 64 KB.
+- **Passwords & Lifetimes**: Minimum 10 characters. Sessions have an 8-hour idle timeout and 7-day absolute lifetime. All sessions are deleted on server start (re-login required after restart).
+- **Audit Trail**: Sensitive events (logins, failed attempts, owner administrative changes) append to `audit_log` in `app.db` and are viewable by the owner in Settings (`GET /api/owner/audit`).
+- **LAN Setup Code**: When running with `--lan`, non-loopback claim requires a 10-character setup code printed at start; 5 incorrect attempts in 10 minutes return HTTP 429.
 
-## Sync and recovery
+---
 
-The first run follows history pagination to its end and saves individual details.
-Every later run merges new IDs and checks the whole saved archive for missing or
-invalid details. It never downloads valid existing details again or deletes orders
-omitted by the provider. Existing saved history cards and details are preserved.
+## Job States & Background Sync
 
-**History list pages are currently scanned on every run.** Neither integration has
-a verified incremental cursor or ordering guarantee. Stopping at the first saved
-order could silently miss older records, so incremental savings apply to detail
-requests. Previously saved details are snapshots; later refunds or status changes
-in those details are not automatically refreshed.
+Background sync jobs are queued and managed by `JobRunner` and `JobControl`:
 
-Completed pages and detail downloads are checkpointed with atomic file replacement.
-After a network error, cancellation, or expired session, run again: discovery
-restarts from the first page, while downloaded orders and details are reused.
-Concurrent writes to an account are prevented with an operating-system lock;
-locks are released when the process exits. Lock files may remain and are harmless.
+- **States**: `queued`, `running`, `needs_code`, `paused`, `done`, `failed`, `cancelled`, `interrupted`.
+- **Transitions**:
+  - `queued` -> `running`: Enqueued jobs execute when a provider slot is available.
+  - `running` -> `done`: Sync and SQLite ingestion complete successfully.
+  - `running` -> `failed`: Fetch or import error. If the error is `IMPORT_FAILED`, `POST /api/sync/jobs/{id}/retry-import` reruns import without refetching.
+  - `running` -> `needs_code`: Session expired during fetch. Completing `POST /api/accounts/{id}/verify-again` updates credentials and resumes the job back to `queued`.
+  - `running` -> `interrupted`: Server restarts (`RESTART`) or graceful shutdown (`SHUTDOWN`).
+  - `interrupted`, `failed`, `cancelled`, and `paused` jobs can be resumed back to `queued` with `POST /api/sync/jobs/{id}/resume`.
+- **Concurrency**: Bounded per provider via `--provider-concurrency swiggy=1,zomato=1`. User quota allows 1 running and 2 queued jobs per user. Exactly one active job is allowed per `(account, provider)`; duplicate submissions return HTTP 409 (`ACCOUNT_BUSY`). The queue displays 1-based `queue_position` and calculated `eta_seconds`.
 
-The summary separates history coverage and detail coverage. `complete` means this
-run retrieved all API-visible pages and all local orders have valid details.
-`lifetime_complete` is always false: these unofficial endpoints may hide older
-orders. Food history does not include Instamart, Dineout, or other service types.
+---
 
-Exit codes: `0` complete, `1` failure/incomplete sync, `130` cancellation.
+## Honest Limitations
 
-- **Expired session:** log in again. Network or access-block errors retain credentials.
-- **Zomato authentication HTTP error:** the message names the failing stage
-  (authorization, OTP request/verification, consent, token exchange, or redirect).
-  Report that stage; authentication requests are not automatically retried.
-- **Invalid JSON/schema:** the original is preserved. Back up the affected file,
-  then restore a known-good copy or move it aside before retrying. Moving history
-  aside triggers a full download. Moving a session aside triggers login.
-- **No Zomato saved address:** add one in the app and retry.
-- **Provider changed its response:** stop and report a sanitized reproduction.
-  Do not attach real session files or unredacted order history.
+1. **Archives and Analytics Are Not Encrypted**: While provider credentials (`sessions/*.json`) and vault keys are sealed with ChaCha20-Poly1305, raw order JSON files and `food_analytics.db` remain unencrypted plain files.
+2. **Host Administrator Has Full Access**: Anyone with access to the host machine, process memory, or filesystem can inspect unencrypted data and capture unlocked keys. Encryption separates users of the application; it is not a defense against the host administrator.
+3. **Unofficial Provider Endpoints**: Integrations rely on private mobile APIs that may change, rate-limit, or restrict accounts without warning.
+4. **Single Server Process**: Multi-server setups against the same data folder are not supported. An exclusive OS lock (`.server.lock`) protects the directory.
 
-## Development
+---
 
-Install development dependencies:
+## Documentation Links
 
-```powershell
-python -m pip install -e ".[dev,serve]" httpx
-python -m pytest -q
-python -m ruff check .
-python -m ruff format --check .
-```
-
-Frontend development (`dashboard-ui/`):
-
-```powershell
-cd dashboard-ui
-npm ci
-npm test
-npm run typecheck
-npm run lint
-npm run build
-npm run test:browser
-```
-
-See [architecture and storage](docs/architecture.md) for module responsibilities and schema, and [metrics definitions](docs/METRICS.md) for calculation and reconciliation formulas.
-Tests use synthetic responses and temporary directories without live API calls.
-CI runs on Windows and Linux with Python 3.11 and 3.14.
-
-The integrations were adapted from Jomato (MIT, copyright 2026 jatin-dot-py).
-See [LICENSE](LICENSE). This repository is independent and imports no parent project
-modules, configuration, sessions, or exports. Use only for accounts you control.
-
-For personal data at rest, enable host full-disk encryption (for example, BitLocker on Windows or FileVault on macOS), restrict data-folder permissions, and encrypt backups separately. Archive payloads and analytics can retain full delivery addresses and coordinates; application credential encryption does not protect those files. Password reset preserves history under this scope. Wider history encryption would require a recovery key independent of the reset password to avoid making history unreadable.
+- [Architecture & Storage](docs/architecture.md): System diagram, job lifecycle diagram, complete route listings, and schema reference.
+- [Runbook](docs/RUNBOOK.md): Systemd service configuration, Windows service setup, backups, updates, and troubleshooting.
+- [Performance Benchmarks](docs/PERFORMANCE.md): Mixed load latencies, soak tests, and database concurrency targets.
+- [Access Security & Recovery](docs/access/security-and-recovery.md): Threat model, LAN security, password reset, and personal data inventory.
+- [Metrics Definitions](docs/METRICS.md): Financial calculation formulas and data reconciliation definitions.

@@ -6,12 +6,23 @@ code with household members. Give each person their own user and password. Close
 the registration window when finished and keep join codes private. Passwords
 cannot be recovered from the app.
 
-By default the server binds to loopback. For LAN access, use `food-khata serve
---lan --allow-host your-hostname` with a private data directory, and add
-`--tls-cert` and `--tls-key` for HTTPS. The certificate must be trusted by the
-clients. Plain HTTP exposes passwords, cookies and order data to network
+By default the server binds to loopback (`127.0.0.1`). For LAN access, use `food-khata serve
+--lan --allow-host your-hostname` with a private data directory (binds `0.0.0.0`), and add
+`--tls-cert` and `--tls-key` for HTTPS (or `--behind-https-proxy` and `--trusted-proxy ADDR`).
+Starting with `--lan` prints a 10-character one-time setup code (valid 30 minutes) at each start.
+Claiming the owner from a non-loopback IP requires this setup code; 5 wrong codes within 10 minutes
+lock out the IP with HTTP 429. Plain HTTP exposes passwords, cookies and order data to network
 observers. The host allow-list limits accepted Host headers; it is not a firewall
 or a substitute for HTTPS. Restrict network access to trusted devices.
+
+Security baseline:
+- **Cookies**: session cookie only, HttpOnly, SameSite=Lax. Marked `Secure` when TLS is active or `--behind-https-proxy` is set.
+- **Proxy**: client IP for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
+- **Headers**: CSP (`default-src 'self'`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
+- **Limits**: 64 KB request body limit. Passwords must be at least 10 characters.
+- **Sessions**: 8-hour idle timeout and 7-day absolute lifetime. All sessions are deleted on server start (re-login required after restart).
+- **Audit trail**: Append-only log of logins and admin actions in `app.db`, viewable by the owner in Settings (`GET /api/owner/audit`).
+- **Server concurrency**: Exactly one server process per data folder, enforced by `<data>/.server.lock`.
 
 Application authorization separates users' dashboards, linked accounts and
 jobs. Provider sessions and phone numbers in account credential metadata are encrypted at rest. Order archives and analytics databases are not encrypted and may retain full phone numbers and other personal data. New analytics imports retain only the last four phone digits for account labels. Protect the data directory and backups with OS

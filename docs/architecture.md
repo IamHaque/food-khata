@@ -2,145 +2,246 @@
 
 `food_khata.py` and the installed CLI command invoke `food_khata.cli.main`.
 
-## Module Responsibilities
+## System Architecture
 
-### Core CLI and Storage
-
-| Module | Responsibility |
-| --- | --- |
-| `cli.py` | Provider and account selection, masked OTP prompt, session reuse/refresh, subcommand dispatch (`sync`, `ingest`, `export`, `serve`) |
-| `contracts.py` | Provider protocol definitions and safe public exception types |
-| `storage.py` | Account filesystem mapping, atomic JSON writes, OS directory file locks |
-| `sync.py` | Archive validation, incremental merging, missing-detail repair, pagination checkpoints |
-| `db.py` | SQLite schema initialization, multi-platform normalization, additive migrations, idempotent upserts |
-| `dashboard.py` | Legacy SQLite export compiler (`food-khata export`) generating versioned static JSON |
-| `providers/zomato.py` | PKCE OAuth authentication, account/address context, Zomato pagination and detail fetching |
-| `providers/swiggy.py` | Swiggy SMS OTP authentication, account profile, cursor pagination and detail fetching |
-| `providers/http.py` | Resilient HTTP reads, backoff retries, error classification, credential redaction |
-| `providers/zomato_headers.py` | Mobile client headers for Zomato API compatibility |
-
-### FastAPI Serving Layer (`food_khata.serve`)
-
-| Module | Responsibility |
-| --- | --- |
-| `serve/app.py` | FastAPI application factory (`create_app`), route registration, loopback security, cache coordination |
-| `serve/cli.py` | CLI integration for `food-khata serve` (`--host`, `--port`, `--db-path`, `--dev`) |
-| `serve/db.py` | Read-only SQLite connection dependency (`?mode=ro`, `PRAGMA query_only=ON`, busy timeout) |
-| `serve/filters.py` | Central `build_where` SQL query generator with EXISTS predicates for item filters |
-| `serve/metrics.py` | Core financial KPI calculations (spend, AOV, separate discounts/savings, fees, tax, tips) |
-| `serve/charts.py` | Waterfall steps, daily spending pace, annual series, and calendar heatmap aggregations |
-| `serve/food.py` | Dietary breakdown (Veg/Non-Veg), cuisine popularity, restaurant loyalty, dish price history |
-| `serve/behavior.py` | Meal slot analysis, weekday x hour heatmap matrix, order size histograms, streaks and gaps |
-| `serve/places.py` | Privacy-safe delivery locality and distance analysis |
-| `serve/schemas.py` | Strict Pydantic models for API request filters and typed response schemas |
+```mermaid
+flowchart TD
+    Client["Browser / Mobile Client"]
+    Proxy["Reverse Proxy (optional TLS / trusted proxy)"]
+    
+    subgraph Server["FastAPI Serving Layer (food_khata.serve)"]
+        subgraph Middlewares["Security & Safety Middleware"]
+            M_Host["Host & Origin Validation"]
+            M_Body["Safety Guard (64 KB body limit)"]
+            M_Auth["Session Cookie & CSRF Validation"]
+            M_Sec["Security Headers (CSP, nosniff, DENY, no-referrer)"]
+        end
+        
+        subgraph Routers["API Endpoints"]
+            R_Auth["Auth (/api/auth/*)<br/>login, logout, password, csrf, me"]
+            R_Owner["Owner (/api/owner/*)<br/>setup, window, join-code, users, audit"]
+            R_Acc["Accounts (/api/accounts/*)<br/>list, providers, link, verify-again, disconnect"]
+            R_Sync["Sync (/api/sync/*)<br/>jobs, events, resume, cancel, retry-import"]
+            R_Read["Read API (/api/*)<br/>dashboard, orders, slim, items, meta"]
+            R_Health["Health (/health, /health/ready)"]
+        end
+        
+        subgraph Background["Services & State"]
+            JR["JobRunner & JobControl<br/>(concurrency slots, queue ETA, fair scheduling)"]
+            MT["Maintenance Thread<br/>(session expiry, prune events, unlock sweep)"]
+            MemState["In-Memory State<br/>(unlocked_sessions, dashboard_cache)"]
+        end
+    end
+    
+    subgraph Storage["Filesystem Storage (<data>)"]
+        LockFile[".server.lock (single server lock)"]
+        AppDB["app.db<br/>(users, sessions, jobs, job_events,<br/>provider_links, audit_log, migrations)"]
+        Logs["logs/food-khata.log (JSON lines)"]
+        
+        subgraph UserStorage["users/<user-id>/ (mode 0700)"]
+            Vault["vault.json (encrypted data key)"]
+            AnalyticsDB["food_analytics.db<br/>(orders, items, restaurants, addresses)"]
+            subgraph AccountsDir["accounts/<local-account-id>/"]
+                AccMeta["account.json (encrypted phone, digests)"]
+                History["zomato-history.json / swiggy-history.json (archives)"]
+                Sessions["sessions/*.json (encrypted credentials)"]
+            end
+        end
+    end
+    
+    Client -->|HTTP / HTTPS| Proxy
+    Proxy --> Server
+    Server --> Storage
+    JR -.->|sync & ingest| Storage
+    MT -.->|cleanup| AppDB
+```
 
 ---
 
-## Dashboard UI
+## Job State Lifecycle
 
-The `dashboard-ui/` frontend is a React + Vite SPA with 5 routes (`/`, `/spending`, `/food`, `/habits`, `/orders`), a shared `BaseChart` ECharts wrapper, semantic design tokens, and 5 accent themes (emerald, indigo, amber, rose, slate) in light/dark.
+Jobs represent background provider synchronization operations. Exactly one active job (running or queued) is permitted per `(account, provider)` tuple; attempting to submit or resume a second active job returns HTTP 409 (`ACCOUNT_BUSY`).
 
-## Account Identity and Sessions
+```mermaid
+stateDiagram-v2
+    [*] --> queued: submit_sync()
+    queued --> running: runner picks job (concurrency slot)
+    
+    running --> done: fetch and ingest complete
+    running --> failed: network / validation error
+    running --> cancelled: POST /jobs/{id}/cancel
+    running --> paused: POST /jobs/{id}/pause
+    running --> needs_code: session expired during sync
+    running --> interrupted: server restart (RESTART) / shutdown (SHUTDOWN)
+    
+    needs_code --> queued: POST /accounts/{id}/verify-again
+    
+    failed --> queued: POST /jobs/{id}/resume
+    paused --> queued: POST /jobs/{id}/resume
+    interrupted --> queued: POST /jobs/{id}/resume
+    cancelled --> queued: POST /jobs/{id}/resume
+    
+    failed --> done: POST /jobs/{id}/retry-import (if IMPORT_FAILED)
+    
+    done --> [*]
+```
 
-Each saved provider account belongs to exactly one logged-in user. A user is
-identified by the server-side session (`users.id`); no API route accepts a user
-id, data path, or database path from the client. The user's analytics database
-and account files live under a folder derived only from that session:
+### Job States & Transitions
+- **`queued`**: Awaiting an available provider execution slot. Queue exposes 1-based `queue_position` and calculated `eta_seconds`.
+- **`running`**: Actively fetching order history and downloading missing details. Progress events update at most once per second.
+- **`done`**: History and details downloaded and successfully ingested into the user's `food_analytics.db`.
+- **`failed`**: Sync or ingestion failed. If the fetch completed but the SQLite import failed (`error_code="IMPORT_FAILED"`), `POST /api/sync/jobs/{id}/retry-import` reruns the import without contacting the provider.
+- **`needs_code`**: Provider session expired during fetch. Completing `POST /api/accounts/{id}/verify-again` updates credentials and resumes the job back to `queued`.
+- **`paused`**: Suspended by user.
+- **`cancelled`**: Stopped by user request.
+- **`interrupted`**: Interrupted by a server process event. On server startup, all previously active jobs become `interrupted` (`RESTART`). On graceful shutdown (SIGTERM), running jobs checkpoint and become `interrupted` (`SHUTDOWN`).
+- **Resumption**: Jobs in `interrupted`, `failed`, `cancelled`, or `paused` state can be resumed back to `queued` via `POST /api/sync/jobs/{id}/resume`.
+
+---
+
+## Storage Layout
+
+The application root directory (`--data-dir`, default `.food-khata/`) separates shared server administration from isolated per-user analytical storage:
 
 ```text
-.food-khata/
-  app.db                  <-- Users, server-side sessions, throttling
+<data>/
+  .server.lock            <-- Exclusive OS file lock (code 2 if locked)
+  app.db                  <-- Global server database (WAL mode)
+  logs/
+    food-khata.log        <-- Structured JSON lines, redacted secrets (10 MB x 5)
   users/
-    <user-id>/            <-- Mode 0700
-      vault.json          <-- Password-wrapped random data key
-      food_analytics.db   <-- Relational SQLite database
+    <user-id>/            <-- Directory per user (mode 0700)
+      vault.json          <-- Encrypted data key wrapped by password via scrypt
+      food_analytics.db   <-- SQLite relational analytics database
       accounts/
         <local-account-id>/
-          account.json    <-- phone_encrypted (AEAD)
-          zomato-history.json
-          swiggy-history.json
+          account.json    <-- Encrypted phone metadata, SHA-256 provider digests
+          zomato-history.json  <-- Plain JSON order and detail archive
+          swiggy-history.json  <-- Plain JSON order and detail archive
           sessions/
-            zomato.json   <-- Encrypted access & refresh tokens
-            swiggy.json   <-- Encrypted cookies & headers
+            zomato.json   <-- ChaCha20-Poly1305 encrypted tokens
+            swiggy.json   <-- ChaCha20-Poly1305 encrypted cookies
 ```
 
-Before multi-user migration, data lived directly under `.food-khata/`. Calling
-`Storage.adopt_legacy_root(user)` (also exposed as
-`food_khata.users.adopt_legacy_root`) copies that data into `users/<user-id>/`
-and moves the originals into a sibling `legacy-backup/` folder. An adoption
-marker makes a second run a no-op.
-
-### Encryption at rest
-
-Provider sessions and phone numbers are sealed with ChaCha20-Poly1305 (AEAD).
-Each user gets a random 32-byte data key, stored in `vault.json` wrapped by a
-key derived from the user's password with scrypt (DEC-P2). The plaintext data
-key exists only in memory while the user is logged in. Plaintext sessions and
-phone fields are re-encrypted on first unlock and the plaintext files are
-atomically replaced.
-
-- A wrong password fails closed: AEAD authentication rejects the unwrap and no
-  plaintext fallback is attempted.
-- A password change re-wraps the same data key, so provider sessions survive.
-- An owner password reset cannot unwrap the key and therefore wipes that user's
-  provider sessions (the user must re-link). With no key rotation, existing
-  account metadata remains readable; a reset that also rotates the key loses
-  that metadata by design.
-
-### Honest limit
-
-Encryption protects data at rest and separates users of the application, but it
-does **not** protect against the host administrator. Whoever controls the
-machine, the `.venv`, the running process, or the OS account can read decrypted
-data and capture the data key from memory while a user is logged in. Backups of
-`.food-khata/` must be protected with the same care as the original data.
-
-Credentials in `sessions/*.json` are excluded from saved history files through recursive redaction of sensitive auth keys.
-The `.food-khata/` folder is gitignored and must remain private on the host machine.
+### Database Tables
+- **`app.db`**:
+  - `users`: User identity, scrypt password hashes, disabled state, ownership flag.
+  - `sessions`: Ephemeral web sessions (cleared at server start), creation and activity timestamps.
+  - `jobs`: Background sync execution records, status, phase, counts, error codes.
+  - `job_events`: Audit timeline of sync execution events.
+  - `provider_links`: Cross-user duplicate detection via SHA-256 digests (`identity_hash`).
+  - `audit_log`: Append-only security audit log (logins, owner actions).
+  - `schema_migrations`: Additive migration tracking versions.
+  - `server_settings`, `failed_logins`, `registration_attempts`: Dynamic flags and rate throttles.
+- **`food_analytics.db`** (per user):
+  - `accounts`: Local account IDs mapped to phone suffix labels.
+  - `orders`: Normalized orders (IST timestamps, amount, fees, taxes, discounts, savings, status).
+  - `order_items`: Line items with inferred dietary classification (`is_veg`).
+  - `restaurants`: Restaurant names, cities, localities.
+  - `delivery_addresses`: Delivery locations and coordinates.
+  - `archive_imports`: API-visible pagination and detail completeness flags.
+  - `partial_import_receipts`: Checkpoints for partial import decisions.
+  - `quarantine`: Malformed order records isolated during ingest.
 
 ---
 
-## Relational Database Schema (`food_analytics.db`)
+## API Routes & Endpoints
 
-Raw JSON order archives are normalized into a local SQLite database for fast analytical queries:
+All endpoints are registered under `food_khata.serve`:
 
-```text
-accounts (local_id PK, phone, created_at)
-   │
-   ├──< orders (order_id PK, platform, account_id FK, restaurant_id FK, address_id FK,
-   │            order_time, order_status, total_amount, item_total, delivery_fee,
-   │            platform_fee, taxes, packaging_fee, discount_amount, payment_method, ...)
-   │       │
-   │       └──< order_items (item_id PK, order_id FK, item_name, quantity,
-   │                         price, total_cost, is_veg, cuisine, category)
-   │
-restaurants (restaurant_id PK, platform, name, city, locality, address)
-delivery_addresses (address_id PK, address_line, city, tag)
-archive_imports (account_id PK, platform PK, history_complete, details_complete, ...)
-```
+### Authentication (`food_khata/serve/routes_auth.py` and `routes_owner.py`)
+- `POST /api/owner/setup`: First claim endpoint for the instance owner. Loopback only or requires the `--lan` setup code. Returns 404 once claimed.
+- `GET /api/auth/setup-status`: Check whether an owner has been established.
+- `POST /api/auth/register`: Create user account. Requires an existing owner and either an active join code or an open registration window. Maximum 8 users.
+- `POST /api/auth/login`: Authenticate with username and password; unlocks the user's encryption vault.
+- `POST /api/auth/password`: Authenticated password change for the current user; re-wraps the vault data key.
+- `POST /api/auth/logout`: Invalidate current session and remove in-memory vault key.
+- `POST /api/auth/logout-all`: Invalidate all active sessions for current user.
+- `GET /api/auth/csrf`: Retrieve CSRF token (also supplied in `food_khata_csrf` cookie).
+- `GET /api/auth/me`: Current user profile, username, and role.
 
-- **`accounts`**: Local user identity records mapped to normalized phone numbers.
-- **`restaurants`**: Restaurant profiles deduplicated across orders.
-- **`delivery_addresses`**: Delivery locations (normalized localities and cities).
-- **`orders`**: Individual orders with normalized timestamps in IST, financial totals, explicit discounts, advertised savings, fees, taxes, status, and payment instruments.
-- **`order_items`**: Dish-level line items with inferred dietary classification (`is_veg`: 1 = Veg, 0 = Non-Veg, NULL = Unknown).
-- **`archive_imports`**: Ingestion metadata tracking API-visible completeness per account and platform.
+### Accounts (`food_khata/serve/routes_accounts.py`)
+- `GET /api/accounts`: List linked accounts for the current user (returns one row per `(account, provider)`).
+- `GET /api/accounts/providers`: List supported providers (`zomato`, `swiggy`, and `fake` if enabled).
+- `POST /api/accounts/link/start`: Initiate provider OAuth / SMS OTP login.
+- `POST /api/accounts/link/verify`: Complete OTP verification and bind account.
+- `POST /api/accounts/{account_id}/verify-again`: Re-authenticate an expired session. Automatically resumes any `needs_code` sync jobs for the account.
+- `DELETE /api/accounts/{account_id}` & `POST /api/accounts/{account_id}/disconnect`: Unlink provider account. Accepts `wipe_data=true` to delete local order archives and analytics rows.
+
+### Synchronization (`food_khata/serve/routes_sync.py`)
+- `POST /api/sync/jobs`: Create and enqueue a sync job (`mode`: `incremental`, `repair`, or `full`). Returns 409 if active job exists.
+- `GET /api/sync/jobs`: List user sync jobs with status, progress, queue position, and ETA.
+- `GET /api/sync/jobs/{job_id}`: Retrieve detailed job record.
+- `GET /api/sync/jobs/{job_id}/events`: Retrieve event log for a job.
+- `POST /api/sync/jobs/{job_id}/resume`: Resume a paused, interrupted, failed, or cancelled job back to `queued`.
+- `POST /api/sync/jobs/{job_id}/cancel`: Cancel a queued or running job.
+- `POST /api/sync/jobs/{job_id}/pause`: Pause an active job.
+- `POST /api/sync/jobs/{job_id}/use-partial`: Ingest partially retrieved orders after sync failure.
+- `POST /api/sync/jobs/{job_id}/discard-partial`: Discard uncommitted partial orders.
+- `POST /api/sync/jobs/{job_id}/retry-import`: Re-run analytics ingestion for a job that failed with `IMPORT_FAILED`.
+*(Note: No `/code` route exists; OTP verification is handled via `/api/accounts/link/verify` or `/verify-again`)*.
+
+### Owner Administration (`food_khata/serve/routes_owner.py`)
+- `GET /api/owner/status`: Instance status, user counts, and registration window state.
+- `POST /api/owner/window`: Open (with timeout in seconds) or close the registration window.
+- `POST /api/owner/join-code/rotate`: Generate a fresh rotated household join code.
+- `GET /api/owner/users`: List registered users, disabled status, and roles.
+- `POST /api/owner/users/{user_id}/disable`: Disable or re-enable a user account.
+- `POST /api/owner/users/{user_id}/reset-password`: Set temporary password for user (wipes provider credentials).
+- `POST /api/owner/users/{user_id}/remove`: Irrevocably delete user, database, and accounts (requires `owner_password`).
+- `POST /api/owner/transfer`: Transfer instance ownership to another user.
+- `GET /api/owner/audit`: Retrieve append-only audit trail entries.
+
+### Read Analytics API (`food_khata/serve/app.py`)
+- `POST /api/dashboard`: Financial and operational KPI aggregations. Accepts optional `sections` filter (`overview`, `spending`, `food`, `behavior`, `places`).
+- `GET /api/orders`: Paginated order records with multi-dimensional filtering.
+- `GET /api/orders/slim`: Fast, lightweight order list for client-side charts (capped at 5,000 orders).
+- `GET /api/orders/{order_id}/bill`: Itemized bill breakdown and pricing for a single order.
+- `GET /api/restaurants`: Top restaurant leaders by spend and frequency.
+- `GET /api/items`: Top food item leaders by spend and quantity.
+- `GET /api/meta/filters`: Available filter dimensions (cities, localities, cuisines, payment options).
+- `GET /api/meta/data-health`: Reconciliation check, API coverage, and data completeness metrics.
+
+### System & Health Probes (`food_khata/serve/app.py`)
+- `GET /health`: Basic process liveness probe (`{"status": "ok"}`).
+- `GET /health/ready`: Readiness probe verifying `app.db` access, migration completeness, and maintenance thread health (200 `ready`, 503 `not_ready`).
 
 ---
 
-## Web Dashboard & API Serving Layer
+## Security Architecture
 
-The modern web application consists of:
-1. **Backend (`food_khata.serve`)**:
-   - Built with FastAPI and Pydantic v2.
-   - Enforces loopback-only connections (`127.0.0.1` / `localhost`). Non-loopback Host/Origin headers are rejected.
-   - Opens the SQLite database in read-only mode (`?mode=ro`, `PRAGMA query_only=ON`) with bounded retry timeouts to permit concurrent CLI sync/ingest operations.
-   - Computes all financial aggregations, distributions, histograms, and waterfall coordinates on the server to ensure high performance and prevent data duplication.
-   - Serves the built static frontend assets from `dashboard-ui/dist/`.
+- **Session Authentication**: Browser session cookie (`food_khata_session`) only; no bearer headers accepted. Cookie flags: `HttpOnly`, `SameSite=Lax`. `Secure` attribute is set when served over TLS or when `--behind-https-proxy` is passed.
+- **CSRF Protection**: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require an `x-csrf-token` header matching the `food_khata_csrf` cookie.
+- **Reverse Proxy Support**: Client IP extraction for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
+- **Security Headers**: All HTTP responses include `Content-Security-Policy` (`default-src 'self' ...`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
+- **Payload Limits**: Request bodies are capped at 64 KB (`MAX_BODY_BYTES`); larger payloads return HTTP 413.
+- **Session Lifetimes**: 8-hour idle timeout and 7-day absolute lifetime. All sessions are cleared from `app.db` at server startup (re-authentication required after restart).
+- **Passwords**: Enforces a minimum length of 10 characters. Hashes use scrypt with per-user salts.
+- **Audit Logging**: Sensitive operations (logins, failed attempts, owner actions, account deletions) append to `audit_log` in `app.db` without logging passwords, tokens, or codes.
+- **LAN Mode Security**: Running with `--lan` binds to `0.0.0.0` and prints a one-time 10-character setup code (valid 30 minutes). Non-loopback owner claims require this code. Five incorrect attempts within 10 minutes lock out the client IP with HTTP 429.
 
-2. **Frontend (`dashboard-ui/`)**:
-   - Built with React 18, Vite 6, TypeScript, Tailwind CSS, Lucide icons, and shadcn/ui.
-   - Uses TanStack Query for caching and asynchronous state management.
-   - Synchronizes all active filters (account, date range, platforms, order statuses, cuisines, dietary choices, payment methods, search queries) bidirectionally with URL search parameters.
-   - Seven responsive views: Overview, Spending, Food, Behavior, Places, Ledger (server-paginated with full CSV export and keyboard-accessible order receipts), and Data Health.
-   - Legacy export fallback available at `/legacy`.
+---
+
+## Concurrency & Resource Control
+
+- **Server Concurrency**: Exactly one server process may run against a given data directory at a time, enforced by an OS file lock (`<data>/.server.lock`). A second server process immediately exits with code 2.
+- **Provider Concurrency**: Provider job concurrency is bounded per provider via `--provider-concurrency swiggy=1,zomato=1` (defaults to 1 slot each).
+- **Per-User Limits**: At most 1 running job and 2 queued jobs per user at any time.
+- **Read-Only Analytics Queries**: Analytics queries open SQLite in read-only mode (`?mode=ro`, `PRAGMA query_only=ON`) with busy timeouts, allowing concurrent reads while sync ingestion writes.
+
+---
+
+## Honest Limitations
+
+1. **Unencrypted Archives and Analytics**: Provider credentials (`sessions/*.json`) and vault keys are encrypted with ChaCha20-Poly1305. Order archives (`*-history.json`) and analytical SQLite databases (`food_analytics.db`) are **not encrypted**.
+2. **Host Administrator Access**: The host administrator or any process with read access to the server machine can read all data, memory keys, and SQLite records.
+3. **Unofficial Provider APIs**: Provider APIs are undocumented, private mobile endpoints. Providers may change schemas, introduce rate limits, or block accounts without notice.
+4. **Single Server Process**: Multi-server clustering against a shared data folder is unsupported; a single server lock is strictly required.
+
+---
+
+## Backup, Restore, and Export
+
+- **Hot Backup**: `food-khata backup --out backup.tar.gz --data-dir <DIR>` safely captures all SQLite databases via SQLite's online backup API, archives, vaults, and a manifest with SHA-256 checksums while the server is live.
+- **Safe Restore**: `food-khata restore backup.tar.gz --data-dir <EMPTY_DIR>` verifies every checksum against the manifest and extracts only into a clean, empty folder.
+- **Offline JSON Export**: `food-khata export` dumps static aggregated analytics to `.food-khata/dashboard.json` for offline viewing via `/legacy`.
