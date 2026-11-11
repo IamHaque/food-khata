@@ -501,7 +501,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-17 | Dead code and duplication purge | P4 | P2 | TODO | | | W6 |
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | TODO | | | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | TODO | | | W6 |
-| PR-20 | Supply chain and CI | P4 | P2 | TODO | | | W0 |
+| PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
 | GC | Production acceptance | P4 | P0 | TODO | | | W7 |
 
 ### 5.2 Decision log
@@ -527,6 +527,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-01 | 2026-11-11 | PR-01, PR-04 | U-3 check and the switch-on list on one test server | Two server configurations: switch off for the production-UI check, switch on for the list test; test provider injected through the test hook only | One server cannot both include and exclude `fake` | Browser suite has two server setups | Approved by owner |
 | DEV-02 | 2026-11-11 | PR-04 | Leftover `fake` accounts: dashboards-never-count test, `purge-fake` | Home keeps the existing Disconnect action for them; `purge-fake` stays in PR-16; no ingest filter by name exists in code, so a count test needs real fake-account data and is left to PR-16 | Leftover fake accounts can still be listed and disconnected, not purged by CLI yet | Open |
 | DEV-03 | 2026-11-11 | All | Strongest Gemini model for high-risk stories | Only Gemini 3.8 Flash is in the catalog; the main agent (Claude Sonnet 5.5) writes high-risk code itself, as DEC-P8 says | None on scope | Open |
+| DEV-04 | 2026-11-11 | PR-20 | Audit script used by CI and verify | CI only: audit needs `pip-audit` and `npm audit` JSON, which need network; verify does not call it | A no-argument call audited nothing | `verify` has no audit step; run `scripts/audit.py` in CI | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -592,4 +593,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
 | --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | running | — |
-| 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | running | — |
+| 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |

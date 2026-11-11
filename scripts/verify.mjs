@@ -279,13 +279,6 @@ function main() {
     }
   }
 
-  try {
-    execSync("python scripts/audit.py", { cwd: worktreeDir, env, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-    outputLines.push("audit: PASS");
-  } catch {
-    outputLines.push("audit: SKIP (non-fatal/offline)");
-  }
-
   if (allPassed && reportArg) {
     const logFile = findLogFile(worktreeDir, reportArg);
     const isValid = logFile ? validateReport(logFile) : false;

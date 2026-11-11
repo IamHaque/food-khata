@@ -7,7 +7,6 @@ expiry) permit exceptions; an expired entry fails the build.
 """
 import argparse
 import json
-import subprocess
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -20,14 +19,6 @@ def load_json(path):
         return json.load(sys.stdin)
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
-
-
-def run_cmd(cmd, cwd=None):
-    try:
-        r = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
-        return r.stdout or r.stderr or ""
-    except Exception:
-        return ""
 
 
 def parse_pip(data):
