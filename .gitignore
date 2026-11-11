@@ -50,3 +50,7 @@ docs/parity.local.md
 /uv.lock
 orchestration/runs/
 orchestration/state.json
+
+# server runtime files
+.server.lock
+logs/
