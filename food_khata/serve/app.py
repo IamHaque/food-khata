@@ -153,6 +153,7 @@ def create_app(
         resolved_app_db, data_root=resolved_data_root, runner=job_runner
     )
     SLIM_LIMIT = 5000
+    build_gate = threading.BoundedSemaphore(2)
     SECTIONS = ("overview", "spending", "food", "behavior", "places")
     cache = app.state.dashboard_cache = {}
     cache_lock = threading.Lock()
@@ -310,6 +311,8 @@ def create_app(
 
     @app.exception_handler(sqlite3.DatabaseError)
     async def db_error(request, exc):
+        # SQLite error text names no user data; logging it keeps a locked or damaged database from being silent.
+        logging.getLogger(__name__).error("database error on %s: %s: %s", request.url.path, type(exc).__name__, exc)
         return JSONResponse(
             {
                 "error": {
@@ -585,31 +588,33 @@ def create_app(
                 cached = cache.get(key)
             if cached is not None and key[2] == database_version(database):
                 return cached
-            h = health(conn, filters)
-            kpis = compute_metrics(conn, filters)
-            try:
-                json.dumps(kpis, allow_nan=False)
-            except ValueError:
-                raise HTTPException(
-                    422, "Dashboard data contains invalid numeric values."
-                ) from None
-            calendar, comparison = overview(conn, filters if "overview" in sections else nothing)
-            result = {
-                **metadata(filters),
-                "comparison": comparison,
-                "kpis": kpis,
-                "charts": {
-                    "kpi_history": part("overview", kpi_history),
-                    "food": part("food", food),
-                    "spending": part("spending", spending),
-                    "behavior": part("behavior", behavior),
-                    "places": part("places", places),
-                    "monthly": part("overview", monthly_totals),
-                    "calendar": calendar,
-                    **part("overview", remaining),
-                },
-                "data_complete": h["history_complete"] and h["details_complete"],
-            }
+            # Cold builds are CPU bound and sqlite3 threads fight over the GIL: two at a time finish sooner than six.
+            with build_gate:
+                h = health(conn, filters)
+                kpis = compute_metrics(conn, filters)
+                try:
+                    json.dumps(kpis, allow_nan=False)
+                except ValueError:
+                    raise HTTPException(
+                        422, "Dashboard data contains invalid numeric values."
+                    ) from None
+                calendar, comparison = overview(conn, filters if "overview" in sections else nothing)
+                result = {
+                    **metadata(filters),
+                    "comparison": comparison,
+                    "kpis": kpis,
+                    "charts": {
+                        "kpi_history": part("overview", kpi_history),
+                        "food": part("food", food),
+                        "spending": part("spending", spending),
+                        "behavior": part("behavior", behavior),
+                        "places": part("places", places),
+                        "monthly": part("overview", monthly_totals),
+                        "calendar": calendar,
+                        **part("overview", remaining),
+                    },
+                    "data_complete": h["history_complete"] and h["details_complete"],
+                }
             try:
                 json.dumps(result, allow_nan=False, default=str)
             except ValueError:

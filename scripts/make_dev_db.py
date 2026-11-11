@@ -30,7 +30,7 @@ from food_khata.db import IST, AnalyticsDB  # noqa: E402
 DB_FILENAME = "food_analytics.db"
 DEFAULT_SEED = 42
 DEFAULT_ORDERS = 1_600
-LARGE_ORDERS = 6_000
+LARGE_ORDERS = 20_000
 HISTORY_DAYS = 3 * 365
 STREAK_DAYS = 10
 END_DATE = date(2026, 10, 31)
