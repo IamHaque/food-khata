@@ -374,6 +374,15 @@ class Charts(ResponseModel):
     insights: list[Insight]
 
 
+Section = Literal["overview", "spending", "food", "behavior", "places"]
+
+
+class DashboardRequest(Filters):
+    """Filters plus the optional sections the page needs; unlisted sections come back empty (C-2, additive)."""
+
+    sections: list[Section] | None = None
+
+
 class Dashboard(Metadata):
     kpis: KPIs
     charts: Charts
@@ -476,6 +485,7 @@ class SlimOrder(ResponseModel):
 
 class Slim(Metadata):
     rows: list[SlimOrder]
+    truncated: bool = False
 
 
 

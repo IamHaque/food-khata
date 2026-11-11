@@ -1017,6 +1017,74 @@ export interface components {
             /** Data Complete */
             data_complete: boolean;
         };
+        /**
+         * DashboardRequest
+         * @description Filters plus the optional sections the page needs; unlisted sections come back empty (C-2, additive).
+         */
+        DashboardRequest: {
+            /** Date From */
+            date_from?: string | null;
+            /** Date To */
+            date_to?: string | null;
+            /** Account Ids */
+            account_ids?: string[];
+            /** Platforms */
+            platforms?: string[];
+            /**
+             * Statuses
+             * @description Repeat for multiple statuses; statuses= selects all statuses.
+             */
+            statuses?: string[];
+            /** Cities */
+            cities?: string[];
+            /** Localities */
+            localities?: string[];
+            /** Restaurant Ids */
+            restaurant_ids?: string[];
+            /** Cuisines */
+            cuisines?: string[];
+            /**
+             * Veg
+             * @default all
+             * @enum {string}
+             */
+            veg: "all" | "veg" | "nonveg" | "unknown";
+            /** Payment Methods */
+            payment_methods?: string[];
+            /** Amount Min */
+            amount_min?: number | null;
+            /** Amount Max */
+            amount_max?: number | null;
+            /** Meal Slots */
+            meal_slots?: ("breakfast" | "lunch" | "snack" | "dinner" | "late_night")[];
+            /**
+             * Day Type
+             * @default all
+             * @enum {string}
+             */
+            day_type: "all" | "weekday" | "weekend";
+            /**
+             * Verified Only
+             * @default false
+             */
+            verified_only: boolean;
+            /**
+             * Anomaly
+             * @default all
+             * @enum {string}
+             */
+            anomaly: "all" | "review";
+            /** Search */
+            search?: string | null;
+            /**
+             * Compare
+             * @default none
+             * @enum {string}
+             */
+            compare: "none" | "previous_period" | "previous_year";
+            /** Sections */
+            sections?: ("overview" | "spending" | "food" | "behavior" | "places")[] | null;
+        };
         /** DietMonth */
         DietMonth: {
             /** Month */
@@ -1895,6 +1963,11 @@ export interface components {
             generated_at: string;
             /** Rows */
             rows: components["schemas"]["SlimOrder"][];
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         };
         /** SlimOrder */
         SlimOrder: {
@@ -2349,7 +2422,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Filters"];
+                "application/json": components["schemas"]["DashboardRequest"];
             };
         };
         responses: {

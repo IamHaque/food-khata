@@ -493,7 +493,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | DONE | 2026-11-11 | tests/test_pr09.py 4 pass; verify on trunk after merge | W3 |
 | PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | DONE | 2026-11-11 | tests/test_pr10.py 7 pass (20 threads claim, 2 threads link); verify on trunk after merge | W2 |
 | PR-11 | Job runner throughput and write cost | P2 | P1 | TODO | | | W4 |
-| PR-12 | Dashboard and read-path performance | P2 | P1 | TODO | | | W3 |
+| PR-12 | Dashboard and read-path performance | P2 | P1 | DONE | 2026-11-11 | cold dashboard 5240 to 796 ms (all sections), 276 to 361 ms per page section, cached 43 ms, on 20,000 orders; test_read_path_budgets_and_sections; browser 84 pass; DEVs 15 to 17 | W3 |
 | PR-13 | Frontend load and polling | P2 | P2 | TODO | | | W5 |
 | PR-14 | Owner claim, passwords and session lifetime | P3 | P1 | TODO | | | W4 |
 | PR-15 | HTTP hardening and audit trail | P3 | P1 | TODO | | | W5 |
@@ -538,6 +538,9 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-12 | 2026-11-11 | PR-06 | Reproduce first; jobs per provider | The reproduction test was written together with the fix, not before it (R-01 was clear from the code); jobs already used one archive file per provider, so only the provider choice was added; `last_sync` is still account-level | Per-provider last sync waits for PR-11 job data | Open |
 | DEV-13 | 2026-11-11 | PR-07 | `/code` route removal logged as DEV (DEC-P3); resume-after-restart no-duplicates test | The route is removed from C-2 as planned; the no-duplicate-orders check for resume stays with PR-08/PR-18 (existing resume tests only check status); six tests that queued several jobs on one account now use several accounts because of the new unique index | Test fixtures changed | Open |
 | DEV-14 | 2026-11-11 | PR-09 | Wipe cancels the running job then waits; scheduler tasks log their counts; test for a lock longer than 50 ms | Wipe returns 409 instead (the allowed alternative); counts are logged once per run as one line; chunk size is tested, the 50 ms bound is not measured | None | Open |
+| DEV-15 | 2026-11-11 | PR-12 | UI asks for the open page's `sections` | Server side is done and measured, but the pages read charts across sections (Spending reads behavior and calendar), so the UI still sends no `sections`; adopting it needs a per-page audit (BL-208) | The full dashboard call is 796 ms cold, above the 500 ms target; each section is under 500 ms | Open |
+| DEV-16 | 2026-11-11 | PR-12 | Indexes by migration; ETag 304; `/api/meta/filters` cache | The evidence report shows neither proposed index changes any plan or timing (noise under 5 percent), so none is added; browsers do not revalidate POST, so no ETag (the cached call is already 43 ms); the filters cache is left out (159 ms, Backlog BL-209) | Fewer changes | Open |
+| DEV-17 | 2026-11-11 | PR-12 | Data health in at most 2 queries | Three queries (imports, orders in one pass, items) | 16 queries to 3 | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -548,6 +551,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-203 | 2026-11-11 | Review | Docker image and compose file | P3 | The service docs in PR-16 cover the first release |
 | BL-204 | 2026-11-11 | Review | Two-factor login for the owner | P3 | Not needed for a household LAN; revisit if exposed to the internet |
 | BL-206 | 2026-11-11 | Owner | Reproduce the owner double login prompt (U-1) at Gate G0 with browser, URL and restart details; reopen only if it still occurs | P2 | Deferred by owner (DEC-P11) |
+| BL-208 | 2026-11-11 | PR-12 | Make the UI request only the open page's `sections` (audit cross-page chart reads first) | P2 | Needs a per-page audit |
+| BL-209 | 2026-11-11 | PR-12 | Cache `/api/meta/filters` per user and database version | P3 | 159 ms; not on the critical path |
 | BL-205 | 2026-11-11 | Review | Move app state to a shared store so several workers can run | P3 | One worker is enough; PR-16 enforces it |
 | BL-207 | 2026-11-11 | PR-20 verify | `tests/test_serve_sync.py::test_discard_partial_api_persists_across_restart` fails about 2 runs in 5 (KeyError `partial_decision`), passes alone; root cause: the real job thread started by the test holds `app.db`, a request after restart gets 503 `database_unavailable`; the test now waits for the job; the product-side lock contention is for PR-11 | P1 | Test stabilised in PR-05; contention left to PR-11 |
 
@@ -590,6 +595,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-12 | Bench: 20,000 orders, `POST /api/dashboard`, 5 runs median, distinct filter per call (before = master `30d2a6c`+PR-10; after = pr-12) | cold all sections 5240 ms to 796 ms; sections overview 347, spending 276, food 361, behavior 307, places 310 ms; cached 38 to 43 ms; data-health 16 to 3 queries; items 45 to 4 queries | — | pr-12 |
 | 2026-11-11 | PR-09 | `verify . --backend` on branch pr-09 | see Progress | — | pr-09 |
 | 2026-11-11 | PR-07 | `verify . --backend` on branch pr-07 | see Progress | — | pr-07 |
 | 2026-11-11 | G0 | `verify . --backend --browser` (twice), `npm run build`, `check-bundle.mjs` on trunk | all PASS; browser 84 pass at 1440 and 390; entry chunk 102.4 kB gzip (budget 250) | 125 s | trunk |
@@ -607,6 +613,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-12 | `kpi_history` in two grouped queries (was two per month, about 4 s); dish count by join (5x); per-request metrics memo; data health one pass over orders; item price trends one grouped query; `sections` on `POST /api/dashboard` (C-2 additive, unlisted sections return empty shapes); `/api/orders/slim` capped at 5,000 with `truncated`; dashboard cache bounded 8 per user and 64 total; query-count budgets in tests; types regenerated | pr-12 |
 | 2026-11-11 | PR-09 | `delete_account_data` (one transaction, orphans removed, rolls back); wipe renames the folder first, 409 `ACCOUNT_BUSY` with a running job, 500 `WIPE_FAILED`; `POST /api/owner/users/{id}/remove`; `maintenance.py` hourly thread (sessions, attempts, events 7 d, jobs 90 d, WAL checkpoint) in chunks of 500 | pr-09 |
 | 2026-11-11 | PR-07 | Startup marks running, queued, needs_code and paused jobs interrupted/RESTART; `/jobs/{id}/code` removed (404) and the Sync screen sends users to Verify again; verify-again resumes the account's needs_code job; expiry works from the database; unique index (migration 4) gives 409 `ACCOUNT_BUSY`; types regenerated | pr-07 |
 | 2026-11-11 | PR-06 | C-2 additive: `GET /api/accounts` one row per (account, provider); optional `provider` on sync create, verify-again and disconnect (422 `PROVIDER_REQUIRED` when ambiguous); `added_to_existing` on link verify; Home one card per provider; selector groups by account; types regenerated | pr-06 |

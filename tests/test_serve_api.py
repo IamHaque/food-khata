@@ -338,3 +338,52 @@ def test_legacy_single_db_off_by_default(tmp_path):
     client = TestClient(create_app(db), base_url="http://127.0.0.1")
     authenticate_client(client)
     assert client.get("/api/orders/slim").status_code == 503
+
+
+def _statements(path, fn):
+    """Count SQL statements run on read connections while fn() runs."""
+    import food_khata.serve.app as app_module
+
+    seen = []
+    original = app_module.connect_readonly
+
+    def traced(database):
+        connection = original(database)
+        connection.set_trace_callback(lambda sql: seen.append(sql) if sql.startswith("SELECT") else None)
+        return connection
+
+    app_module.connect_readonly = traced
+    try:
+        fn()
+    finally:
+        app_module.connect_readonly = original
+    return len(seen)
+
+
+def test_read_path_budgets_and_sections(conn):
+    """PR-12: statement counts per endpoint must not grow; sections only compute what a page asks for."""
+    path = conn.execute("PRAGMA database_list").fetchone()[2]
+    client = make_client(path)
+    full = client.post("/api/dashboard", json={"account_ids": ["a"]})
+    spending_only = client.post("/api/dashboard", json={"account_ids": ["a"], "sections": ["spending"]})
+    assert spending_only.status_code == 200 and spending_only.json()["kpis"] == full.json()["kpis"]
+    assert spending_only.json()["charts"]["spending"] == full.json()["charts"]["spending"]
+    assert spending_only.json()["charts"]["food"] != full.json()["charts"]["food"]  # not requested: empty shape
+    assert client.post("/api/dashboard", json={"sections": ["nope"]}).status_code == 422
+    budgets = {
+        "dashboard": (lambda: client.post("/api/dashboard", json={"statuses": ["x"]}), 40),
+        "data-health": (lambda: client.get("/api/meta/data-health"), 4),
+        "items": (lambda: client.get("/api/items"), 6),  # price trends are one grouped query, not one per item
+    }
+    for name, (call, limit) in budgets.items():
+        assert _statements(path, call) <= limit, name
+
+
+def test_slim_is_capped_and_dashboard_cache_is_bounded(conn):
+    path = conn.execute("PRAGMA database_list").fetchone()[2]
+    client = make_client(path)
+    assert client.get("/api/orders/slim").json()["truncated"] is False
+    for n in range(12):  # one user, more distinct filters than the per-user bound
+        assert client.post("/api/dashboard", json={"amount_min": n}).status_code == 200
+    cache = client.app.state.dashboard_cache
+    assert len(cache) <= 8

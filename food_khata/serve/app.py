@@ -46,7 +46,17 @@ from .routes_accounts import router as accounts_router
 from .routes_auth import router as auth_router
 from .routes_owner import router as owner_router
 from .routes_sync import router as sync_router
-from .schemas import Bill, Dashboard, FilterOptions, Filters, Health, Leaders, Orders, Slim
+from .schemas import (
+    Bill,
+    Dashboard,
+    DashboardRequest,
+    FilterOptions,
+    Filters,
+    Health,
+    Leaders,
+    Orders,
+    Slim,
+)
 from .security import get_allowed_hosts, validate_host_and_origin
 from .spending import spending
 
@@ -134,7 +144,9 @@ def create_app(
     app.state.job_control = JobControl(
         resolved_app_db, data_root=resolved_data_root, runner=job_runner
     )
-    cache = {}
+    SLIM_LIMIT = 5000
+    SECTIONS = ("overview", "spending", "food", "behavior", "places")
+    cache = app.state.dashboard_cache = {}
     cache_lock = threading.Lock()
 
     @app.middleware("http")
@@ -291,6 +303,7 @@ def create_app(
     class RetryingConnection:
         def __init__(self, conn):
             self.conn = conn
+            self.metrics_memo = {}
 
         def execute(self, sql, params=()):
             return retry(lambda: self.conn.execute(sql, params))
@@ -404,9 +417,6 @@ def create_app(
             scope,
         ).fetchall()
         base = f" FROM orders o LEFT JOIN restaurants r ON r.id=o.restaurant_id LEFT JOIN delivery_addresses d ON d.id=o.delivery_address_id WHERE {where}"
-        verified = conn.execute(
-            f"SELECT AVG(CASE WHEN o.financial_verified=1 THEN 100.0 ELSE 0 END) {base}", params
-        ).fetchone()[0]
         columns = {
             "user_rating": "o.user_rating",
             "payment_method": "o.payment_method",
@@ -418,26 +428,22 @@ def create_app(
             "address_latitude": "d.latitude",
             "address_longitude": "d.longitude",
         }
-        null_rates = {}
-        for name, column in columns.items():
-            value = conn.execute(
-                f"SELECT AVG(CASE WHEN {column} IS NULL THEN 100.0 ELSE 0 END) {base}", params
-            ).fetchone()[0]
-            null_rates[name] = round(value, 2) if value is not None else None
-        for name in ("is_veg", "category"):
-            value = conn.execute(
-                f"SELECT AVG(CASE WHEN i.{name} IS NULL THEN 100.0 ELSE 0 END) FROM order_items i JOIN orders o ON o.id=i.order_id WHERE {where}",
-                params,
-            ).fetchone()[0]
-            null_rates[name] = round(value, 2) if value is not None else None
-        duplicates = conn.execute(
-            f"SELECT COALESCE(SUM(n-1),0) FROM (SELECT COUNT(*) n FROM orders o WHERE {where} GROUP BY o.account_id,o.platform,o.platform_order_id HAVING COUNT(*)>1)",
+        # One pass over orders for every order-level figure (was 12 separate scans).
+        agg = conn.execute(
+            "SELECT AVG(CASE WHEN o.financial_verified=1 THEN 100.0 ELSE 0 END), "
+            + "".join(f"AVG(CASE WHEN {c} IS NULL THEN 100.0 ELSE 0 END), " for c in columns.values())
+            + "COUNT(*) - COUNT(DISTINCT o.account_id || '|' || o.platform || '|' || o.platform_order_id), "
+            "COUNT(CASE WHEN ABS(o.reconciliation_difference)>1 THEN 1 END)" + base,
             params,
-        ).fetchone()[0]
-        anomalies = conn.execute(
-            f"SELECT COUNT(*) FROM orders o WHERE {where} AND ABS(o.reconciliation_difference)>1",
+        ).fetchone()
+        verified, duplicates, anomalies = agg[0], agg[-2], agg[-1]
+        null_rates = {n: (round(v, 2) if v is not None else None) for n, v in zip(columns, agg[1:-2], strict=True)}
+        item_rates = conn.execute(
+            f"SELECT AVG(CASE WHEN i.is_veg IS NULL THEN 100.0 ELSE 0 END), AVG(CASE WHEN i.category IS NULL THEN 100.0 ELSE 0 END) FROM order_items i JOIN orders o ON o.id=i.order_id WHERE {where}",
             params,
-        ).fetchone()[0]
+        ).fetchone()
+        for name, value in zip(("is_veg", "category"), item_rates, strict=True):
+            null_rates[name] = round(value, 2) if value is not None else None
         return {
             **metadata(filters),
             "imports": [rounded(r) for r in rows],
@@ -519,14 +525,22 @@ def create_app(
     @app.post("/api/dashboard", response_model=Dashboard)
     def dashboard(
         request: Request,
-        filters: Filters,
+        body: DashboardRequest,
         conn: Annotated[object, Depends(connection)],
     ):
+        sections = set(body.sections or SECTIONS)
+        filters = Filters.model_validate(body.model_dump(exclude={"sections"}))
         own_accounts(request, filters)
+        # An unreachable account id gives the empty shape of a section without scanning orders.
+        nothing = filters.model_copy(update={"account_ids": ["\0none"]})
+
+        def part(name, fn):
+            return fn(conn, filters if name in sections else nothing)
+
         user_id = request.state.user["user_id"]
         database = conn.db_path
         for attempt in range(3):
-            key = (user_id, filters.model_dump_json(), conn.version)
+            key = (user_id, body.model_dump_json(), conn.version)
             with cache_lock:
                 cached = cache.get(key)
             if cached is not None and key[2] == database_version(database):
@@ -539,20 +553,20 @@ def create_app(
                 raise HTTPException(
                     422, "Dashboard data contains invalid numeric values."
                 ) from None
-            calendar, comparison = overview(conn, filters)
+            calendar, comparison = overview(conn, filters if "overview" in sections else nothing)
             result = {
                 **metadata(filters),
                 "comparison": comparison,
                 "kpis": kpis,
                 "charts": {
-                    "kpi_history": kpi_history(conn, filters),
-                    "food": food(conn, filters),
-                    "spending": spending(conn, filters),
-                    "behavior": behavior(conn, filters),
-                    "places": places(conn, filters),
-                    "monthly": monthly_totals(conn, filters),
+                    "kpi_history": part("overview", kpi_history),
+                    "food": part("food", food),
+                    "spending": part("spending", spending),
+                    "behavior": part("behavior", behavior),
+                    "places": part("places", places),
+                    "monthly": part("overview", monthly_totals),
                     "calendar": calendar,
-                    **remaining(conn, filters),
+                    **part("overview", remaining),
                 },
                 "data_complete": h["history_complete"] and h["details_complete"],
             }
@@ -564,12 +578,17 @@ def create_app(
                 ) from None
             with cache_lock:
                 if key[2] == database_version(database):
-                    for stale in [k for k in cache if k[0] == user_id and k != key]:
-                        cache.pop(stale, None)
-                    cache[key] = result
+                    for stale in [k for k in cache if k[2] != key[2]]:
+                        cache.pop(stale, None)  # an older database version can never be served again
+                    cache.pop(key, None)
+                    cache[key] = result  # most recent last
+                    mine = [k for k in cache if k[0] == user_id]
+                    for old in mine[:-8] + [k for k in cache if k[0] != user_id][: max(0, len(cache) - 64)]:
+                        cache.pop(old, None)
                     return result
             if attempt < 2:
                 conn.execute("ROLLBACK")
+                conn.metrics_memo.clear()  # a new snapshot: earlier totals are stale
                 conn.version = database_version(database)
                 conn.execute("BEGIN")
         raise sqlite3.OperationalError("database busy")
@@ -614,10 +633,10 @@ def create_app(
     ):
         where, params = build_where(filters)
         rows = conn.execute(
-            f"SELECT o.id, o.order_date, o.platform, o.order_status, o.final_amount_paid FROM orders o WHERE {where} ORDER BY o.order_date DESC, o.id",
+            f"SELECT o.id, o.order_date, o.platform, o.order_status, o.final_amount_paid FROM orders o WHERE {where} ORDER BY o.order_date DESC, o.id LIMIT {SLIM_LIMIT + 1}",
             params,
-        )
-        return {**metadata(filters), "rows": [rounded(r) for r in rows]}
+        ).fetchall()
+        return {**metadata(filters), "rows": [rounded(r) for r in rows[:SLIM_LIMIT]], "truncated": len(rows) > SLIM_LIMIT}
 
     @app.get("/api/orders", response_model=Orders)
     def orders(
@@ -741,13 +760,17 @@ def create_app(
                 [*params, minimum, page_size, (page - 1) * page_size],
             )
         ]
-        if kind == "item":
+        if kind == "item" and rows:
+            trends: dict[str, list] = {row["key"]: [] for row in rows}
+            marks = ",".join("?" for _ in rows)
+            for r in conn.execute(
+                f"SELECT i.item_name AS item, substr(o.order_date,1,7) AS month, SUM(i.quantity) AS quantity, SUM(i.total_price)*1.0/NULLIF(SUM(CASE WHEN i.total_price IS NOT NULL THEN i.quantity END),0) AS unit_price FROM orders o JOIN order_items i ON i.order_id=o.id WHERE {where} AND i.item_name IN ({marks}) GROUP BY i.item_name, month ORDER BY month",
+                [*params, *trends],
+            ):
+                item = dict(r)
+                trends[item.pop("item")].append(rounded(item))
             for row in rows:
-                trend = conn.execute(
-                    f"SELECT substr(o.order_date,1,7) AS month, SUM(i.quantity) AS quantity, SUM(i.total_price)*1.0/NULLIF(SUM(CASE WHEN i.total_price IS NOT NULL THEN i.quantity END),0) AS unit_price FROM orders o JOIN order_items i ON i.order_id=o.id WHERE {where} AND i.item_name=? GROUP BY month ORDER BY month",
-                    [*params, row["key"]],
-                )
-                row["price_trend"] = [rounded(r) for r in trend]
+                row["price_trend"] = trends[row["key"]]
         return {
             **metadata(filters),
             "rows": rows,

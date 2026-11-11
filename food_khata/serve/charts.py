@@ -1,8 +1,7 @@
-from calendar import monthrange
 from datetime import date, timedelta
 
 from .filters import build_where
-from .metrics import FEES_SQL, compute_metrics
+from .metrics import FEES_SQL, compute_metrics, compute_metrics_by_month
 
 
 def overview(conn, filters):
@@ -242,22 +241,11 @@ def remaining(conn, filters):
 
 
 def kpi_history(conn, filters):
-    where, params = build_where(filters)
-    months = conn.execute(
-        f"SELECT DISTINCT substr(o.order_date,1,7) FROM orders o WHERE {where} ORDER BY 1", params
-    )
     result = []
-    for (month,) in months:
+    for row in compute_metrics_by_month(conn, filters):
         try:
-            start = date.fromisoformat(month + "-01")
-            end = start.replace(day=monthrange(start.year, start.month)[1])
+            date.fromisoformat(row["month"] + "-01")
         except (TypeError, ValueError):
-            continue
-        scoped = filters.model_copy(
-            update={
-                "date_from": max(start, filters.date_from) if filters.date_from else start,
-                "date_to": min(end, filters.date_to) if filters.date_to else end,
-            }
-        )
-        result.append({"month": month, **compute_metrics(conn, scoped)})
+            continue  # malformed order dates never made a month before either
+        result.append(row)
     return result
