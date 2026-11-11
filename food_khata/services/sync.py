@@ -150,18 +150,13 @@ def sync(
     progress: Callable[[Any], None] = lambda _: None,
     checkpoint_session: Callable[[], None] = lambda: None,
     mode: str = "new",
-    on_event: Callable[[Any], None] | None = None,
     event_callback: Callable[[Any], None] | None = None,
-    event_cb: Callable[[Any], None] | None = None,
-    callback: Callable[[Any], None] | None = None,
     cancel_token: Any = None,
-    cancel: Any = None,
     cancellation_token: Any = None,
-    token: Any = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
     # resolve cancel token
-    ct = cancel_token or cancel or cancellation_token or token or kwargs.get("cancel_token")
+    ct = cancel_token or cancellation_token or kwargs.get("cancel_token")
     if ct is None:
         ct = kwargs.get("cancellation_token")
 
@@ -185,7 +180,7 @@ def sync(
 
     def _emit_event(event: SyncEvent) -> None:
         _emit(progress, event)
-        for cb in (on_event, event_callback, event_cb, callback, kwargs.get("on_event")):
+        for cb in (event_callback,):
             if callable(cb):
                 _emit(cb, event)
 
@@ -379,35 +374,10 @@ def sync(
     return archive
 
 
-# compatibility: service class
-class SyncService:
-    def __init__(self, storage: Any = None, **kwargs: Any) -> None:
-        self.storage = storage
-
-    def sync(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return sync(*args, **kwargs)
-
-    run = sync
-
-    @staticmethod
-    def use_partial(*args: Any, **kwargs: Any) -> Any:
-        return None
-
-
-# separate call placeholder for partial import
-def use_partial_import(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-import_partial = use_partial_import
-use_partial = use_partial_import
-partial_import = use_partial_import
-SyncService.use_partial = staticmethod(use_partial_import)
-
 
 # re-export
 __all__ = [
     "sync",
-    "SyncService",
     "CancelToken",
     "SyncEvent",
     "SyncError",

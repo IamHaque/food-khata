@@ -20,6 +20,7 @@ from food_khata.services.linking import LinkingService
 from food_khata.storage import Storage, provider_identity, read_json
 from food_khata.users.context import ensure_private_dir, user_database, user_root
 
+from .deps import _cached_status
 from .schemas_accounts import (
     AccountOut,
     DisconnectRequest,
@@ -131,21 +132,6 @@ def _quota_exceeded(existing: list[dict[str, Any]], phone: str) -> bool:
     return len(existing) >= DEC_010_MAX_ACCOUNTS and not any(
         a.get("phone") == phone for a in existing
     )
-
-
-def _cached_status(session: dict[str, Any] | None) -> str:
-    """Check session expiry status: ok, expiring (within 24h), or expired."""
-    if not isinstance(session, dict):
-        return "expired"
-    now = time.time()
-    expires = session.get("expires_at") or session.get("expiry") or session.get("exp")
-    if isinstance(expires, (int, float)):
-        if now > float(expires):
-            return "expired"
-        if now > float(expires) - 86400:
-            return "expiring"
-        return "ok"
-    return "ok"
 
 
 def _count_orders(account_path: Path, provider: str) -> int:
@@ -273,7 +259,7 @@ def link_start(
             provider_inst = factory(provider_name)
 
     try:
-        handle = svc.start_linking(provider_inst or provider_name, phone, user=user_id)
+        handle = svc.start_login(provider_inst or provider_name, phone, user=user_id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -486,7 +472,7 @@ def verify_again(
             provider_inst = factory(provider)
 
     try:
-        handle = svc.start_linking(provider_inst or provider, phone, user=user_id)
+        handle = svc.start_login(provider_inst or provider, phone, user=user_id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

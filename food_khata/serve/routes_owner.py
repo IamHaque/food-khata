@@ -1,8 +1,6 @@
 """Owner, setup, and registration management routes (AC-07)."""
 
-import ipaddress
 import sqlite3
-from collections.abc import Iterator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -16,7 +14,6 @@ from food_khata.auth import (
     check_throttle,
     claim_owner,
     close_registration_window,
-    connect_app_db,
     get_registration_window,
     get_user_count,
     has_join_code,
@@ -34,7 +31,7 @@ from food_khata.auth import (
     transfer_ownership,
 )
 
-from .security import client_ip, is_secure
+from .deps import _get_client_ip, _is_loopback_client, _is_secure_request, get_auth_db
 
 
 def _audit(request: Request, conn: sqlite3.Connection, actor: str | None, action: str, target: str | None = None) -> None:
@@ -44,34 +41,6 @@ def _audit(request: Request, conn: sqlite3.Connection, actor: str | None, action
 SETUP_THROTTLE_KEY = "\0setup-code"
 
 router = APIRouter(prefix="/api/owner", tags=["owner"])
-
-
-def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
-    """Dependency that yields a connection to app.db."""
-    app_db_path = getattr(request.app.state, "app_db_path", "app.db")
-    conn = connect_app_db(app_db_path)
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-def _get_client_ip(request: Request) -> str:
-    return client_ip(request)
-
-
-def _is_loopback_client(request: Request) -> bool:
-    host = request.client.host if request.client else "127.0.0.1"
-    if host in {"testclient", "localhost", "127.0.0.1", "::1"}:
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
-
-
-def _is_secure_request(request: Request) -> bool:
-    return is_secure(request)
 
 
 def require_owner(request: Request) -> dict[str, Any]:

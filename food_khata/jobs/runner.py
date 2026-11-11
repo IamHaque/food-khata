@@ -694,9 +694,6 @@ class JobControl:
             status=QUEUED,
         )
 
-    submit = submit_sync
-    enqueue = submit_sync
-
     def _with_queue_info(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Add queue_position (1 = next) and eta_seconds (None without history) to queued jobs."""
         if not any(j["status"] == QUEUED for j in jobs):
