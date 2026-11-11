@@ -21,7 +21,7 @@ def run_cli(*args):
 
 
 def test_pip_fail_on_fixable_high(tmp_path):
-    mod = load_module()
+    load_module()
     data = {"dependencies": [{"name": "x", "version": "1.0",
                                "vulns": [{"id": "PY-1", "fix_versions": ["1.1"],
                                           "severity": "high"}]}]}
@@ -35,7 +35,7 @@ def test_pip_fail_on_fixable_high(tmp_path):
 
 
 def test_pip_warn_on_unfixed(tmp_path):
-    mod = load_module()
+    load_module()
     data = {"dependencies": [{"name": "x", "version": "1.0",
                                "vulns": [{"id": "PY-2", "fix_versions": [],
                                           "severity": "high"}]}]}
@@ -71,7 +71,7 @@ def test_npm_warn_when_no_fix(tmp_path):
 
 
 def test_allowlist_expired_fails(tmp_path):
-    mod = load_module()
+    load_module()
     allow = tmp_path / "allow.json"
     allow.write_text(json.dumps([{"id": "PY-1", "reason": "r", "expiry": "2020-01-01"}]))
     data = {"dependencies": []}
