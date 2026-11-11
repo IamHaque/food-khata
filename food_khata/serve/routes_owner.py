@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
+from food_khata import audit
 from food_khata.auth import (
     MAX_USERS,
     OwnerAlreadyExistsError,
@@ -33,7 +34,15 @@ from food_khata.auth import (
     transfer_ownership,
 )
 
+from .security import client_ip, is_secure
+
+
+def _audit(request: Request, conn: sqlite3.Connection, actor: str | None, action: str, target: str | None = None) -> None:
+    audit.record(conn, actor, action, target, _get_client_ip(request))
+
+
 SETUP_THROTTLE_KEY = "\0setup-code"
+
 router = APIRouter(prefix="/api/owner", tags=["owner"])
 
 
@@ -48,7 +57,7 @@ def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
 
 
 def _get_client_ip(request: Request) -> str:
-    return request.client.host if request.client else "127.0.0.1"
+    return client_ip(request)
 
 
 def _is_loopback_client(request: Request) -> bool:
@@ -62,9 +71,7 @@ def _is_loopback_client(request: Request) -> bool:
 
 
 def _is_secure_request(request: Request) -> bool:
-    if getattr(request.app.state, "is_https", False):
-        return True
-    return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    return is_secure(request)
 
 
 def require_owner(request: Request) -> dict[str, Any]:
@@ -233,6 +240,7 @@ def post_setup(
             detail=str(exc),
         ) from exc
 
+    _audit(request, conn, user["id"], "owner_claim")
     from food_khata.users.context import UserContext
 
     context = UserContext(request.app.state.data_root, user["id"]).unlock(data.password)
@@ -274,8 +282,9 @@ def get_owner_status(
 @router.post("/window", response_model=WindowStatusResponse)
 def set_registration_window(
     data: WindowRequest,
+    request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
-    _: Annotated[dict[str, Any], Depends(require_owner)],
+    owner: Annotated[dict[str, Any], Depends(require_owner)],
 ):
     """Open or close the timed registration window (15 min, 1 hour, or until closed)."""
     if data.action == "close":
@@ -285,6 +294,7 @@ def set_registration_window(
         if seconds is None and data.duration_minutes is not None:
             seconds = data.duration_minutes * 60
         open_registration_window(conn, seconds)
+    _audit(request, conn, owner["user_id"], "window_close" if data.action == "close" else "window_open")
 
     win = get_registration_window(conn)
     return WindowStatusResponse(
@@ -296,12 +306,23 @@ def set_registration_window(
 
 @router.post("/join-code/rotate", response_model=RotateJoinCodeResponse)
 def post_rotate_join_code(
+    request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
-    _: Annotated[dict[str, Any], Depends(require_owner)],
+    owner: Annotated[dict[str, Any], Depends(require_owner)],
 ):
     """Rotate the household join code. The new plaintext code is returned once."""
     new_code = rotate_join_code(conn)
+    _audit(request, conn, owner["user_id"], "join_code_rotate")
     return RotateJoinCodeResponse(join_code=new_code)
+
+
+@router.get("/audit")
+def get_audit(
+    conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
+    _: Annotated[dict[str, Any], Depends(require_owner)],
+):
+    """The last 200 audit rows (logins and admin actions); the owner reads them in Settings."""
+    return {"rows": audit.recent(conn, 200)}
 
 
 @router.get("/users", response_model=list[UserResponse])
@@ -329,7 +350,7 @@ def disable_user_endpoint(
     data: DisableUserRequest,
     request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
-    _: Annotated[dict[str, Any], Depends(require_owner)],
+    owner: Annotated[dict[str, Any], Depends(require_owner)],
 ):
     """Disable or enable a user. Disabling terminates active sessions and running jobs."""
     try:
@@ -343,6 +364,7 @@ def disable_user_endpoint(
         for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
             if uid == user_id:
                 request.app.state.unlocked_sessions.pop(session_id, None)
+    _audit(request, conn, owner["user_id"], "user_disable" if data.disabled else "user_enable", user_id)
     user_row = conn.execute("SELECT created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     return UserResponse(
         id=res["id"],
@@ -363,7 +385,9 @@ def remove_user_endpoint(
 ):
     """Sensitive action: delete a user and all their data. Requires the owner's password."""
     try:
-        remove_user(conn, user_id, owner["user_id"], data.owner_password, request.app.state.data_root)
+        remove_user(
+            conn, user_id, owner["user_id"], data.owner_password, request.app.state.data_root
+        )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
@@ -371,6 +395,7 @@ def remove_user_endpoint(
     for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
         if uid == user_id:
             request.app.state.unlocked_sessions.pop(session_id, None)
+    _audit(request, conn, owner["user_id"], "user_remove", user_id)
     return StatusResponse(status="ok")
 
 
@@ -410,6 +435,7 @@ def reset_password_endpoint(
     for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
         if uid == user_id:
             request.app.state.unlocked_sessions.pop(session_id, None)
+    _audit(request, conn, owner["user_id"], "user_reset_password", user_id)
 
     return ResetUserPasswordResponse(
         status="ok",
@@ -421,6 +447,7 @@ def reset_password_endpoint(
 @router.post("/transfer", response_model=StatusResponse)
 def transfer_owner_endpoint(
     data: TransferOwnershipRequest,
+    request: Request,
     conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
     owner: Annotated[dict[str, Any], Depends(require_owner)],
 ):
@@ -448,5 +475,6 @@ def transfer_owner_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
+    _audit(request, conn, owner["user_id"], "ownership_transfer", target)
 
     return StatusResponse(status="ok")

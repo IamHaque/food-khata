@@ -11,6 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
+from food_khata import audit
 from food_khata.auth import (
     INVALID_CREDENTIALS_MESSAGE,
     SESSION_COOKIE_NAME,
@@ -37,6 +38,8 @@ from food_khata.auth import (
     verify_password,
 )
 from food_khata.auth.passwords import check_password_rules
+
+from .security import client_ip, is_secure
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -91,7 +94,7 @@ class StatusResponse(BaseModel):
 
 
 def _get_client_ip(request: Request) -> str:
-    return request.client.host if request.client else "127.0.0.1"
+    return client_ip(request)
 
 
 def _is_loopback_client(request: Request) -> bool:
@@ -105,9 +108,7 @@ def _is_loopback_client(request: Request) -> bool:
 
 
 def _is_secure_request(request: Request) -> bool:
-    if getattr(request.app.state, "is_https", False):
-        return True
-    return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    return is_secure(request)
 
 
 @router.get("/setup-status", response_model=SetupStatusResponse)
@@ -156,7 +157,9 @@ def register(
 
     # 2. Check if registration is allowed (first claim, 8 user cap, window / join code)
     is_loop = _is_loopback_client(request)
-    allowed, err_msg, status_code = can_register(conn, join_code=data.join_code, is_loopback=is_loop)
+    allowed, err_msg, status_code = can_register(
+        conn, join_code=data.join_code, is_loopback=is_loop
+    )
     if not allowed:
         raise HTTPException(
             status_code=status_code,
@@ -233,6 +236,7 @@ def login(
     if user is None:
         dummy_verify()
         record_failed_login(conn, username, ip)
+        audit.record(conn, None, "login_failed", username, ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=INVALID_CREDENTIALS_MESSAGE,
@@ -241,6 +245,7 @@ def login(
     # 3. Verify password
     if not verify_password(data.password, user["password_hash"]) or user["disabled"]:
         record_failed_login(conn, username, ip)
+        audit.record(conn, None, "login_failed", username, ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=INVALID_CREDENTIALS_MESSAGE,
@@ -252,6 +257,7 @@ def login(
 
     # 4. Successful login: reset failed login attempts
     reset_failed_logins(conn, username, ip)
+    audit.record(conn, user["id"], "login", None, ip)
 
     # 5. Rotate session ID on login
     old_session_id = request.cookies.get(SESSION_COOKIE_NAME)
@@ -293,7 +299,8 @@ def change_password(
 
     user_id = request.state.session["user_id"]
     user = conn.execute(
-        "SELECT id, username, password_hash, is_owner, created_at FROM users WHERE id = ?", (user_id,)
+        "SELECT id, username, password_hash, is_owner, created_at FROM users WHERE id = ?",
+        (user_id,),
     ).fetchone()
     ip = _get_client_ip(request)
     throttled, retry_after = check_throttle(conn, user["username"], ip)
@@ -304,7 +311,9 @@ def change_password(
             headers={"Retry-After": str(retry_after)},
         )
     if not verify_password(data.current_password, user["password_hash"]):
-        record_failed_login(conn, user["username"], ip)  # a wrong current password counts as a failed login
+        record_failed_login(
+            conn, user["username"], ip
+        )  # a wrong current password counts as a failed login
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "WRONG_PASSWORD", "message": "Current password is incorrect."},
@@ -314,9 +323,13 @@ def change_password(
 
     context = UserContext(request.app.state.data_root, user_id).unlock(data.current_password)
     context.change_password(data.current_password, data.new_password)
-    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(data.new_password), user_id))
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (hash_password(data.new_password), user_id),
+    )
     conn.commit()
     reset_failed_logins(conn, user["username"], ip)
+    audit.record(conn, user_id, "password_change", None, ip)
 
     _end_sessions(request, conn, user_id)
     session_id, csrf_token = create_session(conn, user_id)
@@ -326,7 +339,10 @@ def change_password(
     set_csrf_cookie(response, csrf_token, secure=secure)
     return LoginResponse(
         user=UserResponse(
-            id=user_id, username=user["username"], is_owner=bool(user["is_owner"]), created_at=user["created_at"]
+            id=user_id,
+            username=user["username"],
+            is_owner=bool(user["is_owner"]),
+            created_at=user["created_at"],
         ),
         csrf_token=csrf_token,
     )
@@ -334,7 +350,9 @@ def change_password(
 
 def _end_sessions(request: Request, conn: sqlite3.Connection, user_id: str) -> None:
     """Delete every session of the user and drop their keys from memory."""
-    for (session_id,) in conn.execute("SELECT id FROM sessions WHERE user_id = ?", (user_id,)).fetchall():
+    for (session_id,) in conn.execute(
+        "SELECT id FROM sessions WHERE user_id = ?", (user_id,)
+    ).fetchall():
         request.app.state.unlocked_sessions.pop(session_id, None)
     conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
     conn.commit()
@@ -348,6 +366,7 @@ def logout_everywhere(
 ):
     """End every session of the signed-in user, on every device."""
     _end_sessions(request, conn, request.state.session["user_id"])
+    audit.record(conn, request.state.session["user_id"], "logout_all", None, _get_client_ip(request))
     clear_session_cookies(response)
     return StatusResponse(status="ok")
 

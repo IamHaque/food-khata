@@ -53,12 +53,20 @@ def _one_active_job(conn, data_root):
     conn.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_one_active ON jobs(account_id, provider) WHERE {live}")
 
 
+def _audit_log(conn, data_root):
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, "
+        "actor TEXT, action TEXT NOT NULL, target TEXT, ip TEXT)"
+    )
+
+
 # (version, function, needs the data root)
 MIGRATIONS = [
     (1, _one_owner, False),
     (2, _provider_links, False),
     (3, _backfill_provider_links, True),
     (4, _one_active_job, False),
+    (5, _audit_log, False),
 ]
 
 

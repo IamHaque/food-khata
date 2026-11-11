@@ -167,3 +167,31 @@ def validate_host_and_origin(
         )
 
     return None
+
+
+MAX_BODY_BYTES = 64 * 1024
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+        "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
+
+
+def client_ip(request: Request) -> str:
+    """The address used for throttling: the socket peer, or the last X-Forwarded-For entry when the peer
+    is the configured trusted proxy (a client-supplied header is otherwise ignored)."""
+    peer = request.client.host if request.client else "127.0.0.1"
+    trusted = getattr(request.app.state, "trusted_proxy", None)
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if trusted and peer == trusted and forwarded:
+        return forwarded.split(",")[-1].strip() or peer
+    return peer
+
+
+def is_secure(request: Request) -> bool:
+    """Cookies are Secure when the server runs TLS or was told it sits behind an HTTPS proxy; never from a header."""
+    return bool(getattr(request.app.state, "is_https", False)) or request.url.scheme == "https"
