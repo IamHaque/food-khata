@@ -14,10 +14,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python scripts/check_staged_files.py --self-check
       - run: python scripts/check_staged_files.py --all
-      - run: python -m pip install -e ".[dev,serve]" httpx
+      - run: python -m pip install -r requirements-lock.txt
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest -q
+      - run: python scripts/licenses.py
+      - run: python -m pip install pip-audit
+      - run: pip-audit --format json > pip-audit.json || true
+        shell: bash
+      - run: python scripts/audit.py --pip-audit pip-audit.json --allowlist scripts/audit-allowlist.json
 
   dashboard:
     runs-on: ubuntu-latest
@@ -31,8 +36,21 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: dashboard-ui/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: node scripts/check-bundle.mjs
+      - run: npm audit --omit=dev --json > npm-audit.json || true
+        shell: bash
+      - run: python ../scripts/audit.py --npm-audit npm-audit.json --allowlist ../scripts/audit-allowlist.json
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Upload dashboard dist (tags)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-dist
+          path: dashboard-ui/dist
