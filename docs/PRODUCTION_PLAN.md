@@ -486,7 +486,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-03 | Landing on Home and navigation rules | P0 | P0 | DONE | 2026-11-11 | browser suite 84 pass incl. [PR-03] at 1440 and 390; vitest 1024; verify on trunk after merge | W2 |
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
 | PR-05 | Account scope and no shared database | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-05; trunk re-run after merge; browser not run | W1 |
-| G0 | User findings closed | P0 | P0 | IN_PROGRESS | 2026-11-11 | automated checks green; waiting for your hand test of login, register and link | W2 |
+| G0 | User findings closed | P0 | P0 | DONE | 2026-11-11 | owner approved by hand: login, register and link scenarios | W2 |
 | PR-06 | One account, several providers | P1 | P1 | DONE | 2026-11-11 | test_one_account_several_providers; browser 84 pass; verify on trunk after merge | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | TODO | | | W3 |
 | PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
@@ -616,3 +616,4 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
 | --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | merged; spec could not start (ESM path, cross-origin proxy, restart used a new data folder), so I rewrote it | main agent took over after the sub-agent could not run a browser |
 | 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |
+| 2026-11-11 | G0 sign-off | Claude Haiku 5.5 (session switched via /model) | 1 | Owner approved G0 by hand; W3 not started | Haiku is last resort for high-risk stories (PR-07, PR-09, PR-12); switch back to Sonnet 5.5 before PR-07 |
