@@ -481,7 +481,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 
 | ID | Title | Phase | Pri | Status | Date | Evidence | Wave |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PR-01 | Reproduction harness for the reported bugs | P0 | P0 | TODO | | | W0 |
+| PR-01 | Reproduction harness for the reported bugs | P0 | P0 | DONE | 2026-11-11 | auth-flow.spec.ts at 1440 and 390: 6 pass, 4 red for PR-02 (session-ended message) and PR-03 (setup lands on /login) | W0 |
 | PR-02 | Session consistency and login without bounce | P0 | P0 | TODO | | | W1 |
 | PR-03 | Landing on Home and navigation rules | P0 | P0 | TODO | | | W2 |
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
@@ -530,6 +530,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-04 | 2026-11-11 | PR-20 | Audit script used by CI and verify | CI only: audit needs `pip-audit` and `npm audit` JSON, which need network; verify does not call it | A no-argument call audited nothing | `verify` has no audit step; run `scripts/audit.py` in CI | Open |
 | DEV-05 | 2026-11-11 | PR-05 | Empty user gets 200 with empty aggregates | A user with no database still gets 503 `database_not_found`; the PR-03 redirect to Home covers the UI; changing the API now would touch every read endpoint | New users see no error banner once PR-03 lands | Open |
 | DEV-06 | 2026-11-11 | PR-05 | Edits only in Owns | Also edited `serve/cli.py` (serve always passes a data root), `scripts/parity_check.py` and five test files (pass `legacy_single_db=True`) because they are callers of the changed `create_app` | None | Closed |
+| DEV-07 | 2026-11-11 | PR-01 | Register in the U-2 test | Register needs an open registration window and join code; the register landing check moves to PR-03, which owns `Register.tsx` | One of three U-2 paths is covered later | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -582,7 +583,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
-| 2026-11-11 | PR-05 | `verify . --backend` on branch pr-05 | see Progress | — | pr-05 |
+| 2026-11-11 | PR-01 | `npx playwright test e2e/auth-flow.spec.ts` | 6 pass, 4 fail as designed: [PR-02] restart lacks "Your session ended" message, [PR-03] setup ends on `/login?setup=complete` | 24 s | trunk |
+| 2026-11-11 | PR-05 | `verify . --backend` on branch pr-05 and trunk | all PASS | 96 s | pr-05 |
 | 2026-11-11 | PR-04 | `verify . --backend` on branch pr-04 | all PASS (pytest 88 s) | 106 s | pr-04 |
 
 ### 5.9 Changelog
@@ -591,11 +593,12 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-01 | Browser repro suite: backend serves the built UI, restart reuses data folder and port, two widths | trunk |
 | 2026-11-11 | PR-05 | `create_app(legacy_single_db=False)` default, `serve` always has a data root; `account_ids` checked against the user's own account folders (422 `INVALID_ACCOUNT`); selector reads "All my accounts (n)" with tooltip and "Swiggy ••••1234" labels | pr-05 |
 | 2026-11-11 | PR-04 | Fake provider off unless `FOOD_KHATA_ENABLE_FAKE_PROVIDER=1`; `GET /api/accounts/providers`; Link screen server-driven, nothing preselected; tests/conftest.py fixture turns the switch on except `no_fake` tests | pr-04 |
 
 ### 5.10 Delegation ledger
 
 | Date | Story | Task class | Model | Attempts | Outcome | Escalation |
-| --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | running | — |
+| --- | --- | --- | --- | --- | --- | --- || 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | merged; spec could not start (ESM path, cross-origin proxy, restart used a new data folder), so I rewrote it | main agent took over after the sub-agent could not run a browser |
 | 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |
