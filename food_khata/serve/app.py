@@ -7,6 +7,7 @@ import math
 import sqlite3
 import threading
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,8 +31,9 @@ from food_khata.auth import (
     init_app_db,
     validate_csrf_token,
 )
+from food_khata.logging import request_id, user_id
 from food_khata.maintenance import Maintenance
-from food_khata.migrations import run_migrations
+from food_khata.migrations import MIGRATIONS, run_migrations
 from food_khata.providers.base import fake_enabled
 from food_khata.users.context import user_root
 
@@ -83,7 +85,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app):
         app.state.job_runner.start()
-        maintenance = Maintenance(app.state.app_db_path)
+        maintenance = app.state.maintenance = Maintenance(app.state.app_db_path)
         maintenance.start()
         try:
             yield
@@ -199,6 +201,7 @@ def create_app(
     UNAUTHENTICATED_ROUTES = frozenset(
         {
             "/health",
+            "/health/ready",
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/setup-status",
@@ -229,6 +232,7 @@ def create_app(
 
         request.state.session = session
         request.state.user = session
+        user_id.set(session["user_id"] if session else "-")  # the id for log lines, never the username
         if session_id and session is None:
             app.state.unlocked_sessions.pop(session_id, None)
 
@@ -259,7 +263,13 @@ def create_app(
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
         # Registered last, so it wraps every response, including 401, 403 and 413 from the other middlewares.
-        return secured(await call_next(request))
+        rid = request_id.set(uuid.uuid4().hex[:12])
+        try:
+            response = secured(await call_next(request))
+            response.headers["X-Request-ID"] = request_id.get()
+            return response
+        finally:
+            request_id.reset(rid)
 
     @app.exception_handler(RequestValidationError)
     @app.exception_handler(ValidationError)
@@ -838,6 +848,21 @@ def create_app(
         direction: str = "desc",
     ):
         return leaders(conn, filters, "item", min_qty, page, page_size, sort, direction)
+
+    @app.get("/health/ready", tags=["system"])
+    def ready():
+        """Readiness: app.db opens, migrations are current and the maintenance thread is alive. No counts or names."""
+        try:
+            conn = connect_app_db(app.state.app_db_path)
+            try:
+                done = {r[0] for r in conn.execute("SELECT version FROM schema_migrations")}
+            finally:
+                conn.close()
+            maintenance = getattr(app.state, "maintenance", None)
+            ok = {m[0] for m in MIGRATIONS if not m[2]} <= done and maintenance is not None and maintenance.thread.is_alive()
+        except Exception:
+            ok = False
+        return JSONResponse({"status": "ready" if ok else "not_ready"}, status_code=200 if ok else 503)
 
     @app.get("/health", tags=["system"])
     def health_check():

@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import shutil
 import sys
 from contextlib import ExitStack
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 
 import questionary
 
+from .config import apply_env_defaults, describe
 from .contracts import AuthenticationError, KhataError, Provider
 from .dashboard import export_dashboard_data
 from .db import AnalyticsDB
@@ -238,6 +240,55 @@ def _provider_concurrency(text: str) -> dict[str, int]:
     return pairs
 
 
+def _backup(args) -> int:
+    from .backup import NOTE, backup
+
+    if not args.out:
+        print("Give --out FILE.")
+        return 1
+    manifest = backup(args.data_dir.expanduser(), args.out)
+    print(f"Backup written: {args.out} ({len(manifest['files'])} files)")
+    print(NOTE)
+    return 0
+
+
+def _restore(args) -> int:
+    from .backup import restore
+
+    if not args.file:
+        print("Give the backup file: food-khata restore FILE --data-dir EMPTY_FOLDER")
+        return 1
+    try:
+        count = restore(args.file, args.data_dir.expanduser())
+    except (ValueError, OSError, KeyError) as error:
+        print(f"Restore refused: {error}")
+        return 1
+    print(f"Restored {count} files into {args.data_dir}")
+    return 0
+
+
+def _purge_fake(args) -> int:
+    """Remove accounts linked to the test-only `fake` provider (DEV-02), with their analytics rows."""
+    from .db import delete_account_data
+    from .users.context import user_database
+
+    root = args.data_dir.expanduser().resolve()
+    found = [p.parent for p in root.glob("users/*/accounts/*/account.json") if '"fake"' in p.read_text(encoding="utf-8", errors="ignore")]
+    if not found:
+        print("No fake accounts found.")
+        return 0
+    if not args.yes and input(f"Delete {len(found)} fake account(s) and their data? [y/N] ").strip().lower() != "y":
+        print("Nothing deleted.")
+        return 1
+    for folder in found:
+        user_db = user_database(root, folder.parents[1].name)
+        if user_db.is_file():
+            delete_account_data(user_db, folder.name)
+        shutil.rmtree(folder)
+    print(f"Removed {len(found)} fake account(s).")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
     if raw_args and raw_args[0] == "owner":
@@ -251,10 +302,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "action",
         nargs="?",
-        choices=["sync", "ingest", "export", "dashboard", "serve", "owner"],
+        choices=["sync", "ingest", "export", "dashboard", "serve", "owner", "backup", "restore", "purge-fake"],
         default="sync",
         help="Action: sync, ingest (update local DB), export, or owner recovery",
     )
+    parser.add_argument("file", nargs="?", default=None, help="Backup file (restore)")
+    parser.add_argument("--out", type=Path, default=None, help="Backup file to write (backup)")
+    parser.add_argument("--yes", action="store_true", help="Do not ask for confirmation (purge-fake)")
+    parser.add_argument("--print-config", action="store_true", help="Show the effective serve settings and exit")
     parser.add_argument(
         "--data-dir",
         type=Path,
@@ -319,7 +374,17 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Path to TLS private key for HTTPS",
     )
+    apply_env_defaults(parser)  # FOOD_KHATA_<FLAG>; flags still win
     args = parser.parse_args(argv)
+    if args.print_config:
+        print(describe(args))
+        return 0
+    if args.action == "backup":
+        return _backup(args)
+    if args.action == "restore":
+        return _restore(args)
+    if args.action == "purge-fake":
+        return _purge_fake(args)
     if args.action == "serve":
         if not 1 <= args.port <= 65535:
             print("Port must be between 1 and 65535.")

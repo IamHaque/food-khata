@@ -3,6 +3,8 @@
 import ipaddress
 from pathlib import Path
 
+from food_khata.contracts import KhataError
+
 
 def serve(
     host: str = "127.0.0.1",
@@ -61,6 +63,17 @@ def serve(
     db = Path(db_path) if db_path is not None else Path("food_analytics.db")
     root = db.parent
     effective_data_root = data_root or root
+    from food_khata.logging import setup_logging
+    from food_khata.storage import lock
+
+    Path(effective_data_root).mkdir(parents=True, exist_ok=True)
+    try:  # one server per data folder; the OS drops this lock when the process dies
+        server_lock = lock(Path(effective_data_root) / ".server.lock")
+        server_lock.__enter__()
+    except KhataError:
+        print("Another Food Khata server is already using this data folder.")
+        return 2
+    setup_logging(effective_data_root)
     app = create_app(
         db,
         dev=dev,
@@ -110,4 +123,6 @@ def serve(
     except KeyboardInterrupt:
         print("Server stopped.")
         return 130
+    finally:
+        server_lock.__exit__(None, None, None)
     return 0
