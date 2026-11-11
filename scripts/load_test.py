@@ -77,7 +77,8 @@ def _claim_owner(client):
 def _login(client, username="owner", password=PW):
     _csrf(client)
     r = client.post("/api/auth/login", json={"username": username, "password": password})
-    if r.status_code >= 400: print("LOGIN FAIL", r.status_code, r.text[:200])
+    if r.status_code >= 400:
+        print("LOGIN FAIL", r.status_code, r.text[:200])
     r.raise_for_status()
     _csrf(client)
     return r
@@ -262,7 +263,6 @@ def mixed_load(args):
     # link accounts for syncers
     syncer_indices = list(range(args.users - args.syncers, args.users))
     syncer_accounts = {}
-    syncer_clients_setup = []
     for j, idx in enumerate(syncer_indices):
         uname, pw = user_creds[idx]
         c = httpx.Client(base_url=base_url, timeout=30)

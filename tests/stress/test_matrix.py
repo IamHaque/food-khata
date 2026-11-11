@@ -23,7 +23,7 @@ def _app(tmp_path):
 @pytest.mark.stress
 def test_owner_claim_matrix(tmp_path):
     app = _app(tmp_path)
-    with TestClient(app, base_url="http://127.0.0.1:8765") as client:
+    with TestClient(app, base_url="http://127.0.0.1:8765"):
         codes = []
 
         def claim(i):
@@ -45,7 +45,7 @@ def test_owner_claim_matrix(tmp_path):
 @pytest.mark.stress
 def test_same_provider_account_matrix(tmp_path):
     app = _app(tmp_path)
-    with TestClient(app, base_url="http://127.0.0.1:8765") as base:
+    with TestClient(app, base_url="http://127.0.0.1:8765"):
         users = []
         for name, owner in (("alice", True), ("bob", False)):
             c = TestClient(app, base_url="http://127.0.0.1:8765")
@@ -108,7 +108,7 @@ def test_double_sync_submit_matrix(tmp_path):
 @pytest.mark.stress
 def test_login_storm_matrix(tmp_path):
     app = _app(tmp_path)
-    with TestClient(app, base_url="http://127.0.0.1:8765") as base:
+    with TestClient(app, base_url="http://127.0.0.1:8765"):
         # create owner
         c = TestClient(app, base_url="http://127.0.0.1:8765")
         r = c.get("/api/auth/csrf")
@@ -122,7 +122,7 @@ def test_login_storm_matrix(tmp_path):
             # get csrf
             rr = cl.get("/api/auth/csrf")
             cl.headers["X-CSRF-Token"] = rr.json()["csrf_token"]
-            t0 = time.perf_counter()
+            time.perf_counter()
             res = cl.post("/api/auth/login", json={"username": "owner", "password": PW})
             codes.append(res.status_code)
             # health

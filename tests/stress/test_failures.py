@@ -118,7 +118,7 @@ def test_garbage_provider_pages(tmp_path):
 
     for garbage in ("not-a-list", None, {"foo": "bar"}):
         class GarbageProvider(FakeProvider):
-            def pages(self):
+            def pages(self, garbage=garbage):
                 yield garbage
 
         job = control.submit_sync(
