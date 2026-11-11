@@ -49,7 +49,7 @@ for (const width of [1440, 390]) {
     await page.reload();
     await expect(page.getByText('Sync complete.', { exact: false })).toBeVisible();
     await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-    await expect(page.getByRole('link', { name: 'Sync', exact: true })).toHaveAttribute('href', '/sync?account=B');
+    await expect(page.getByRole('link', { name: 'Sync', exact: true })).toHaveAttribute('href', '/sync?account=B&provider=fake');
     await page.getByRole('link', { name: 'Sync', exact: true }).click();
     await expect(page.getByText('Choose a sync')).toBeVisible();
   });

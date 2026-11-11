@@ -22,7 +22,17 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   const { defaultOpen = false } = props;
   const { filters, update } = useFilters();
   const linked = useAccounts();
-  const accounts: Account[] = useMemo(() => (linked.data ?? []).map(a => ({ id: a.local_id, label: `${a.provider.charAt(0).toUpperCase()}${a.provider.slice(1)} ••••${(a.phone ?? a.local_id).slice(-4)}`, platforms: [a.provider], order_count: a.order_count })), [linked.data]);
+  const accounts: Account[] = useMemo(() => {
+    // The API has one row per (account, provider); the filter is per account.
+    const byId = new Map<string, Account>();
+    for (const a of linked.data ?? []) {
+      const name = `${a.provider.charAt(0).toUpperCase()}${a.provider.slice(1)}`;
+      const seen = byId.get(a.local_id);
+      if (seen) { seen.label = seen.label.replace(' ••••', ` + ${name} ••••`); seen.platforms.push(a.provider); seen.order_count += a.order_count; }
+      else byId.set(a.local_id, { id: a.local_id, label: `${name} ••••${(a.phone ?? a.local_id).slice(-4)}`, platforms: [a.provider], order_count: a.order_count });
+    }
+    return [...byId.values()];
+  }, [linked.data]);
   const selected = filters.account_ids ?? [];
 
   const [open, setOpen] = useState(defaultOpen);

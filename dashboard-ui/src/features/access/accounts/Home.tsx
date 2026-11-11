@@ -31,9 +31,11 @@ export function Home() {
   const [verifyHandle, setVerifyHandle] = React.useState<string | null>(null);
   const [verifyCode, setVerifyCode] = React.useState("");
 
-  const handleDisconnect = async (id: string, wipe: boolean) => {
+  // `disconnecting` holds "accountId|provider": one card per provider (R-01).
+  const handleDisconnect = async (target: string, wipe: boolean) => {
+    const [id, provider] = target.split("|");
     try {
-      await accountsApi.disconnect(id, wipe);
+      await accountsApi.disconnect(id, wipe, provider);
       setMessage(wipe ? "Account data wiped." : "Account disconnected; data kept.");
       setDisconnecting(null);
       accounts.refetch();
@@ -43,9 +45,9 @@ export function Home() {
     }
   };
 
-  const startVerifyAgain = async (id: string) => {
+  const startVerifyAgain = async (id: string, provider: string) => {
     try {
-      const res = await accountsApi.verifyAgain(id);
+      const res = await accountsApi.verifyAgain(id, provider);
       setVerifyHandle(res.handle);
     } catch (err) {
       if (err instanceof ApiError) setMessage(err.message);
@@ -100,7 +102,7 @@ export function Home() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {(accounts.data ?? []).map((acc) => (
-            <div key={acc.id} className="rounded-lg border bg-card p-4 space-y-2">
+            <div key={`${acc.id}:${acc.provider}`} className="rounded-lg border bg-card p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <strong className="capitalize">{acc.provider}</strong>
                 {statusChip(acc.status)}
@@ -110,11 +112,11 @@ export function Home() {
                 {acc.last_sync ? ` • last sync ${acc.last_sync}` : ""}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                <Link className="rounded-md border px-2 py-1 text-xs font-medium" to={`/sync?account=${encodeURIComponent(acc.local_id)}`}>Sync</Link>
+                <Link className="rounded-md border px-2 py-1 text-xs font-medium" to={`/sync?account=${encodeURIComponent(acc.local_id)}&provider=${encodeURIComponent(acc.provider)}`}>Sync</Link>
                 {acc.status === "expired" && (
                   <button
                     type="button"
-                    onClick={() => startVerifyAgain(acc.id)}
+                    onClick={() => startVerifyAgain(acc.id, acc.provider)}
                     className="rounded-md border px-2 py-1 text-xs font-medium"
                   >
                     Verify again
@@ -122,7 +124,7 @@ export function Home() {
                 )}
                 <button
                   type="button"
-                  onClick={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(acc.id); }}
+                  onClick={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(`${acc.id}|${acc.provider}`); }}
                   className="rounded-md border px-2 py-1 text-xs font-medium"
                 >
                   Disconnect

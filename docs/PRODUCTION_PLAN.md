@@ -487,7 +487,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
 | PR-05 | Account scope and no shared database | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-05; trunk re-run after merge; browser not run | W1 |
 | G0 | User findings closed | P0 | P0 | TODO | | | W2 |
-| PR-06 | One account, several providers | P1 | P1 | TODO | | | W2 |
+| PR-06 | One account, several providers | P1 | P1 | DONE | 2026-11-11 | test_one_account_several_providers; browser 84 pass; verify on trunk after merge | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | TODO | | | W3 |
 | PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
 | PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | TODO | | | W3 |
@@ -535,6 +535,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-09 | 2026-11-11 | PR-02 | Edits only in Owns | Also edited `features/access/routes.tsx` (RedirectIfAuthed wrapper), `e2e/access-integration.spec.ts` (labels from PR-05, login tab starts signed out) and removed unused `isAuthenticated()` | PR-05's label change had broken the access-integration spec; fixed here | Closed |
 | DEV-10 | 2026-11-11 | PR-03 | `return` keeps its query string | `account_ids` and `restaurant_ids` are dropped from the return path, because they are the previous user's ids and the cross-tab test (and PR-05's 422) require it | Other parameters are kept | Closed |
 | DEV-11 | 2026-11-11 | PR-10 | Handles "swept every minute"; lock-order test; `authenticate_client` default owner | Handles are swept on every new login (comment marks the shortcut; PR-09's scheduler can call `sweep()` each minute); the lock-order test runs `bind` and `save_session` from two threads and checks for no deadlock, because the code has no per-account lock, only the root and credential file locks; two test helpers now pass `is_owner=False` for second users because the owner index forbids a second owner | Weaker lock test than written | Open |
+| DEV-12 | 2026-11-11 | PR-06 | Reproduce first; jobs per provider | The reproduction test was written together with the fix, not before it (R-01 was clear from the code); jobs already used one archive file per provider, so only the provider choice was added; `last_sync` is still account-level | Per-provider last sync waits for PR-11 job data | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -587,6 +588,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-06 | `verify . --backend`, `npx playwright test` on branch pr-06 | all PASS | — | pr-06 |
 | 2026-11-11 | PR-10 | `verify . --backend` on branch pr-10 | all PASS | — | pr-10 |
 | 2026-11-11 | PR-03 | `npx playwright test` (all) and `verify . --backend` on branch pr-03 | all PASS | — | pr-03 |
 | 2026-11-11 | PR-02 | `verify . --backend` and `npx playwright test` on branch pr-02 | see Progress | — | pr-02 |
@@ -600,6 +602,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-06 | C-2 additive: `GET /api/accounts` one row per (account, provider); optional `provider` on sync create, verify-again and disconnect (422 `PROVIDER_REQUIRED` when ambiguous); `added_to_existing` on link verify; Home one card per provider; selector groups by account; types regenerated | pr-06 |
 | 2026-11-11 | PR-10 | `migrations.py` (schema_migrations, backup before first run, one transaction each); unique owner index and `BEGIN IMMEDIATE` claim; transfer refuses disabled target; `provider_links` table replaces the folder scan (backfilled at startup, freed on disconnect); quota checked at Send code; login handles capped at 200 and 3 per user | pr-10 |
 | 2026-11-11 | PR-03 | Login and setup land on `/home`; `return` keeps query; zero accounts at `/` redirect to Home; `/accounts` redirects to `/home`; Open dashboard and Sync now on Home; brand links | pr-03 |
 | 2026-11-11 | PR-02 | Sessions deleted at startup; middleware closes a key-less session with 401 `SESSION_EXPIRED`; touch at most once a minute; client handles 401 once through the router, retries a stale CSRF once, seeds `/me` from login; login page redirects when signed in; expired banner | pr-02 |

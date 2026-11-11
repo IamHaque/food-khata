@@ -14,6 +14,7 @@ from food_khata.serve.routes_accounts import (
     get_current_user_id,
     get_user_cipher,
     get_user_storage,
+    pick_provider,
 )
 from food_khata.serve.schemas_sync import (
     CreateSyncJobRequest,
@@ -68,9 +69,8 @@ def create_sync_job(
             detail={"code": "NOT_FOUND", "message": f"Account '{data.account_id}' not found."},
         )
 
-    providers = account_meta.get("providers", {})
-    provider = next(iter(providers.keys()), "zomato")
-    provider_id = providers.get(provider)
+    provider = pick_provider(account_meta, data.provider)
+    provider_id = account_meta.get("providers", {}).get(provider)
     phone = account_meta.get("phone")
     session = storage.session(data.account_id, provider)
     cipher = get_user_cipher(request, user_id)
