@@ -408,3 +408,46 @@ def _transfer_ownership(conn, current_owner_id, target_username_or_id, owner_pas
         "new_owner_id": target["id"],
         "new_owner_username": target["username"],
     }
+
+
+def remove_user(
+    conn: sqlite3.Connection,
+    user_id: str,
+    owner_id: str,
+    owner_password: str,
+    data_root: Path | str | None = None,
+) -> None:
+    """Delete a user: sessions, jobs and provider links (by cascade), their data folder and the row.
+
+    The folder is renamed first and put back if the row cannot be deleted, so nothing is half removed.
+    """
+    import shutil
+    import uuid
+
+    owner = conn.execute("SELECT password_hash FROM users WHERE id = ? AND is_owner = 1", (owner_id,)).fetchone()
+    if not owner or not verify_password(owner_password, owner["password_hash"]):
+        raise PermissionError("Invalid owner password.")
+    if user_id == owner_id:
+        raise ValueError("The owner cannot remove themselves.")
+    if not conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone():
+        raise ValueError("User not found.")
+
+    JobControl.cancel_user(user_id, conn)  # waits for running jobs to stop
+    folder = trash = None
+    if data_root is not None:
+        from food_khata.users.context import user_root
+
+        folder = user_root(data_root, user_id)
+        if folder.exists():
+            trash = folder.with_name(f".deleting-{uuid.uuid4().hex}")
+            folder.rename(trash)
+    try:
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        if trash is not None:
+            trash.rename(folder)
+        raise
+    if trash is not None:
+        shutil.rmtree(trash, ignore_errors=True)

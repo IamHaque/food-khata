@@ -30,6 +30,7 @@ from food_khata.auth import (
     init_app_db,
     validate_csrf_token,
 )
+from food_khata.maintenance import Maintenance
 from food_khata.migrations import run_migrations
 from food_khata.providers.base import fake_enabled
 from food_khata.users.context import user_root
@@ -69,9 +70,12 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app):
         app.state.job_runner.start()
+        maintenance = Maintenance(app.state.app_db_path)
+        maintenance.start()
         try:
             yield
         finally:
+            maintenance.stop()
             app.state.job_runner.stop(wait=True)
             app.state.unlocked_sessions.clear()
 

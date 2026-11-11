@@ -21,6 +21,7 @@ from food_khata.auth import (
     has_owner,
     list_users,
     open_registration_window,
+    remove_user,
     reset_user_password,
     rotate_join_code,
     rotate_session,
@@ -127,6 +128,10 @@ class RotateJoinCodeResponse(BaseModel):
 
 class DisableUserRequest(BaseModel):
     disabled: bool = True
+
+
+class RemoveUserRequest(BaseModel):
+    owner_password: str
 
 
 class ResetUserPasswordRequest(BaseModel):
@@ -333,6 +338,27 @@ def disable_user_endpoint(
         disabled=res["disabled"],
         created_at=user_row["created_at"] if user_row else "",
     )
+
+
+@router.post("/users/{user_id}/remove", response_model=StatusResponse)
+def remove_user_endpoint(
+    user_id: str,
+    data: RemoveUserRequest,
+    request: Request,
+    conn: Annotated[sqlite3.Connection, Depends(get_auth_db)],
+    owner: Annotated[dict[str, Any], Depends(require_owner)],
+):
+    """Sensitive action: delete a user and all their data. Requires the owner's password."""
+    try:
+        remove_user(conn, user_id, owner["user_id"], data.owner_password, request.app.state.data_root)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    for session_id, (uid, _) in list(request.app.state.unlocked_sessions.items()):
+        if uid == user_id:
+            request.app.state.unlocked_sessions.pop(session_id, None)
+    return StatusResponse(status="ok")
 
 
 @router.post("/users/{user_id}/reset-password", response_model=ResetUserPasswordResponse)
