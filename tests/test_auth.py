@@ -386,3 +386,26 @@ def test_parallel_logins_do_not_stall_health(tmp_path):
             health = time.monotonic() - started
             assert [f.result() for f in futures] == [200] * 8
         assert health < 1.0
+
+
+def test_app_db_connection_can_cross_worker_threads(tmp_path):
+    """Found by the PR-18 load test: a request's connection is created in one worker thread and used in another."""
+    import threading
+
+    from food_khata.auth import connect_app_db, init_app_db
+
+    init_app_db(tmp_path / "app.db")
+    conn = connect_app_db(tmp_path / "app.db")
+    errors = []
+    result = []
+
+    def use():
+        try:
+            result.append(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0])
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    worker = threading.Thread(target=use)
+    worker.start()
+    worker.join()
+    assert not errors and result == [0]

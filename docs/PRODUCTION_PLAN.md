@@ -499,7 +499,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-15 | HTTP hardening and audit trail | P3 | P1 | DONE | 2026-11-11 | tests/test_pr15.py 5 pass; e2e/csp.spec.ts passes (claim, Home, `/` under the CSP, no violations); vitest 1026; verify on trunk after merge | W5 |
 | PR-16 | Operability | P3 | P1 | DONE | 2026-11-11 | tests/test_pr16.py 7 pass (real second process exits 2, backup then restore then login); verify on trunk after merge | W5 |
 | PR-17 | Dead code and duplication purge | P4 | P2 | DONE | 2026-11-11 | 7 files, 69 insertions and 129 deletions; verify green on trunk | W6 |
-| PR-18 | Load, soak and failure-injection suite | P4 | P1 | TODO | | | W6 |
+| PR-18 | Load, soak and failure-injection suite | P4 | P1 | DONE | 2026-11-11 | mixed load 0 5xx of 3,303; kill 20 of 20 runs identical; soak 30 min flat; tests/stress 9 pass; numbers in docs/PERFORMANCE.md | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | TODO | | | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
 | GC | Production acceptance | P4 | P0 | TODO | | | W7 |
@@ -547,6 +547,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-21 | 2026-11-11 | PR-15 | Owns; CSP check of the full dashboard; no-secrets-in-logs | Also edited `index.html`, `public/theme-init.js` (an inline script cannot run under `script-src 'self'`), `routes_auth.py`, `routes_owner.py`, `cli.py`, `serve/cli.py`, `migrations.py`, `OwnerSettings.tsx`; the CSP browser test covers claim, Home and the empty dashboard only, not the charts with data (inline styles stay allowed: `style-src 'unsafe-inline'`); the log test greps one journey with debug logging on, and the app logs no request bodies by design | CSP on a populated dashboard unchecked | Open |
 | DEV-22 | 2026-11-11 | PR-16 | Owns; DEV-02 closed | Also edited `serve/app.py` (readiness, request id), `serve/cli.py`, `cli.py` (new actions and a second positional), `maintenance` state; `purge-fake` is in `cli.py` and uses the PR-09 wipe helper, which closes DEV-02; the runbook says there is no UI button to remove a user | None | Closed |
 | DEV-23 | 2026-11-11 | PR-17 | Remove the `sync()` keyword aliases; `routes.tsx` duplicates | `event_callback` stays (the one real name); the `Home` duplicate was already removed in PR-03; `LinkingService._cached_status` now calls the shared helper, a small services-to-serve import | None | Closed |
+| DEV-24 | 2026-11-11 | PR-18 | Targets section 2 | Two misses: the concurrent cold dashboard is p95 5.0 s under the mixed load (every call a new filter; BL-208 would fix it by asking for one section), and the 8-user memory peak is 438 MB against 400 MB (368 MB at the end); the soak script's fd check used single samples and failed once, now medians; the free opencode quota ran out mid-story, so I finished the harness myself; PR-19 went to Gemini 3.8 Flash | Two section-2 rows not met; DEC-P1 targets stay proposals | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -604,6 +605,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-18 | `load_test.py --duration 300`; `kill --runs 20`; `--soak --duration 1800` | 0 5xx and 0 locked of 3,303; kill 20 of 20 ok (300 orders, 0 duplicates); RSS 93 MB idle, 438 MB peak, 368 MB at minute 30, threads 21 to 23 | 5 + 10 + 30 min | pr-18 |
 | 2026-11-11 | PR-17 | `verify . --backend` on trunk after merge | see below | — | pr-17-review |
 | 2026-11-11 | PR-13 | `npm test`, `check-bundle.mjs`, `npx playwright test` on trunk | all PASS; entry chunk 102.9 kB (budget 250) | — | pr-13-review |
 | 2026-11-11 | PR-16 | `verify . --backend` on branch pr-16 | all PASS | — | pr-16 |
@@ -629,6 +631,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-18 | `scripts/load_test.py` (mixed, kill, soak), `tests/stress` (matrix, failure injection, kill wrapper; skipped by default with `-m stress`), `docs/PERFORMANCE.md`; found and fixed three bugs: `app.db` connections used across worker threads (503 on login under load), database errors swallowed without a log line, and six cold dashboard builds thrashing the GIL (27 s to 7 s with a two-at-a-time gate) | pr-18 |
 | 2026-11-11 | PR-17 | Deleted `SyncService`, `use_partial_import` and aliases, `ProviderLinkingService`, `Linking`, `JobControl.submit` and `enqueue`, `start_linking`; one copy each of the client address, loopback, secure, session status and app.db helpers in `serve/deps.py` | pr-17-review |
 | 2026-11-11 | PR-13 | Job list polls every 3 s only while a job is active, every 30 s otherwise, never while the tab is hidden, and refetches once on return (one shared hook); QueryClient defaults (30 s stale, retry once on network errors, never on 4xx, no refetch on focus); error boundary with Reload and Go to Home | pr-13-review |
 | 2026-11-11 | PR-16 | `.server.lock` (second server exits 2); `GET /health/ready`; `FOOD_KHATA_<FLAG>` for every flag and `--print-config`; JSON logs with request id and user id, redacted, rotating; `food-khata backup` and `restore` (SQLite backup API, checksums, non-empty folder refused); `purge-fake`; `docs/RUNBOOK.md` | pr-16 |
@@ -655,3 +658,5 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | PR-01 | W0 test harness | opencode/beam-free | 1 | merged; spec could not start (ESM path, cross-origin proxy, restart used a new data folder), so I rewrote it | main agent took over after the sub-agent could not run a browser |
 | 2026-11-11 | PR-20 | W0 config | opencode/beam-free | 1 | merged after review; removed dead `run_cmd` and a verify step that audited nothing | — |
 | 2026-11-11 | G0 sign-off | Claude Haiku 5.5 (session switched via /model) | 1 | Owner approved G0 by hand; W3 not started | Haiku is last resort for high-risk stories (PR-07, PR-09, PR-12); switch back to Sonnet 5.5 before PR-07 |
+| 2026-11-11 | PR-18 | W6 harness | opencode/beam-free | 1 | quota ended mid-story; main agent finished and fixed it | Gemini rung not used; main agent took over |
+| 2026-11-11 | PR-19 | W6 docs | antigravity gemini-3.8-flash | 1 | review pending | opencode quota ended |

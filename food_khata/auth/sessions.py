@@ -81,7 +81,8 @@ def init_app_db(db_path: Path | str) -> None:
 
 def connect_app_db(db_path: Path | str) -> sqlite3.Connection:
     """Connect to app.db with row factory, WAL, and busy timeout."""
-    conn = sqlite3.connect(Path(db_path), timeout=30.0)
+    # FastAPI may create a dependency's connection and use it in another worker thread; each request still owns its own.
+    conn = sqlite3.connect(Path(db_path), timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")
