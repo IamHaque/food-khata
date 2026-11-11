@@ -30,6 +30,7 @@ from food_khata.auth import (
     validate_csrf_token,
 )
 from food_khata.providers.base import fake_enabled
+from food_khata.users.context import user_root
 
 from .behavior import behavior
 from .charts import kpi_history, overview, remaining
@@ -56,9 +57,12 @@ def create_app(
     lan: bool = False,
     allow_hosts: list[str] | set[str] | None = None,
     is_https: bool = False,
+    legacy_single_db: bool = False,
 ) -> FastAPI:
     if fake_enabled():
-        logging.getLogger(__name__).warning("FOOD_KHATA_ENABLE_FAKE_PROVIDER is on: fake provider enabled (testing only)")
+        logging.getLogger(__name__).warning(
+            "FOOD_KHATA_ENABLE_FAKE_PROVIDER is on: fake provider enabled (testing only)"
+        )
 
     @asynccontextmanager
     async def lifespan(app):
@@ -84,7 +88,7 @@ def create_app(
         # and tests until the legacy root is adopted by its owner.
         resolved_data_root = (db_path.parent or Path(".")).expanduser().resolve()
         legacy_db = db_path
-    allow_legacy_fallback = not explicit_data_root and legacy_db is not None
+    allow_legacy_fallback = legacy_single_db and not explicit_data_root and legacy_db is not None
     dist = (
         Path(dist_path)
         if dist_path is not None
@@ -312,30 +316,51 @@ def create_app(
         finally:
             conn.close()
 
-    def query_filters(**values) -> Filters:
+    def own_accounts(request: Request, filters: Filters) -> Filters:
+        # Account ids must be the caller's own; per-user databases already hide other users' rows.
+        if filters.account_ids and resolved_data_root is not None and not allow_legacy_fallback:
+            own = {
+                p.name
+                for p in (
+                    user_root(resolved_data_root, request.state.user["user_id"]) / "accounts"
+                ).glob("*")
+            }
+            if not set(filters.account_ids) <= own:
+                raise HTTPException(
+                    422, detail={"code": "INVALID_ACCOUNT", "message": "Unknown account."}
+                )
+        return filters
+
+    def query_filters(request: Request, **values) -> Filters:
         if values.get("statuses") == [""]:
             values["statuses"] = []
         try:
-            return Filters.model_validate(
-                {key: value for key, value in values.items() if value is not None}
+            return own_accounts(
+                request,
+                Filters.model_validate(
+                    {key: value for key, value in values.items() if value is not None}
+                ),
             )
         except ValidationError:
             raise HTTPException(422, "Invalid request parameters.") from None
 
     query_filters.__signature__ = inspect.Signature(
         parameters=[
-            inspect.Parameter(
-                name,
-                inspect.Parameter.KEYWORD_ONLY,
-                default=Query(
-                    None,
-                    description="Repeat values; statuses= selects all statuses."
-                    if name == "statuses"
-                    else None,
-                ),
-                annotation=field.annotation,
-            )
-            for name, field in Filters.model_fields.items()
+            inspect.Parameter("request", inspect.Parameter.KEYWORD_ONLY, annotation=Request),
+            *(
+                inspect.Parameter(
+                    name,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    default=Query(
+                        None,
+                        description="Repeat values; statuses= selects all statuses."
+                        if name == "statuses"
+                        else None,
+                    ),
+                    annotation=field.annotation,
+                )
+                for name, field in Filters.model_fields.items()
+            ),
         ],
         return_annotation=Filters,
     )
@@ -477,6 +502,7 @@ def create_app(
         filters: Filters,
         conn: Annotated[object, Depends(connection)],
     ):
+        own_accounts(request, filters)
         user_id = request.state.user["user_id"]
         database = conn.db_path
         for attempt in range(3):

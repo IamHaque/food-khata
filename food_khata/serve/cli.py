@@ -57,7 +57,7 @@ def serve(
 
     db = Path(db_path) if db_path is not None else Path("food_analytics.db")
     root = db.parent
-    effective_data_root = data_root or (root if str(root) not in ("", ".") else None)
+    effective_data_root = data_root or root
     app = create_app(
         db,
         dev=dev,

@@ -297,3 +297,26 @@ def test_fake_provider_switch_on(tmp_path):
     client, _, _ = _make_client(tmp_path)
     authenticate_client(client, username="alice", is_owner=True)
     assert "fake" in client.get("/api/accounts/providers").json()["providers"]
+
+
+def test_account_ids_must_be_own(tmp_path):
+    """PR-05: another user's (or unknown) account id is 422 INVALID_ACCOUNT on every account_ids endpoint."""
+    from food_khata.db import AnalyticsDB
+    from food_khata.users.context import user_database
+
+    client, data_root, _ = _make_client(tmp_path)
+    _, csrf = authenticate_client(client, username="alice", is_owner=True)
+    own = client.post("/api/accounts/link/verify", json={
+        "handle": client.post("/api/accounts/link/start", json={"provider": "zomato", "phone": "9876543210"}).json()["handle"],
+        "code": "123456"}).json()["id"]
+    uid = next((data_root / "users").iterdir()).name
+    db = user_database(data_root, uid)
+    db.parent.mkdir(parents=True, exist_ok=True)
+    AnalyticsDB(db).init_db()
+    assert client.get("/api/meta/filters", params={"account_ids": own}).status_code == 200
+    for res in (
+        client.get("/api/meta/filters", params={"account_ids": "someone-elses"}),
+        client.get("/api/orders", params={"account_ids": "someone-elses"}),
+        client.post("/api/dashboard", json={"account_ids": ["someone-elses"]}),
+    ):
+        assert res.status_code == 422, res.text

@@ -119,7 +119,7 @@ def test_concurrent_requests_use_separate_closed_connections(conn, monkeypatch):
         return connection
 
     monkeypatch.setattr(app_module, "connect_readonly", connect)
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = TestClient(create_app(path, legacy_single_db=True), base_url="http://127.0.0.1")
     authenticate_client(client)
     with ThreadPoolExecutor(max_workers=20) as pool:
         responses = list(pool.map(lambda _: client.get("/api/orders/slim"), range(20)))
@@ -134,7 +134,7 @@ def test_concurrent_requests_use_separate_closed_connections(conn, monkeypatch):
 
 def test_missing_database_returns_clear_error(tmp_path):
     path = tmp_path / "missing.db"
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = TestClient(create_app(path, legacy_single_db=True), base_url="http://127.0.0.1")
     authenticate_client(client)
     responses = (
         client.get("/api/orders"),

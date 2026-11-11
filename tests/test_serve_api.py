@@ -6,7 +6,7 @@ pytest_plugins = ["test_serve_filters"]
 
 
 def make_client(path, *args, **kwargs):
-    client = TestClient(create_app(path, *args, **kwargs), base_url="http://127.0.0.1")
+    client = TestClient(create_app(path, *args, legacy_single_db=True, **kwargs), base_url="http://127.0.0.1")
     authenticate_client(client)
     return client
 
@@ -86,7 +86,7 @@ def test_static_private_data(conn, tmp_path):
     (dist / "data").mkdir(parents=True)
     (dist / "index.html").write_text("app")
     (dist / "data" / "secret.json").write_text("secret")
-    client = TestClient(create_app(path, dist_path=dist), base_url="http://127.0.0.1")
+    client = TestClient(create_app(path, dist_path=dist, legacy_single_db=True), base_url="http://127.0.0.1")
     assert client.get("/some/page").text == "app"
     assert client.get("/data/secret.json").status_code == 404
 
@@ -327,3 +327,14 @@ def test_bill_discount_items_and_balance_label(conn):
     ]
     assert result["reconciliation_status"] == "off"
     assert result["reconciliation_label"] == "Off by INR 2.00"
+
+
+def test_legacy_single_db_off_by_default(tmp_path):
+    """PR-05: without legacy_single_db=True a bare database path is never served to a user."""
+    from food_khata.serve.app import authenticate_client, create_app
+
+    db = tmp_path / "shared.db"
+    db.touch()
+    client = TestClient(create_app(db), base_url="http://127.0.0.1")
+    authenticate_client(client)
+    assert client.get("/api/orders/slim").status_code == 503
