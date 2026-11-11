@@ -1,5 +1,6 @@
 """Tests for Background Sync Control API (AC-10)."""
 
+import time
 import uuid
 from pathlib import Path
 
@@ -200,13 +201,19 @@ def test_discard_partial_api_persists_across_restart(tmp_path):
     authenticate_client(client, username="alice", is_owner=True)
     account_id = _link_account(client)
     job = client.post("/api/sync/jobs", json={"account_id": account_id}).json()
+    for _ in range(100):  # let the real job thread finish: it holds app.db and caused "database_unavailable"
+        if client.get(f"/api/sync/jobs/{job['id']}").json()["status"] in ("done", "failed", "interrupted", "cancelled"):
+            break
+        time.sleep(0.1)
     create_job(app_db, job_id="discard-api", user_id=job["user_id"], account_id=account_id,
                provider="zomato", status="failed")
-    assert client.post("/api/sync/jobs/discard-api/discard-partial").json()["partial_decision"] == "discarded"
+    first = client.post("/api/sync/jobs/discard-api/discard-partial")
+    assert first.json().get("partial_decision") == "discarded", first.text
     restarted = TestClient(create_app(tmp_path / "dummy.db", app_db_path=app_db, data_root=data_root), base_url="http://127.0.0.1:8765")
     authenticate_client(restarted, username="alice", is_owner=True)
     assert restarted.get("/api/sync/jobs/discard-api").json()["partial_decision"] == "discarded"
-    assert restarted.post("/api/sync/jobs/discard-api/discard-partial").json()["partial_decision"] == "discarded"
+    again = restarted.post("/api/sync/jobs/discard-api/discard-partial")
+    assert again.json().get("partial_decision") == "discarded", again.text
     assert restarted.post("/api/sync/jobs/discard-api/use-partial").status_code == 400
 
 

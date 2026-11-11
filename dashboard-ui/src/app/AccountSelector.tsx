@@ -22,7 +22,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   const { defaultOpen = false } = props;
   const { filters, update } = useFilters();
   const linked = useAccounts();
-  const accounts: Account[] = useMemo(() => (linked.data ?? []).map(a => ({ id: a.local_id, label: a.phone ?? a.local_id, platforms: [a.provider], order_count: a.order_count })), [linked.data]);
+  const accounts: Account[] = useMemo(() => (linked.data ?? []).map(a => ({ id: a.local_id, label: `${a.provider.charAt(0).toUpperCase()}${a.provider.slice(1)} ••••${(a.phone ?? a.local_id).slice(-4)}`, platforms: [a.provider], order_count: a.order_count })), [linked.data]);
   const selected = filters.account_ids ?? [];
 
   const [open, setOpen] = useState(defaultOpen);
@@ -53,7 +53,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   }, [open]);
 
   const triggerLabel = useMemo(() => {
-    if (selected.length === 0) return 'All Accounts';
+    if (selected.length === 0) return `All my accounts (${accounts.length})`;
     if (selected.length === 1) {
       const match = accounts.find(a => a.id === selected[0]);
       return match ? match.label : selected[0];
@@ -178,6 +178,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
             onClick={() => toggleAll()}
             onKeyDown={e => handleItemKeyDown(e, 0)}
             onFocus={() => setActiveIndex(0)}
+            title="Covers only the accounts you have linked while signed in"
             className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs transition-colors text-left ${
               activeIndex === 0 ? 'bg-accent' : 'hover:bg-accent/50'
             }`}
@@ -186,7 +187,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
               All
             </span>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-foreground">All Accounts</div>
+              <div className="font-medium text-foreground">All my accounts ({accounts.length})</div>
               <div className="text-[10px] text-muted-foreground">All platforms</div>
             </div>
             {selected.length === 0 && <Check className="h-4 w-4 text-primary shrink-0" />}

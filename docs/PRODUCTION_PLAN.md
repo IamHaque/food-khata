@@ -485,7 +485,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-02 | Session consistency and login without bounce | P0 | P0 | TODO | | | W1 |
 | PR-03 | Landing on Home and navigation rules | P0 | P0 | TODO | | | W2 |
 | PR-04 | Remove the fake provider from the product | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-04; trunk re-run after merge | W1 |
-| PR-05 | Account scope and no shared database | P0 | P0 | TODO | | | W1 |
+| PR-05 | Account scope and no shared database | P0 | P0 | DONE | 2026-11-11 | verify --backend green on branch pr-05; trunk re-run after merge; browser not run | W1 |
 | G0 | User findings closed | P0 | P0 | TODO | | | W2 |
 | PR-06 | One account, several providers | P1 | P1 | TODO | | | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | TODO | | | W3 |
@@ -528,6 +528,8 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-02 | 2026-11-11 | PR-04 | Leftover `fake` accounts: dashboards-never-count test, `purge-fake` | Home keeps the existing Disconnect action for them; `purge-fake` stays in PR-16; no ingest filter by name exists in code, so a count test needs real fake-account data and is left to PR-16 | Leftover fake accounts can still be listed and disconnected, not purged by CLI yet | Open |
 | DEV-03 | 2026-11-11 | All | Strongest Gemini model for high-risk stories | Only Gemini 3.8 Flash is in the catalog; the main agent (Claude Sonnet 5.5) writes high-risk code itself, as DEC-P8 says | None on scope | Open |
 | DEV-04 | 2026-11-11 | PR-20 | Audit script used by CI and verify | CI only: audit needs `pip-audit` and `npm audit` JSON, which need network; verify does not call it | A no-argument call audited nothing | `verify` has no audit step; run `scripts/audit.py` in CI | Open |
+| DEV-05 | 2026-11-11 | PR-05 | Empty user gets 200 with empty aggregates | A user with no database still gets 503 `database_not_found`; the PR-03 redirect to Home covers the UI; changing the API now would touch every read endpoint | New users see no error banner once PR-03 lands | Open |
+| DEV-06 | 2026-11-11 | PR-05 | Edits only in Owns | Also edited `serve/cli.py` (serve always passes a data root), `scripts/parity_check.py` and five test files (pass `legacy_single_db=True`) because they are callers of the changed `create_app` | None | Closed |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -539,7 +541,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | BL-204 | 2026-11-11 | Review | Two-factor login for the owner | P3 | Not needed for a household LAN; revisit if exposed to the internet |
 | BL-206 | 2026-11-11 | Owner | Reproduce the owner double login prompt (U-1) at Gate G0 with browser, URL and restart details; reopen only if it still occurs | P2 | Deferred by owner (DEC-P11) |
 | BL-205 | 2026-11-11 | Review | Move app state to a shared store so several workers can run | P3 | One worker is enough; PR-16 enforces it |
-| BL-207 | 2026-11-11 | PR-20 verify | `tests/test_serve_sync.py::test_discard_partial_api_persists_across_restart` fails about 2 runs in 5 (KeyError `partial_decision`), passes alone; the test races the job thread it starts | P1 | Pre-existing; look at it in PR-07 (job runner) |
+| BL-207 | 2026-11-11 | PR-20 verify | `tests/test_serve_sync.py::test_discard_partial_api_persists_across_restart` fails about 2 runs in 5 (KeyError `partial_decision`), passes alone; root cause: the real job thread started by the test holds `app.db`, a request after restart gets 503 `database_unavailable`; the test now waits for the job; the product-side lock contention is for PR-11 | P1 | Test stabilised in PR-05; contention left to PR-11 |
 
 ### 5.5 Blockers
 
@@ -580,6 +582,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-05 | `verify . --backend` on branch pr-05 | see Progress | — | pr-05 |
 | 2026-11-11 | PR-04 | `verify . --backend` on branch pr-04 | all PASS (pytest 88 s) | 106 s | pr-04 |
 
 ### 5.9 Changelog
@@ -588,6 +591,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-05 | `create_app(legacy_single_db=False)` default, `serve` always has a data root; `account_ids` checked against the user's own account folders (422 `INVALID_ACCOUNT`); selector reads "All my accounts (n)" with tooltip and "Swiggy ••••1234" labels | pr-05 |
 | 2026-11-11 | PR-04 | Fake provider off unless `FOOD_KHATA_ENABLE_FAKE_PROVIDER=1`; `GET /api/accounts/providers`; Link screen server-driven, nothing preselected; tests/conftest.py fixture turns the switch on except `no_fake` tests | pr-04 |
 
 ### 5.10 Delegation ledger

@@ -48,7 +48,7 @@ def test_dashboard_malformed_dates_and_unavailable_timing(conn):
     conn.execute("UPDATE orders SET order_date='invalid', order_time='invalid'")
     conn.commit()
     path = conn.execute("PRAGMA database_list").fetchone()[2]
-    client = TestClient(create_app(path), base_url="http://127.0.0.1")
+    client = TestClient(create_app(path, legacy_single_db=True), base_url="http://127.0.0.1")
     authenticate_client(client)
     result = client.post(
         "/api/dashboard", json={"compare": "previous_year"}

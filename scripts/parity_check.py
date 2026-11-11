@@ -52,7 +52,7 @@ def compare(db_path):
             match = abs(new - old) <= 0.01000001
         rows.append((label, old, new, difference, match))
 
-    with TestClient(create_app(db_path), base_url="http://127.0.0.1") as client:
+    with TestClient(create_app(db_path, legacy_single_db=True), base_url="http://127.0.0.1") as client:
         authenticate_client(client)
         scopes = [("All", {}, data["orders"])]
         for field, filter_key, label in (
