@@ -406,6 +406,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/users/{user_id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove User Endpoint
+         * @description Sensitive action: delete a user and all their data. Requires the owner's password.
+         */
+        post: operations["remove_user_endpoint_api_owner_users__user_id__remove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/owner/users/{user_id}/reset-password": {
         parameters: {
             query?: never;
@@ -1792,6 +1812,11 @@ export interface components {
             /** Join Code */
             join_code?: string | null;
         };
+        /** RemoveUserRequest */
+        RemoveUserRequest: {
+            /** Owner Password */
+            owner_password: string;
+        };
         /** ResetUserPasswordRequest */
         ResetUserPasswordRequest: {
             /** Owner Password */
@@ -2950,6 +2975,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["food_khata__serve__routes_owner__UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_user_endpoint_api_owner_users__user_id__remove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusResponse"];
                 };
             };
             /** @description Validation Error */

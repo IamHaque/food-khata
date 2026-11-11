@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import shutil
-import sqlite3
 import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from food_khata.auth import connect_app_db
 from food_khata.contracts import KhataError
+from food_khata.db import delete_account_data
 from food_khata.providers.base import provider_names
 from food_khata.services.linking import LinkingService
 from food_khata.storage import Storage, provider_identity, read_json
@@ -30,6 +32,7 @@ from .schemas_accounts import (
     VerifyAgainResponse,
 )
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
 DEC_010_MAX_ACCOUNTS = 5
@@ -538,6 +541,43 @@ def verify_again(
     )
 
 
+def _wipe(request, user_id, storage, acc, account_id, acc_path, provider, others) -> None:
+    """Wipe an account, or only one provider of it when others remain. Nothing is half deleted: the database
+    step is one transaction, and the folder is renamed first so it can be put back if that step fails."""
+    jobs = [j for j in request.app.state.job_control.list_jobs(user_id=user_id, limit=1000) if j["account_id"] == account_id]
+    if any(j["status"] in ("queued", "running") and (not others or j["provider"] == provider) for j in jobs):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "ACCOUNT_BUSY", "message": "A sync is running for this account; cancel it first."},
+        )
+    data_root = getattr(request.app.state, "data_root", None)
+    user_db = user_database(data_root, user_id) if data_root else None
+    trash = None
+    try:
+        if not others and acc_path.exists():
+            trash = acc_path.parent.parent / f".deleting-{uuid.uuid4().hex}"
+            acc_path.rename(trash)
+        if user_db and user_db.is_file():
+            delete_account_data(user_db, account_id, provider if others else None, [j["id"] for j in jobs])
+        if others:
+            storage.remove_session(account_id, provider)
+            for f in acc_path.glob(f"{provider}-*.json"):
+                f.unlink(missing_ok=True)
+            for key in ("providers", "provider_identities"):
+                (acc.get(key) or {}).pop(provider, None)
+            storage._write_account(acc)
+    except Exception as exc:
+        if trash is not None and trash.exists() and not acc_path.exists():
+            trash.rename(acc_path)
+        log.error("wipe failed for account %s: %s", account_id, type(exc).__name__)  # no personal data
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"code": "WIPE_FAILED", "message": "Wipe failed; nothing was deleted."},
+        ) from exc
+    if trash is not None:
+        shutil.rmtree(trash, ignore_errors=True)
+
+
 @router.delete("/{account_id}", response_model=DisconnectResponse)
 @router.post("/{account_id}/disconnect", response_model=DisconnectResponse)
 def disconnect_account(
@@ -561,42 +601,8 @@ def disconnect_account(
     acc_path = user_storage.accounts_dir / account_id
     provider = pick_provider(acc, provider or (body.provider if body else None))
     others = [p for p in acc.get("providers", {}) if p != provider]
-    if effective_wipe and others:
-        # Another provider shares this account: remove only this provider's session, archive and orders.
-        user_storage.remove_session(account_id, provider)
-        for f in acc_path.glob(f"{provider}-*.json"):
-            f.unlink(missing_ok=True)
-        for key in ("providers", "provider_identities"):
-            (acc.get(key) or {}).pop(provider, None)
-        user_storage._write_account(acc)
-        data_root = getattr(request.app.state, "data_root", None)
-        user_db = user_database(data_root, user_id) if data_root else None
-        if user_db and user_db.is_file():
-            with sqlite3.connect(user_db) as conn:
-                conn.execute(
-                    "DELETE FROM orders WHERE account_id = ? AND UPPER(platform) = UPPER(?)",
-                    (account_id, provider),
-                )
-                conn.execute(
-                    "DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders)"
-                )
-    elif effective_wipe:
-        if acc_path.exists():
-            shutil.rmtree(acc_path, ignore_errors=True)
-        # Also clean up orders from user database if analytics db exists
-        data_root = getattr(request.app.state, "data_root", None)
-        if data_root:
-            user_db = user_database(data_root, user_id)
-            if user_db.is_file():
-                try:
-                    with sqlite3.connect(user_db) as conn:
-                        conn.execute("DELETE FROM orders WHERE account_id = ?", (account_id,))
-                        conn.execute(
-                            "DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders)"
-                        )
-                        conn.commit()
-                except Exception:
-                    pass
+    if effective_wipe:
+        _wipe(request, user_id, user_storage, acc, account_id, acc_path, provider, others)
     else:
         # Preserves data: remove this provider's session only
         user_storage.remove_session(account_id, provider)

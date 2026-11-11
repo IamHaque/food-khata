@@ -2695,6 +2695,59 @@
         }
       }
     },
+    "/api/owner/users/{user_id}/remove": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Remove User Endpoint",
+        "description": "Sensitive action: delete a user and all their data. Requires the owner's password.",
+        "operationId": "remove_user_endpoint_api_owner_users__user_id__remove_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/owner/users/{user_id}/reset-password": {
       "post": {
         "tags": [
@@ -6597,6 +6650,19 @@
           "password"
         ],
         "title": "RegisterRequest"
+      },
+      "RemoveUserRequest": {
+        "properties": {
+          "owner_password": {
+            "type": "string",
+            "title": "Owner Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_password"
+        ],
+        "title": "RemoveUserRequest"
       },
       "ResetUserPasswordRequest": {
         "properties": {

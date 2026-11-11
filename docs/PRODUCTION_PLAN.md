@@ -490,7 +490,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-06 | One account, several providers | P1 | P1 | DONE | 2026-11-11 | test_one_account_several_providers; browser 84 pass; verify on trunk after merge | W2 |
 | PR-07 | Job recovery and the needs-code path | P1 | P1 | DONE | 2026-11-11 | tests in test_serve_sync.py and test_jobs.py; verify on trunk after merge | W3 |
 | PR-08 | Import integrity and fresh data | P1 | P1 | TODO | | | W4 |
-| PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | TODO | | | W3 |
+| PR-09 | Data lifecycle: wipe, remove user, retention | P1 | P1 | DONE | 2026-11-11 | tests/test_pr09.py 4 pass; verify on trunk after merge | W3 |
 | PR-10 | Atomic ownership, uniqueness and bounded state | P2 | P1 | DONE | 2026-11-11 | tests/test_pr10.py 7 pass (20 threads claim, 2 threads link); verify on trunk after merge | W2 |
 | PR-11 | Job runner throughput and write cost | P2 | P1 | TODO | | | W4 |
 | PR-12 | Dashboard and read-path performance | P2 | P1 | TODO | | | W3 |
@@ -537,6 +537,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-11 | 2026-11-11 | PR-10 | Handles "swept every minute"; lock-order test; `authenticate_client` default owner | Handles are swept on every new login (comment marks the shortcut; PR-09's scheduler can call `sweep()` each minute); the lock-order test runs `bind` and `save_session` from two threads and checks for no deadlock, because the code has no per-account lock, only the root and credential file locks; two test helpers now pass `is_owner=False` for second users because the owner index forbids a second owner | Weaker lock test than written | Open |
 | DEV-12 | 2026-11-11 | PR-06 | Reproduce first; jobs per provider | The reproduction test was written together with the fix, not before it (R-01 was clear from the code); jobs already used one archive file per provider, so only the provider choice was added; `last_sync` is still account-level | Per-provider last sync waits for PR-11 job data | Open |
 | DEV-13 | 2026-11-11 | PR-07 | `/code` route removal logged as DEV (DEC-P3); resume-after-restart no-duplicates test | The route is removed from C-2 as planned; the no-duplicate-orders check for resume stays with PR-08/PR-18 (existing resume tests only check status); six tests that queued several jobs on one account now use several accounts because of the new unique index | Test fixtures changed | Open |
+| DEV-14 | 2026-11-11 | PR-09 | Wipe cancels the running job then waits; scheduler tasks log their counts; test for a lock longer than 50 ms | Wipe returns 409 instead (the allowed alternative); counts are logged once per run as one line; chunk size is tested, the 50 ms bound is not measured | None | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -589,6 +590,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-11 | PR-09 | `verify . --backend` on branch pr-09 | see Progress | — | pr-09 |
 | 2026-11-11 | PR-07 | `verify . --backend` on branch pr-07 | see Progress | — | pr-07 |
 | 2026-11-11 | G0 | `verify . --backend --browser` (twice), `npm run build`, `check-bundle.mjs` on trunk | all PASS; browser 84 pass at 1440 and 390; entry chunk 102.4 kB gzip (budget 250) | 125 s | trunk |
 | 2026-11-11 | PR-06 | `verify . --backend`, `npx playwright test` on branch pr-06 | all PASS | — | pr-06 |
@@ -605,6 +607,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
+| 2026-11-11 | PR-09 | `delete_account_data` (one transaction, orphans removed, rolls back); wipe renames the folder first, 409 `ACCOUNT_BUSY` with a running job, 500 `WIPE_FAILED`; `POST /api/owner/users/{id}/remove`; `maintenance.py` hourly thread (sessions, attempts, events 7 d, jobs 90 d, WAL checkpoint) in chunks of 500 | pr-09 |
 | 2026-11-11 | PR-07 | Startup marks running, queued, needs_code and paused jobs interrupted/RESTART; `/jobs/{id}/code` removed (404) and the Sync screen sends users to Verify again; verify-again resumes the account's needs_code job; expiry works from the database; unique index (migration 4) gives 409 `ACCOUNT_BUSY`; types regenerated | pr-07 |
 | 2026-11-11 | PR-06 | C-2 additive: `GET /api/accounts` one row per (account, provider); optional `provider` on sync create, verify-again and disconnect (422 `PROVIDER_REQUIRED` when ambiguous); `added_to_existing` on link verify; Home one card per provider; selector groups by account; types regenerated | pr-06 |
 | 2026-11-11 | PR-10 | `migrations.py` (schema_migrations, backup before first run, one transaction each); unique owner index and `BEGIN IMMEDIATE` claim; transfer refuses disabled target; `provider_links` table replaces the folder scan (backfilled at startup, freed on disconnect); quota checked at Send code; login handles capped at 200 and 3 per user | pr-10 |

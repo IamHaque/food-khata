@@ -1138,3 +1138,37 @@ class AnalyticsDB:
             total_counts["accounts"] += 1
 
         return total_counts
+
+
+def delete_account_data(
+    db_path: Path | str, account_id: str, platform: str | None = None, job_ids: list[str] | None = None
+) -> None:
+    """Delete one account's rows (or one provider's) in a single transaction; raises and rolls back on any failure.
+
+    Orphaned restaurants and addresses go too. `job_ids` are the account's jobs, whose import receipts are removed.
+    """
+    conn = sqlite3.connect(db_path, timeout=30.0, isolation_level=None)
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA busy_timeout = 30000")
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            scope, args = ("account_id = ?", [account_id])
+            if platform:
+                scope, args = (scope + " AND UPPER(platform) = UPPER(?)", [account_id, platform])
+            conn.execute(f"DELETE FROM orders WHERE {scope}", args)  # items cascade
+            conn.execute("DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders)")
+            conn.execute(f"DELETE FROM quarantine WHERE {scope}", args)
+            conn.execute(f"DELETE FROM archive_imports WHERE {scope}", args)
+            for job_id in job_ids or []:
+                conn.execute("DELETE FROM partial_import_receipts WHERE job_id = ?", (job_id,))
+            if not platform:
+                conn.execute("DELETE FROM accounts WHERE id = ? OR local_id = ?", (account_id, account_id))
+            conn.execute("DELETE FROM restaurants WHERE id NOT IN (SELECT restaurant_id FROM orders WHERE restaurant_id IS NOT NULL)")
+            conn.execute("DELETE FROM delivery_addresses WHERE id NOT IN (SELECT delivery_address_id FROM orders WHERE delivery_address_id IS NOT NULL)")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()
