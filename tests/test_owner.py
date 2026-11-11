@@ -340,8 +340,12 @@ def test_limits_rate_limit_and_user_cap(tmp_path):
     assert "maximum 8 users" in cap_res.json()["error"]["message"].lower()
 
     # 3. Rate limiting test: 5 attempts per 10 minutes per IP
-    app_db2 = tmp_path / "app_throttle.db"
-    app2 = create_app(dummy_db, app_db_path=app_db2)
+    throttle_env = tmp_path / "throttle_env"
+    throttle_env.mkdir()
+    dummy_db2 = throttle_env / "orders.db"
+    dummy_db2.touch()
+    app_db2 = throttle_env / "app.db"
+    app2 = create_app(dummy_db2, app_db_path=app_db2)
     throttled_client = TestClient(app2, base_url="http://127.0.0.1")
     csrf2 = throttled_client.get("/api/auth/csrf").json()["csrf_token"]
     t_headers = {CSRF_HEADER_NAME: csrf2}
