@@ -26,13 +26,10 @@ def test_migrations_run_once_back_up_and_roll_back(tmp_path, monkeypatch):
     conn.execute("DROP TABLE provider_links")
     conn.commit()
     run_migrations(db)
-    assert [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")] == [
-        1,
-        2,
-    ]
+    assert [r[0] for r in conn.execute("SELECT version FROM schema_migrations ORDER BY 1")] == [1, 2, 4]
     assert (tmp_path / "app.db.pre-v1.bak").is_file()  # existing data is backed up first
     run_migrations(db)  # idempotent
-    assert conn.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 3
 
     def boom(c, root):
         c.execute("CREATE TABLE half_done (x)")
@@ -42,7 +39,7 @@ def test_migrations_run_once_back_up_and_roll_back(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError):
         run_migrations(db)
     assert conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'half_done'").fetchone() is None
-    assert conn.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 3
 
 
 def test_twenty_simultaneous_claims_make_one_owner(tmp_path):

@@ -10,7 +10,6 @@ export const syncApi = {
   create: (account_id: string, mode: SyncMode, provider?: string) => request<SyncJob>("/api/sync/jobs", { method: "POST", body: { account_id, mode, provider } }),
   cancel: (id: string) => request<SyncJob>(`${path(id)}/cancel`, { method: "POST" }),
   resume: (id: string) => request<SyncJob>(`${path(id)}/resume`, { method: "POST" }),
-  code: (id: string, code: string) => request<SyncJob>(`${path(id)}/code`, { method: "POST", body: { code: code.trim() } }),
   usePartial: (id: string) => request<components["schemas"]["UsePartialResponse"]>(`${path(id)}/use-partial`, { method: "POST" }),
   discardPartial: (id: string) => request<SyncJob>(`${path(id)}/discard-partial`, { method: "POST" }),
 };

@@ -51,10 +51,6 @@ class JobEventOut(BaseModel):
     created_at: float | None = Field(default=None, description="Timestamp event was logged")
 
 
-class SubmitCodeRequest(BaseModel):
-    code: str = Field(..., description="Verification code / OTP from provider")
-
-
 class UsePartialResponse(BaseModel):
     status: str = Field(default="ok", description="Import status")
     total: int = Field(default=0, description="Total records imported into analytics database")

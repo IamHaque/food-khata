@@ -89,6 +89,12 @@ class JobRunnerTests(unittest.TestCase):
         self.alice_account_id = acc["local_id"]
         self.alice_session = {"access_token": "token-123", "provider": "zomato"}
         self.alice_storage.save_session(self.alice_account_id, "zomato", self.alice_session)
+        # One active job per account and provider (PR-07): tests that queue several jobs use several accounts.
+        self.alice_accounts = [self.alice_account_id]
+        for n in range(1, 5):
+            extra = self.alice_storage.bind(f"987654321{n}", "zomato", f"fake-account-{n + 1}")
+            self.alice_storage.save_session(extra["local_id"], "zomato", self.alice_session)
+            self.alice_accounts.append(extra["local_id"])
 
         self.runner = JobRunner(
             self.app_db,
@@ -218,8 +224,10 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(needs_code_job["status"], NEEDS_CODE)
         self.assertEqual(needs_code_job["error_code"], "NEEDS_OTP")
 
-        # Now submit the code
-        resumed = self.control.submit_code(job_id, "123456")
+        # A code cannot repair a provider session: Verify again, then the job is resumed with a fresh session
+        resumed = self.control.resume_job(
+            job_id, session=self.alice_session, cipher=self.alice_ctx.cipher, provider_instance=provider
+        )
         self.assertIn(resumed["status"], (QUEUED, RUNNING, DONE))
 
         # Wait for completion
@@ -302,7 +310,7 @@ class JobRunnerTests(unittest.TestCase):
         self.assertIn(job_id, interrupted)
         crashed_job = self.control.get_job(job_id)
         self.assertEqual(crashed_job["status"], INTERRUPTED)
-        self.assertEqual(crashed_job["error_code"], "INTERRUPTED")
+        self.assertEqual(crashed_job["error_code"], "RESTART")
         self.assertTrue(crashed_job["resumable"])
         self.assertIsNotNone(crashed_job["finished_at"])
 
@@ -377,7 +385,7 @@ class JobRunnerTests(unittest.TestCase):
         # 1st job: running
         j1 = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[0],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -389,7 +397,7 @@ class JobRunnerTests(unittest.TestCase):
         # 2nd job: queued (1 running, 1 queued)
         j2 = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[1],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -400,7 +408,7 @@ class JobRunnerTests(unittest.TestCase):
         # 3rd job: queued (1 running, 2 queued)
         j3 = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[2],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -413,7 +421,7 @@ class JobRunnerTests(unittest.TestCase):
         with self.assertRaises(JobLimitExceeded) as cm:
             self.control.submit_sync(
                 user_id=self.alice_id,
-                account_id=self.alice_account_id,
+                account_id=self.alice_accounts[3],
                 provider="zomato",
                 session=self.alice_session,
                 cipher=self.alice_ctx.cipher,
@@ -431,7 +439,7 @@ class JobRunnerTests(unittest.TestCase):
         # Bob submits a job: should succeed (Bob has 0 jobs)
         bob_job = self.control.submit_sync(
             user_id=bob_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[4],
             provider="swiggy",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -459,7 +467,7 @@ class JobRunnerTests(unittest.TestCase):
         # Alice starts Zomato sync
         j_alice = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[0],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -471,7 +479,7 @@ class JobRunnerTests(unittest.TestCase):
         # Bob starts Zomato sync while Alice's Zomato is running
         j_bob = self.control.submit_sync(
             user_id=bob_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[1],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -499,7 +507,7 @@ class JobRunnerTests(unittest.TestCase):
 
         j1 = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[0],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -507,7 +515,7 @@ class JobRunnerTests(unittest.TestCase):
         )
         j2 = self.control.submit_sync(
             user_id=self.alice_id,
-            account_id=self.alice_account_id,
+            account_id=self.alice_accounts[1],
             provider="zomato",
             session=self.alice_session,
             cipher=self.alice_ctx.cipher,
@@ -639,7 +647,7 @@ class JobRunnerTests(unittest.TestCase):
 
         for status in (QUEUED, RUNNING, DONE, INTERRUPTED):
             job = create_job(self.app_db, job_id="state-" + status, user_id=self.alice_id,
-                             account_id=self.alice_account_id, provider="zomato", status=status)
+                             account_id=f"{self.alice_account_id}-{status}", provider="zomato", status=status)
             for action in (self.control.use_partial, self.control.discard_partial):
                 with self.subTest(status=status, action=action.__name__), self.assertRaises(KhataError):
                     action(job["id"])

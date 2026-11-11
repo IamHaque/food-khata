@@ -2,7 +2,6 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
 import { AuthShell, StatusBanner } from "../primitives";
 import { isSyncActive, syncApi, type SyncJob, type SyncMode } from "./api";
 export { SyncLogoutWarning } from "./SyncLogoutWarning";
@@ -31,20 +30,17 @@ export function SyncChooser({ accountId, provider, onStarted }: { accountId: str
 
 export function SyncJobScreen({ jobId }: { jobId: string }) {
   const client = useQueryClient();
-  const [code, setCode] = React.useState("");
-  React.useEffect(() => { setCode(""); }, [jobId]);
   const key = ["access", "sync", jobId];
   const query = useQuery({ queryKey: key, queryFn: () => syncApi.get(jobId), refetchInterval: q => q.state.data && isSyncActive(q.state.data) ? 2000 : false });
   const action = useMutation({
-    mutationFn: async (kind: "cancel" | "resume" | "code" | "partial" | "discard") => {
+    mutationFn: async (kind: "cancel" | "resume" | "partial" | "discard") => {
       if (kind === "partial") {
         await syncApi.usePartial(jobId);
       } else if (kind === "discard") {
         client.setQueryData(key, await syncApi.discardPartial(jobId));
       } else {
-        const job = await (kind === "code" ? syncApi.code(jobId, code) : syncApi[kind](jobId));
+        const job = await syncApi[kind](jobId);
         client.setQueryData(key, job);
-        setCode("");
       }
       await client.invalidateQueries({ queryKey: ["access", "sync"] });
     },
@@ -59,7 +55,7 @@ export function SyncJobScreen({ jobId }: { jobId: string }) {
       </div>
       {job.error_message && <StatusBanner variant="warning">{job.error_message}</StatusBanner>}
       {isSyncActive(job) && <><p>You can leave this page; the sync continues in the background.</p><Button variant="outline" disabled={action.isPending} onClick={() => action.mutate("cancel")}>Cancel sync</Button></>}
-      {job.status === "needs_code" && <form className="space-y-3" onSubmit={e => { e.preventDefault(); if (code.trim()) action.mutate("code"); }}><label htmlFor="sync-code">Provider verification code</label><Input id="sync-code" autoComplete="one-time-code" required value={code} onChange={e => setCode(e.target.value)} /><Button disabled={action.isPending || !code.trim()}>Submit code</Button></form>}
+      {job.status === "needs_code" && <><p>Your provider session expired. Verify the account again; this sync then resumes by itself.</p><Link to="/home">Verify again on Home</Link></>}
       {["interrupted", "paused"].includes(job.status) && <><p>Log in again if needed, then resume this sync.</p><Link to={`/login?return=${encodeURIComponent(`/sync?job=${jobId}`)}`}>Log in again</Link><Button disabled={action.isPending} onClick={() => action.mutate("resume")}>Resume after login</Button></>}
       {["failed", "cancelled"].includes(job.status) && (job.partial_decision ?? "pending") === "pending" && <div className="space-y-3"><p>Use any orders fetched before the sync stopped, or leave them out of your dashboard.</p><div className="flex flex-wrap gap-2"><Button disabled={action.isPending} onClick={() => action.mutate("partial")}>Use partial data</Button><Button variant="outline" disabled={action.isPending} onClick={() => action.mutate("discard")}>Discard</Button></div></div>}
       {["failed", "cancelled"].includes(job.status) && job.partial_decision === "imported" && <StatusBanner>Partial data was imported into your dashboard.</StatusBanner>}

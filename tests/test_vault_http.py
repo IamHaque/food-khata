@@ -254,7 +254,7 @@ def test_revocation_serializes_delayed_checkpoint(tmp_path, monkeypatch, action,
     control = app.state.job_control
     job = control.submit_sync(user_id=user_id, account_id=account_id, provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
     assert entered.wait(10)
-    queued = control.submit_sync(user_id=user_id, account_id=account_id, provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
+    queued = control.submit_sync(user_id=user_id, account_id=account_id + "-queued", provider="fake", session={"token": "old"}, cipher=context.cipher, provider_instance=FakeProvider(name="fake"))
     body = {"owner_password": "password123", "new_password": "new-password"} if action == "reset-password" else {"disabled": True}
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
