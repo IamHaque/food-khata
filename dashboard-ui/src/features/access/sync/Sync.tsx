@@ -13,9 +13,9 @@ const modes: [SyncMode, string, string][] = [
   ["missing", "Missing bill details", "Retry bill details missing from previously fetched orders."],
 ];
 
-export function SyncChooser({ accountId, onStarted }: { accountId: string; onStarted: (job: SyncJob) => void }) {
+export function SyncChooser({ accountId, provider, onStarted }: { accountId: string; provider?: string; onStarted: (job: SyncJob) => void }) {
   const [mode, setMode] = React.useState<SyncMode>("new");
-  const start = useMutation({ mutationFn: () => syncApi.create(accountId, mode), onSuccess: onStarted });
+  const start = useMutation({ mutationFn: () => syncApi.create(accountId, mode, provider), onSuccess: onStarted });
   return <form className="space-y-4" onSubmit={e => { e.preventDefault(); start.mutate(); }}>
     <fieldset disabled={start.isPending} className="space-y-3">
       <legend className="font-medium">Choose a sync</legend>
@@ -75,5 +75,5 @@ export default function Sync() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
   const accountId = params.get("account");
-  return <AuthShell title="Sync orders">{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId} accountId={accountId} onStarted={job => setParams({ job: job.id })} /> : <><p>Choose a linked account from Home to start a sync.</p><Link to="/home">Back to Home</Link></>}</AuthShell>;
+  return <AuthShell title="Sync orders">{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId + (params.get("provider") ?? "")} accountId={accountId} provider={params.get("provider") ?? undefined} onStarted={job => setParams({ job: job.id })} /> : <><p>Choose a linked account from Home to start a sync.</p><Link to="/home">Back to Home</Link></>}</AuthShell>;
 }

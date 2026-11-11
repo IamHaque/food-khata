@@ -23,6 +23,7 @@ export function LinkAccount() {
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
+  const [addedTo, setAddedTo] = React.useState<string | null>(null);
 
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +47,8 @@ export function LinkAccount() {
     setError(null);
     setSubmitting(true);
     try {
-      await accountsApi.linkVerify(handle, code);
+      const res = await accountsApi.linkVerify(handle, code);
+      if (res.added_to_existing) setAddedTo(`${provider.charAt(0).toUpperCase()}${provider.slice(1)} added to the account for ••••${phone.slice(-4)}`);
       await queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setSuccess(true);
       timer.current = setTimeout(() => navigate("/home"), 800);
@@ -77,7 +79,7 @@ export function LinkAccount() {
   return (
     <AuthShell title="Link account" subtitle="Phone number → SMS code.">
       <div className="space-y-4">
-        {success && <StatusBanner variant="success">Linked successfully</StatusBanner>}
+        {success && <StatusBanner variant="success">{addedTo ?? "Linked successfully"}</StatusBanner>}
         {error && <StatusBanner variant="error">{error}</StatusBanner>}
 
         {step === "phone" && (

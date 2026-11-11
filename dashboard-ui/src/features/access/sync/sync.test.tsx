@@ -24,7 +24,7 @@ describe("sync screens", () => {
     expect(output).toMatch(/checked="" value="new"/);
     for (const text of ["New orders", "All history", "Missing bill details", "20 minutes or more", "1,000 orders"]) expect(output).toContain(text);
     await state.mutation.mutationFn();
-    expect(start).toHaveBeenCalledWith("synthetic-account", "new");
+    expect(start).toHaveBeenCalledWith("synthetic-account", "new", undefined);
     state.mutation.onSuccess(job("queued"));
     expect(started).toHaveBeenCalledWith(job("queued"));
   });

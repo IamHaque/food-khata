@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class CreateSyncJobRequest(BaseModel):
     account_id: str = Field(..., description="Linked account local ID to sync")
+    provider: str | None = Field(default=None, description="Provider to sync; required when the account has several")
     mode: Literal["new", "missing", "all", "incremental", "repair", "full"] = Field(
         default="new",
         description="Sync mode: 'new' (incremental), 'missing' (repair), or 'all' (full scan)",

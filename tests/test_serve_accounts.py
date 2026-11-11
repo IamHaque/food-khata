@@ -313,3 +313,32 @@ def test_account_ids_must_be_own(tmp_path):
         client.post("/api/dashboard", json={"account_ids": ["someone-elses"]}),
     ):
         assert res.status_code == 422, res.text
+
+
+def test_one_account_several_providers(tmp_path):
+    """PR-06 (R-01): Zomato and Swiggy on one phone are one account with one row, job and disconnect each."""
+    client, data_root, _ = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+
+    def link(provider):
+        handle = client.post("/api/accounts/link/start", json={"provider": provider, "phone": "9876543210"}).json()["handle"]
+        return client.post("/api/accounts/link/verify", json={"handle": handle, "code": "123456"}).json()
+
+    first, second = link("zomato"), link("swiggy")
+    assert second["id"] == first["id"] and (first["added_to_existing"], second["added_to_existing"]) == (False, True)
+    rows = client.get("/api/accounts").json()
+    assert sorted(r["provider"] for r in rows) == ["swiggy", "zomato"]
+    account_id = first["id"]
+
+    for res in (
+        client.post("/api/sync/jobs", json={"account_id": account_id}),
+        client.post(f"/api/accounts/{account_id}/verify-again", json={}),
+        client.post(f"/api/accounts/{account_id}/disconnect", json={}),
+    ):
+        assert (res.status_code, res.json()["error"]["code"]) == (422, "PROVIDER_REQUIRED")
+    assert client.post("/api/sync/jobs", json={"account_id": account_id, "provider": "swiggy"}).status_code == 200
+    assert client.post("/api/sync/jobs", json={"account_id": account_id, "provider": "zomato"}).status_code == 200
+
+    assert client.post(f"/api/accounts/{account_id}/disconnect", json={"provider": "swiggy"}).status_code == 200
+    by_provider = {r["provider"]: r for r in client.get("/api/accounts").json()}
+    assert by_provider["zomato"]["has_session"] and not by_provider["swiggy"]["has_session"]

@@ -468,6 +468,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/accounts/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Providers */
+        get: operations["providers_api_accounts_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/accounts/link/start": {
         parameters: {
             query?: never;
@@ -949,6 +966,11 @@ export interface components {
              */
             account_id: string;
             /**
+             * Provider
+             * @description Provider to sync; required when the account has several
+             */
+            provider?: string | null;
+            /**
              * Mode
              * @description Sync mode: 'new' (incremental), 'missing' (repair), or 'all' (full scan)
              * @default new
@@ -1033,6 +1055,11 @@ export interface components {
              * @default false
              */
             wipe_data: boolean;
+            /**
+             * Provider
+             * @description Provider to disconnect; required when the account has several
+             */
+            provider?: string | null;
         };
         /** DisconnectResponse */
         DisconnectResponse: {
@@ -1543,6 +1570,12 @@ export interface components {
              * @description Account name
              */
             name?: string | null;
+            /**
+             * Added To Existing
+             * @description True when the phone already had an account (another provider was added)
+             * @default false
+             */
+            added_to_existing: boolean;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -2069,6 +2102,11 @@ export interface components {
              * @description Optional OTP code if verifying in one call
              */
             code?: string | null;
+            /**
+             * Provider
+             * @description Provider to verify; required when the account has several
+             */
+            provider?: string | null;
         };
         /** VerifyAgainResponse */
         VerifyAgainResponse: {
@@ -3041,6 +3079,26 @@ export interface operations {
             };
         };
     };
+    providers_api_accounts_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     link_start_api_accounts_link_start_post: {
         parameters: {
             query?: never;
@@ -3146,6 +3204,7 @@ export interface operations {
         parameters: {
             query?: {
                 wipe_data?: boolean;
+                provider?: string | null;
             };
             header?: never;
             path: {
@@ -3183,6 +3242,7 @@ export interface operations {
         parameters: {
             query?: {
                 wipe_data?: boolean;
+                provider?: string | null;
             };
             header?: never;
             path: {

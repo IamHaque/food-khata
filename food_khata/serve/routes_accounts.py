@@ -77,6 +77,30 @@ def get_linking_service(request: Request) -> LinkingService:
     return svc
 
 
+def pick_provider(acc: dict[str, Any], requested: str | None) -> str:
+    """The provider an action targets: explicit, or the only one the account has (R-01)."""
+    providers = list((acc.get("providers") or {}).keys())
+    if requested:
+        if requested not in providers:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "NOT_FOUND",
+                    "message": f"Provider '{requested}' is not linked to this account.",
+                },
+            )
+        return requested
+    if len(providers) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "PROVIDER_REQUIRED",
+                "message": "This account has several providers; name one.",
+            },
+        )
+    return providers[0] if providers else "zomato"
+
+
 def _user_accounts(user_storage: Storage) -> list[dict[str, Any]]:
     found = []
     if user_storage.accounts_dir.exists():
@@ -91,14 +115,19 @@ def _user_accounts(user_storage: Storage) -> list[dict[str, Any]]:
 def _release_link(request: Request, provider: str, identity: str) -> None:
     conn = connect_app_db(request.app.state.app_db_path)
     try:
-        conn.execute("DELETE FROM provider_links WHERE provider = ? AND identity_hash = ?", (provider, identity))
+        conn.execute(
+            "DELETE FROM provider_links WHERE provider = ? AND identity_hash = ?",
+            (provider, identity),
+        )
         conn.commit()
     finally:
         conn.close()
 
 
 def _quota_exceeded(existing: list[dict[str, Any]], phone: str) -> bool:
-    return len(existing) >= DEC_010_MAX_ACCOUNTS and not any(a.get("phone") == phone for a in existing)
+    return len(existing) >= DEC_010_MAX_ACCOUNTS and not any(
+        a.get("phone") == phone for a in existing
+    )
 
 
 def _cached_status(session: dict[str, Any] | None) -> str:
@@ -165,27 +194,26 @@ def list_accounts(
             continue
 
         providers = acc.get("providers", {})
-        provider = next(iter(providers.keys()), "zomato")
-        provider_id = providers.get(provider)
-        session = storage.session(account_id, provider)
-        stat = _cached_status(session)
-        orders = acc.get("order_count") or _count_orders(acc_path, provider)
-        last_sync = acc.get("last_sync")
-
-        accounts_out.append(
-            AccountOut(
-                id=account_id,
-                local_id=account_id,
-                provider=provider,
-                phone=acc.get("phone"),
-                provider_id=provider_id,
-                status=stat,
-                last_sync=last_sync,
-                order_count=orders,
-                name=acc.get("name") or acc.get("account_name"),
-                has_session=session is not None,
+        for provider in providers or {"zomato": None}:
+            provider_id = providers.get(provider)
+            session = storage.session(account_id, provider)
+            orders = (acc.get("order_count") if len(providers) <= 1 else None) or _count_orders(
+                acc_path, provider
             )
-        )
+            accounts_out.append(
+                AccountOut(
+                    id=account_id,
+                    local_id=account_id,
+                    provider=provider,
+                    phone=acc.get("phone"),
+                    provider_id=provider_id,
+                    status=_cached_status(session),
+                    last_sync=acc.get("last_sync"),
+                    order_count=orders,
+                    name=acc.get("name") or acc.get("account_name"),
+                    has_session=session is not None,
+                )
+            )
     return accounts_out
 
 
@@ -304,7 +332,16 @@ def link_verify(
         ) from exc
 
     # Allow re-linking if matching phone already exists among user's accounts
-    is_existing = any((a.get("phone") == entry.phone or (not a.get("phone") and a.get("providers", {}).get(entry.provider) == provider_identity(provider_id))) for a in existing_accounts)
+    is_existing = any(
+        (
+            a.get("phone") == entry.phone
+            or (
+                not a.get("phone")
+                and a.get("providers", {}).get(entry.provider) == provider_identity(provider_id)
+            )
+        )
+        for a in existing_accounts
+    )
     if len(existing_accounts) >= DEC_010_MAX_ACCOUNTS and not is_existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -331,10 +368,13 @@ def link_verify(
     identity = provider_identity(provider_id)
     links = connect_app_db(request.app.state.app_db_path)
     try:
-        claimed = links.execute(
-            "INSERT OR IGNORE INTO provider_links (provider, identity_hash, user_id) VALUES (?, ?, ?)",
-            (entry.provider, identity, user_id),
-        ).rowcount == 1
+        claimed = (
+            links.execute(
+                "INSERT OR IGNORE INTO provider_links (provider, identity_hash, user_id) VALUES (?, ?, ?)",
+                (entry.provider, identity, user_id),
+            ).rowcount
+            == 1
+        )
         links.commit()
         owner = links.execute(
             "SELECT user_id FROM provider_links WHERE provider = ? AND identity_hash = ?",
@@ -383,6 +423,7 @@ def link_verify(
             phone=entry.phone,
             status="ok",
             name=account.get("name"),
+            added_to_existing=any(a.get("phone") == entry.phone for a in existing_accounts),
         )
     except KhataError as exc:
         if claimed:
@@ -410,9 +451,8 @@ def verify_again(
         )
 
     phone = acc.get("phone")
-    providers = acc.get("providers", {})
-    provider = next(iter(providers.keys()), "zomato")
-    expected_id = providers.get(provider)
+    provider = pick_provider(acc, data.provider if data else None)
+    expected_id = acc.get("providers", {}).get(provider)
 
     if not phone:
         raise HTTPException(
@@ -492,6 +532,7 @@ def disconnect_account(
     request: Request,
     user_id: Annotated[str, Depends(get_current_user_id)],
     wipe_data: bool = False,
+    provider: str | None = None,
     body: DisconnectRequest | None = None,
 ):
     """Disconnect account. Wipes or preserves data according to wipe_data flag."""
@@ -505,7 +546,28 @@ def disconnect_account(
         )
 
     acc_path = user_storage.accounts_dir / account_id
-    if effective_wipe:
+    provider = pick_provider(acc, provider or (body.provider if body else None))
+    others = [p for p in acc.get("providers", {}) if p != provider]
+    if effective_wipe and others:
+        # Another provider shares this account: remove only this provider's session, archive and orders.
+        user_storage.remove_session(account_id, provider)
+        for f in acc_path.glob(f"{provider}-*.json"):
+            f.unlink(missing_ok=True)
+        for key in ("providers", "provider_identities"):
+            (acc.get(key) or {}).pop(provider, None)
+        user_storage._write_account(acc)
+        data_root = getattr(request.app.state, "data_root", None)
+        user_db = user_database(data_root, user_id) if data_root else None
+        if user_db and user_db.is_file():
+            with sqlite3.connect(user_db) as conn:
+                conn.execute(
+                    "DELETE FROM orders WHERE account_id = ? AND UPPER(platform) = UPPER(?)",
+                    (account_id, provider),
+                )
+                conn.execute(
+                    "DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders)"
+                )
+    elif effective_wipe:
         if acc_path.exists():
             shutil.rmtree(acc_path, ignore_errors=True)
         # Also clean up orders from user database if analytics db exists
@@ -523,15 +585,17 @@ def disconnect_account(
                 except Exception:
                     pass
     else:
-        # Preserves data: remove sessions only
-        for prov in acc.get("providers", {}).keys():
-            user_storage.remove_session(account_id, prov)
-        acc["has_session"] = False
+        # Preserves data: remove this provider's session only
+        user_storage.remove_session(account_id, provider)
+        acc["has_session"] = bool(others)
         user_storage._write_account(acc)
 
     links = connect_app_db(request.app.state.app_db_path)
     try:  # the provider account is free for any user to link again
-        links.execute("DELETE FROM provider_links WHERE user_id = ? AND account_id = ?", (user_id, account_id))
+        links.execute(
+            "DELETE FROM provider_links WHERE user_id = ? AND account_id = ? AND provider = ?",
+            (user_id, account_id, provider),
+        )
         links.commit()
     finally:
         links.close()

@@ -2816,6 +2816,25 @@
         }
       }
     },
+    "/api/accounts/providers": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Providers",
+        "operationId": "providers_api_accounts_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/accounts/link/start": {
       "post": {
         "tags": [
@@ -2987,6 +3006,22 @@
               "default": false,
               "title": "Wipe Data"
             }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
           }
         ],
         "requestBody": {
@@ -3056,6 +3091,22 @@
               "type": "boolean",
               "default": false,
               "title": "Wipe Data"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
             }
           }
         ],
@@ -4119,6 +4170,18 @@
             "title": "Account Id",
             "description": "Linked account local ID to sync"
           },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Provider to sync; required when the account has several"
+          },
           "mode": {
             "type": "string",
             "enum": [
@@ -4320,6 +4383,18 @@
             "title": "Wipe Data",
             "description": "Whether to wipe stored orders and history files",
             "default": false
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Provider to disconnect; required when the account has several"
           }
         },
         "type": "object",
@@ -5753,6 +5828,12 @@
             ],
             "title": "Name",
             "description": "Account name"
+          },
+          "added_to_existing": {
+            "type": "boolean",
+            "title": "Added To Existing",
+            "description": "True when the phone already had an account (another provider was added)",
+            "default": false
           }
         },
         "type": "object",
@@ -7208,6 +7289,18 @@
             ],
             "title": "Code",
             "description": "Optional OTP code if verifying in one call"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Provider to verify; required when the account has several"
           }
         },
         "type": "object",

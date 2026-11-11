@@ -42,10 +42,12 @@ class LinkVerifyResponse(BaseModel):
     phone: str | None = Field(default=None, description="Linked phone number")
     status: str = Field(default="ok", description="Account session status")
     name: str | None = Field(default=None, description="Account name")
+    added_to_existing: bool = Field(default=False, description="True when the phone already had an account (another provider was added)")
 
 
 class VerifyAgainRequest(BaseModel):
     code: str | None = Field(default=None, description="Optional OTP code if verifying in one call")
+    provider: str | None = Field(default=None, description="Provider to verify; required when the account has several")
 
 
 class VerifyAgainResponse(BaseModel):
@@ -56,6 +58,7 @@ class VerifyAgainResponse(BaseModel):
 
 class DisconnectRequest(BaseModel):
     wipe_data: bool = Field(default=False, description="Whether to wipe stored orders and history files")
+    provider: str | None = Field(default=None, description="Provider to disconnect; required when the account has several")
 
 
 class DisconnectResponse(BaseModel):

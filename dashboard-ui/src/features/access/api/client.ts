@@ -174,16 +174,16 @@ export const accountsApi = {
       body: { handle, code, account_name },
     });
   },
-  async verifyAgain(accountId: string) {
+  async verifyAgain(accountId: string, provider?: string) {
     return request<components["schemas"]["VerifyAgainResponse"]>(`/api/accounts/${accountId}/verify-again`, {
       method: "POST",
-      body: {},
+      body: { provider },
     });
   },
-  async disconnect(accountId: string, wipe_data = false) {
+  async disconnect(accountId: string, wipe_data = false, provider?: string) {
     return request<components["schemas"]["DisconnectResponse"]>(`/api/accounts/${accountId}/disconnect`, {
       method: "POST",
-      body: { wipe_data },
+      body: { wipe_data, provider },
     });
   },
 };
