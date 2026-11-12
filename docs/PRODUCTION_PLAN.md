@@ -502,7 +502,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | DONE | 2026-11-11 | mixed load 0 5xx of 3,303; kill 20 of 20 runs identical; soak 30 min flat; tests/stress 9 pass; numbers in docs/PERFORMANCE.md | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | DONE | 2026-11-11 | README first-hour path, architecture with system and job-state diagrams, honest limits; commands checked with --help and a throwaway folder; verify green | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
-| GC | Production acceptance | P4 | P0 | IN_PROGRESS | 2026-11-12 | all stories DONE; full verify, browser, build, bundle, load, kill, soak green; independent review done and fixed; waiting for your manual smoke and backup/restore, and your call on DEC-P1 | W7 |
+| GC | Production acceptance | P4 | P0 | IN_PROGRESS | 2026-11-12 | all stories DONE; full verify, browser, build, bundle, load, kill, soak green; independent review done and fixed; manual smoke done by the owner (all good, 2026-11-12); still waiting for the backup/restore check and your call on DEC-P1 | W7 |
 
 ### 5.2 Decision log
 
