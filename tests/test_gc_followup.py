@@ -263,3 +263,28 @@ def test_maintenance_prunes_unlocked_keys_of_dead_sessions(tmp_path):
     assert Maintenance(tmp_path / "app.db", on_run=app.state.prune_unlocked_sessions).on_run is app.state.prune_unlocked_sessions
     app.state.prune_unlocked_sessions()
     assert set(app.state.unlocked_sessions) == {live}
+
+
+# --- item 6 -----------------------------------------------------------------
+def test_quarantined_order_is_retried_only_when_its_payload_changes(tmp_path):
+    from food_khata.db import AnalyticsDB
+    from food_khata.storage import Storage, save_json
+
+    storage = Storage(tmp_path / "storage")
+    acc_id = "00000000-0000-0000-0000-000000000001"
+    directory = storage.account_path(acc_id)
+    save_json(directory / "account.json", {"phone": "test"})
+    path = directory / "swiggy-history.json"
+    save_json(path, {"orders": {"o1": []}})
+    db = AnalyticsDB(tmp_path / "analytics.db")
+    assert db.ingest_account(storage, acc_id)["quarantined"] == 1
+    again = db.ingest_account(storage, acc_id)  # unchanged bad payload: not retried
+    assert again["quarantined"] == 0 and again["total"] == 0
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0] == 1
+    save_json(path, {"orders": {"o1": {"details": {"orders": [{"order_total": 10}]}}}})
+    fixed = db.ingest_account(storage, acc_id)
+    assert fixed["total"] == 1
+    with db.connection() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 1

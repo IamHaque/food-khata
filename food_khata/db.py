@@ -16,6 +16,7 @@ from .contracts import KhataError
 from .storage import DEFAULT_DATA_DIR, Storage, read_json
 
 DEFAULT_DB_PATH = DEFAULT_DATA_DIR / "food_analytics.db"
+PARSER_VERSION = "1"  # bump when order parsing changes, so quarantined orders are retried
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # ==========================================
@@ -394,6 +395,14 @@ class AnalyticsDB:
                     except sqlite3.OperationalError as exc:  # a concurrent init added it first
                         if "duplicate column" not in str(exc):
                             raise
+            quarantine_columns = {r[1] for r in conn.execute("PRAGMA table_info(quarantine)")}
+            for name in ("source_digest", "parser_version"):
+                if name not in quarantine_columns:
+                    try:
+                        conn.execute(f"ALTER TABLE quarantine ADD COLUMN {name} TEXT")
+                    except sqlite3.OperationalError as exc:  # a concurrent init added it first
+                        if "duplicate column" not in str(exc):
+                            raise
             conn.commit()
 
     def record_quarantine(
@@ -405,8 +414,9 @@ class AnalyticsDB:
         reason: str,
         error_details: str,
         raw_payload: Any,
+        source_digest: str | None = None,
     ) -> None:
-        """Record a malformed order in the quarantine table for auditing."""
+        """Record a malformed order in the quarantine table (one row per order) for auditing."""
         try:
             payload_str = (
                 json.dumps(raw_payload, ensure_ascii=False)
@@ -417,10 +427,15 @@ class AnalyticsDB:
             payload_str = str(raw_payload)
 
         cursor.execute(
+            "DELETE FROM quarantine WHERE account_id = ? AND platform = ? AND platform_order_id = ?",
+            (account_id, platform.upper(), str(order_id)),
+        )
+        cursor.execute(
             """
             INSERT INTO quarantine (
-                account_id, platform, platform_order_id, reason, error_details, raw_payload, quarantined_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                account_id, platform, platform_order_id, reason, error_details, raw_payload, quarantined_at,
+                source_digest, parser_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 account_id,
@@ -430,6 +445,8 @@ class AnalyticsDB:
                 error_details,
                 payload_str,
                 datetime.now(IST).isoformat(),
+                source_digest,
+                PARSER_VERSION,
             ),
         )
 
@@ -1029,7 +1046,7 @@ class AnalyticsDB:
                 if not isinstance(archive, dict) or not isinstance(archive.get("orders"), dict):
                     raise KhataError(f"Invalid {provider} archive")
 
-                existing_oids: set[str] = set()
+                quarantined: dict[str, tuple[str | None, str | None]] = {}
                 stored_hashes: dict[str, str | None] = {}
                 if incremental:
                     # An order is skipped only when its archive content is unchanged since it was imported.
@@ -1039,10 +1056,11 @@ class AnalyticsDB:
                     )
                     stored_hashes = {str(row[0]): row[1] for row in cursor.fetchall()}
                     cursor.execute(
-                        "SELECT platform_order_id FROM quarantine WHERE account_id = ? AND platform = ?",
+                        "SELECT platform_order_id, source_digest, parser_version FROM quarantine"
+                        " WHERE account_id = ? AND platform = ?",
                         (local_id, provider.upper()),
                     )
-                    existing_oids.update(str(row[0]) for row in cursor.fetchall())
+                    quarantined = {str(row[0]): (row[1], row[2]) for row in cursor.fetchall()}
 
                 cursor.execute(
                     """INSERT INTO archive_imports VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1063,7 +1081,10 @@ class AnalyticsDB:
                 for oid, order in archive["orders"].items():
                     oid_str = str(oid)
                     digest = hashlib.sha256(json.dumps(order, sort_keys=True, default=str).encode()).hexdigest()
-                    if incremental and (oid_str in existing_oids or stored_hashes.get(oid_str) == digest):
+                    # A quarantined order is retried unless the same bytes failed under the same parser (NULL = retry).
+                    if incremental and (
+                        stored_hashes.get(oid_str) == digest or quarantined.get(oid_str) == (digest, PARSER_VERSION)
+                    ):
                         continue
                     sp_id = f"sp_{re.sub(r'[^a-zA-Z0-9_]', '_', oid_str)}"
                     cursor.execute(f"SAVEPOINT {sp_id}")
@@ -1080,6 +1101,10 @@ class AnalyticsDB:
                                 "UPDATE orders SET source_hash = ? WHERE account_id = ? AND platform = ? AND platform_order_id = ?",
                                 (digest, local_id, provider.upper(), oid_str),
                             )
+                        cursor.execute(
+                            "DELETE FROM quarantine WHERE account_id = ? AND platform = ? AND platform_order_id = ?",
+                            (local_id, provider.upper(), oid_str),
+                        )
                         cursor.execute(f"RELEASE SAVEPOINT {sp_id}")
                     except KhataError as exc:
                         cursor.execute(f"ROLLBACK TO SAVEPOINT {sp_id}")
@@ -1089,7 +1114,7 @@ class AnalyticsDB:
                         reason = str(exc)
                         error_details = traceback.format_exc()
                         self.record_quarantine(
-                            cursor, local_id, provider, oid_str, reason, error_details, order
+                            cursor, local_id, provider, oid_str, reason, error_details, order, digest
                         )
                         counts["quarantined"] += 1
                         counts["quarantine"].append(
@@ -1106,7 +1131,7 @@ class AnalyticsDB:
                         reason = f"Malformed order: {type(exc).__name__}: {exc}"
                         error_details = traceback.format_exc()
                         self.record_quarantine(
-                            cursor, local_id, provider, oid_str, reason, error_details, order
+                            cursor, local_id, provider, oid_str, reason, error_details, order, digest
                         )
                         counts["quarantined"] += 1
                         counts["quarantine"].append(
