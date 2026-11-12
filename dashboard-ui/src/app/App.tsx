@@ -8,6 +8,7 @@ const AnalyticsPage = lazy(() =>
   import('./AnalyticsPages').then((m) => ({ default: m.AnalyticsPage })),
 );
 const Orders = lazy(() => import('./Orders').then((m) => ({ default: m.Orders })));
+const DataHealth = lazy(() => import('./DataHealth'));
 const DesignSystem = lazy(() =>
   import('./DesignSystem').then((m) => ({ default: m.DesignSystem })),
 );
@@ -27,7 +28,7 @@ import { AccountSelector } from './AccountSelector';
 import { FilterBar } from './FilterBar';
 import { ThemeControl } from './ThemeControl';
 import { SyncStatusChip } from './SyncStatusChip';
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
 import {
   LayoutDashboard,
@@ -42,7 +43,10 @@ import {
   UtensilsCrossed,
   AlertCircle,
   CheckCircle2,
-  Menu,
+  MapPin,
+  HeartPulse,
+  Settings as SettingsIcon,
+  Ellipsis,
 } from 'lucide-react';
 import '../styles/app.css';
 import AccessRoutes from '../features/access/routes';
@@ -51,13 +55,18 @@ import { AccessBanners } from '../features/access/banners/AccessBanners';
 import { SessionControls } from '../features/access/banners/SessionControls';
 import { useAccounts } from '../features/access/api';
 
-const pages = [
-  { name: 'Overview', icon: LayoutDashboard },
-  { name: 'Spending', icon: TrendingUp },
-  { name: 'Food', icon: Utensils },
-  { name: 'Habits', icon: Clock },
-  { name: 'Orders', icon: Receipt },
+// bare: the page lives outside the filtered dashboard shell, so links drop the filter query.
+const pages: { name: string; path: string; icon: typeof Clock; bare?: boolean }[] = [
+  { name: 'Overview', path: '/', icon: LayoutDashboard },
+  { name: 'Spending', path: '/spending', icon: TrendingUp },
+  { name: 'Food', path: '/food', icon: Utensils },
+  { name: 'Habits', path: '/habits', icon: Clock },
+  { name: 'Places', path: '/places', icon: MapPin },
+  { name: 'Orders', path: '/orders', icon: Receipt },
+  { name: 'Data health', path: '/data-health', icon: HeartPulse },
+  { name: 'Settings', path: '/settings', icon: SettingsIcon, bare: true },
 ];
+const tabs = pages.slice(0, 4); // bottom tab bar; everything else sits behind More
 
 export function NotFoundPage() {
   const location = useLocation();
@@ -99,7 +108,7 @@ function Shell() {
 
   return (
     <TooltipProvider>
-    <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden">
+    <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden pb-16 lg:pb-0">
       {/* Accessible skip link */}
       <a
         href="#main-content"
@@ -113,15 +122,6 @@ function Shell() {
         {/* Brand + Mobile nav toggle */}
         <div className="flex items-center gap-2 shrink-0">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                aria-label="Open navigation menu"
-                className="lg:hidden inline-flex items-center justify-center p-2 rounded-md border border-input bg-background min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4 bg-card">
               <SheetHeader className="pb-3 border-b text-left">
                 <SheetTitle className="text-base font-bold text-foreground flex items-center gap-2">
@@ -130,14 +130,14 @@ function Shell() {
                 </SheetTitle>
               </SheetHeader>
               <nav aria-label="Mobile drawer navigation" className="flex flex-col gap-1.5 py-4">
-                {pages.map((p, i) => {
-                  const path = i === 0 ? '/' : `/${p.name.toLowerCase().replace(' ', '-')}`;
+                {pages.map((p) => {
+                  const path = p.path;
                   const active = location.pathname === path;
                   const Icon = p.icon;
                   return (
                     <Link
                       key={p.name}
-                      to={{ pathname: path, search: location.search }}
+                      to={{ pathname: path, search: p.bare ? '' : location.search }}
                       onClick={() => setMobileOpen(false)}
                       aria-current={active ? 'page' : undefined}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
@@ -204,14 +204,14 @@ function Shell() {
               )}
             </button>
 
-            {pages.map((p, i) => {
-              const path = i === 0 ? '/' : `/${p.name.toLowerCase().replace(' ', '-')}`;
+            {pages.map((p) => {
+              const path = p.path;
               const active = location.pathname === path;
               const Icon = p.icon;
               const item = (
                 <Link
                   key={p.name}
-                  to={{ pathname: path, search: location.search }}
+                  to={{ pathname: path, search: p.bare ? '' : location.search }}
                   title={p.name}
                   aria-label={p.name}
                   aria-current={active ? 'page' : undefined}
@@ -307,15 +307,24 @@ function Shell() {
             <FilterBar />
           )}
 
-          {accounts.data?.length !== 0 && health.data && (!health.data.history_complete || !health.data.details_complete) && (
-            <p
-              className="partial rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2"
-              role="status"
-            >
-              <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>Some API-visible history or order details are incomplete for this account scope.</span>
-            </p>
-          )}
+          {accounts.data?.length !== 0 && health.data && location.pathname !== '/data-health' && (() => {
+            const incomplete = !health.data.history_complete || !health.data.details_complete;
+            const anomalies = (health.data.reconciliation_anomalies ?? 0) + (health.data.quarantined_orders ?? 0);
+            if (!incomplete && !anomalies) return null;
+            return (
+              <p
+                className="partial rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center gap-2"
+                role="status"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  {incomplete ? 'Some API-visible history or order details are incomplete for this account scope. ' : ''}
+                  {anomalies ? `${anomalies} order${anomalies === 1 ? '' : 's'} need review (totals that do not reconcile or records set aside). ` : ''}
+                </span>
+                <Link to={{ pathname: '/data-health', search: location.search }} className="underline font-medium">View Data health</Link>
+              </p>
+            );
+          })()}
 
           {/* Routes */}
           <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
@@ -327,9 +336,9 @@ function Shell() {
                 <Route path="/habits" element={<AnalyticsPage page="Habits" />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
-                <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
+                <Route path="/places" element={<AnalyticsPage page="Places" />} />
                 <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
-                <Route path="/data-health" element={<Navigate to={`/?sync=open`} replace />} />
+                <Route path="/data-health" element={<DataHealth />} />
                 {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
@@ -342,6 +351,38 @@ function Shell() {
           </footer>
         </div>
       </div>
+
+      <nav
+        aria-label="Mobile tabs"
+        className="lg:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      >
+        {tabs.map((p) => {
+          const active = location.pathname === p.path;
+          const Icon = p.icon;
+          return (
+            <Link
+              key={p.name}
+              to={{ pathname: p.path, search: location.search }}
+              aria-current={active ? 'page' : undefined}
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium ${
+                active ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              {p.name}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-haspopup="dialog"
+          className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium text-muted-foreground"
+        >
+          <Ellipsis className="h-5 w-5" aria-hidden="true" />
+          More
+        </button>
+      </nav>
     </div>
     </TooltipProvider>
   );
@@ -354,6 +395,6 @@ export function App() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/account/password", "/sync", "/settings"].includes(pathname)) return <AccessRoutes />;
+  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/account/password", "/sync", "/settings"].includes(pathname) || pathname.startsWith("/jobs")) return <AccessRoutes />;
   return <RequireAuth><FilterProvider><Shell /></FilterProvider></RequireAuth>;
 }

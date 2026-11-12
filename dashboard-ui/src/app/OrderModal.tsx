@@ -281,7 +281,7 @@ export function OrderModal({
                 <div>
                   <dt className="text-xs text-muted-foreground font-medium">Account</dt>
                   <dd className="font-semibold text-foreground truncate">
-                    {o?.account_label} · {o?.account_id}
+                    {o?.account_label}
                   </dd>
                 </div>
                 {o?.payment_method && (

@@ -91,12 +91,12 @@ describe("WeekdayBarsChart pure option builder (CC-2, CC-3, CC-8, CC-12)", () =>
     const ordersSeries = option.series[0];
     const spendSeries = option.series[1];
 
-    // Monday through Friday (indices 0..4) MUST have solid decal ("none")
+    // Monday through Friday (indices 0..4) MUST have no decal (the string "none" crashes ECharts)
     for (let i = 0; i <= 4; i++) {
-      expect(ordersSeries.data[i].itemStyle.decal).toBe("none");
+      expect(ordersSeries.data[i].itemStyle.decal).toBeUndefined(); // the string "none" crashes ECharts
       expect(ordersSeries.data[i].itemStyle.color).toBe(theme.colors[0]);
 
-      expect(spendSeries.data[i].itemStyle.decal).toBe("none");
+      expect(spendSeries.data[i].itemStyle.decal).toBeUndefined();
       expect(spendSeries.data[i].itemStyle.color).toBe(theme.colors[2]);
     }
 

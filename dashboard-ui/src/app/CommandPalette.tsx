@@ -238,7 +238,11 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
     { group: 'Navigate', label: 'Spending', icon: Compass, run: () => go('/spending', 'Spending') },
     { group: 'Navigate', label: 'Food', icon: Compass, run: () => go('/food', 'Food') },
     { group: 'Navigate', label: 'Habits', icon: Compass, run: () => go('/habits', 'Habits') },
+    { group: 'Navigate', label: 'Places', icon: Compass, run: () => go('/places', 'Places') },
     { group: 'Navigate', label: 'Orders', icon: Compass, run: () => go('/orders', 'Orders') },
+    { group: 'Navigate', label: 'Data health', icon: Compass, run: () => go('/data-health', 'Data health') },
+    { group: 'Navigate', label: 'Sync jobs', icon: Compass, run: () => { navigate({ pathname: '/jobs', search: '' }); setAnnouncement('Navigated to Sync jobs'); } },
+    { group: 'Navigate', label: 'Settings', icon: Compass, run: () => { navigate({ pathname: '/settings', search: '' }); setAnnouncement('Navigated to Settings'); } },
     // Filters
     { group: 'Filters', label: 'Period: 7d', icon: Filter, run: () => applyPreset('7d') },
     { group: 'Filters', label: 'Period: 30d', icon: Filter, run: () => applyPreset('30d') },

@@ -457,4 +457,19 @@ describe("OrderValueDistributionChart - React Component & ChartCard Integration 
     );
     expect(html).toContain("Custom order value distribution takeaway");
   });
+
+  it("draws the API aov_histogram (lower-bound keys) instead of the empty state", () => {
+    const html = renderToString(
+      <MemoryRouter>
+        <OrderValueDistributionChart
+          aov_histogram={[{ key: "0", orders: 2 }, { key: "100", orders: 3 }, { key: "250", orders: 1 }]}
+          showTable={true}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(html).not.toContain("No order value distribution data");
+    expect(html).toContain("₹0–₹100");
+    expect(html).toContain("₹250+");
+  });
 });

@@ -277,3 +277,72 @@ def test_verify_again_resumes_needs_code_job_and_expiry_is_db_driven(tmp_path):
     client.app.state.job_runner.registered_payloads.clear()
     assert "old" in client.app.state.job_runner.drop_expired_keys(max_age_seconds=-1)
     assert get_job(app_db, "old")["status"] == "interrupted"
+
+
+def _finish(client, job_id):
+    for _ in range(100):
+        if client.get(f"/api/sync/jobs/{job_id}").json()["status"] in ("done", "failed", "interrupted", "cancelled"):
+            return
+        time.sleep(0.1)
+
+
+def test_accounts_show_real_count_last_sync_active_job_and_masked_phone(tmp_path):
+    from food_khata.jobs.db import create_job
+
+    client, _, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    acc_id = _link_account(client, "9876543210")
+    job = client.post("/api/sync/jobs", json={"account_id": acc_id, "mode": "all"}).json()
+    _finish(client, job["id"])
+    row = client.get("/api/accounts").json()[0]
+    assert row["order_count"] == 10 and row["last_sync"] and row["phone"] == "••••3210"
+    assert row["active_job_id"] is None and row["active_status"] is None  # latest job is done
+    create_job(app_db, job_id="bad", user_id=job["user_id"], account_id=acc_id, provider="zomato", status="failed")
+    row = client.get("/api/accounts").json()[0]
+    assert (row["active_job_id"], row["active_status"]) == ("bad", "failed")
+
+
+def test_account_busy_is_plain_and_names_the_running_job(tmp_path):
+    from food_khata.jobs.db import create_job
+
+    client, _, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    acc_id = _link_account(client)
+    jobs = client.post("/api/sync/jobs", json={"account_id": acc_id, "mode": "all"}).json()
+    _finish(client, jobs["id"])
+    create_job(app_db, job_id="busy", user_id=jobs["user_id"], account_id=acc_id, provider="zomato", status="running")
+    res = client.post("/api/sync/jobs", json={"account_id": acc_id})
+    err = res.json()["error"]
+    assert res.status_code == 409 and err["code"] == "ACCOUNT_BUSY" and err["job_id"] == "busy"
+    assert not err["message"].startswith("409")
+
+
+def test_job_list_filters_by_account_and_pages(tmp_path):
+    from food_khata.jobs.db import create_job
+
+    client, _, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    acc_id = _link_account(client)
+    job = client.post("/api/sync/jobs", json={"account_id": acc_id}).json()
+    _finish(client, job["id"])
+    create_job(app_db, job_id="other", user_id=job["user_id"], account_id="other-acc", provider="zomato", status="failed")
+    assert [j["id"] for j in client.get(f"/api/sync/jobs?account_id={acc_id}").json()] == [job["id"]]
+    assert [j["id"] for j in client.get("/api/sync/jobs?status=failed").json()] == ["other"]
+    assert [j["id"] for j in client.get("/api/sync/jobs?limit=1&offset=1").json()] == [job["id"]]
+
+
+def test_running_job_reports_progress_and_eta(tmp_path):
+    from food_khata.jobs.db import create_job, update_job
+
+    client, _, app_db = _make_client(tmp_path)
+    authenticate_client(client, username="alice", is_owner=True)
+    acc_id = _link_account(client)
+    uid = client.post("/api/sync/jobs", json={"account_id": acc_id}).json()["user_id"]
+    now = time.time()
+    create_job(app_db, job_id="old", user_id=uid, account_id="a2", provider="zomato", mode="full", status="done")
+    update_job(app_db, "old", started_at=now - 1000, finished_at=now - 900)  # a 100 s run to base the ETA on
+    create_job(app_db, job_id="run", user_id=uid, account_id="a3", provider="zomato", mode="full", status="running")
+    update_job(app_db, "run", started_at=now - 40, phase="details", page=5, counts={"orders": 200, "details": 50, "details_downloaded": 50})
+    job = client.get("/api/sync/jobs/run").json()
+    assert job["progress"]["percent"] == 25 and job["progress"]["page"] == 5
+    assert 55 <= job["eta_seconds"] <= 61

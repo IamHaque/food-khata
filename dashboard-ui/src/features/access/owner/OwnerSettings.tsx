@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,18 @@ export function OwnerSettings() {
   if (auth.isLoading) return <p className="p-6">Loading…</p>;
   if (!auth.data) return <Navigate to="/login" replace />;
   if (!auth.data.is_owner) return <p className="p-6" role="alert">Owner access required.</p>;
-  return <OwnerControls />;
+  return <main className="mx-auto max-w-4xl p-4 sm:p-6"><Card className="space-y-6 p-5 sm:p-6"><OwnerControls /></Card></main>;
 }
 
-function OwnerControls() {
+type Action = "reset" | "remove" | "transfer";
+const ACTION_TEXT: Record<Action, { title: (name: string) => string; body: string; confirm: string }> = {
+  reset: { title: n => `Reset password for ${n}?`, body: "This wipes the user's provider sessions and cancels their jobs. They will need to re-link their providers.", confirm: "Confirm reset" },
+  remove: { title: n => `Remove ${n}?`, body: "This deletes the user and all of their saved orders, sessions and jobs. It cannot be undone.", confirm: "Remove user" },
+  transfer: { title: n => `Make ${n} the owner?`, body: "You become a regular user and lose owner controls. Only the new owner can transfer it back.", confirm: "Transfer ownership" },
+};
+
+export function OwnerControls() {
+  const queryClient = useQueryClient();
   const status = useQuery({ queryKey: ["owner", "status"], queryFn: () => request<OwnerStatus>("/api/owner/status"), retry: false });
   const audit = useQuery({ queryKey: ["owner", "audit"], queryFn: () => request<{ rows: { at: number; actor: string | null; action: string; target: string | null; ip: string | null }[] }>("/api/owner/audit"), retry: false });
   const users = useQuery({ queryKey: ["owner", "users"], queryFn: () => request<User[]>("/api/owner/users"), retry: false });
@@ -31,7 +40,7 @@ function OwnerControls() {
   const [notice, setNotice] = React.useState("");
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
-  const [target, setTarget] = React.useState<User | null>(null);
+  const [target, setTarget] = React.useState<{ user: User; action: Action } | null>(null);
   const [password, setPassword] = React.useState("");
   const [temporaryPassword, setTemporaryPassword] = React.useState("");
 
@@ -58,8 +67,8 @@ function OwnerControls() {
   const seconds = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
   const windowText = !status.data?.window.is_open || seconds === 0 ? "Closed" : status.data.window.until_closed ? "Open until closed" : seconds === null ? "Open" : `Time left: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-  return <main className="mx-auto max-w-4xl p-4 sm:p-6"><Card className="space-y-6 p-5 sm:p-6">
-    <h1 className="text-2xl font-semibold">Owner settings</h1>
+  return <>
+    <h2 className="text-xl font-semibold">Owner settings</h2>
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {notice && <p role="status">{notice}</p>}
     {(status.isLoading || users.isLoading) && <p>Loading settings…</p>}
@@ -81,9 +90,11 @@ function OwnerControls() {
     </section>
     <section className="space-y-3"><h2 className="text-lg font-semibold">Users</h2>
       <div className="space-y-3">{users.data?.map(user => <div key={user.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
-        <div><strong>{user.username}</strong><span className="ml-2 text-sm text-muted-foreground">{user.is_owner ? "owner" : user.disabled ? "disabled" : "active"}</span></div>
+        <div><strong>{user.username}</strong>{" "}<span className="ml-2 text-sm text-muted-foreground">{user.is_owner ? "owner" : user.disabled ? "disabled" : "active"}</span></div>
         {!user.is_owner && <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => void run(async () => { await request(`/api/owner/users/${encodeURIComponent(user.id)}/disable`, { method: "POST", body: { disabled: !user.disabled } }); await users.refetch(); })}>{user.disabled ? "Enable" : "Disable"}</Button>
-          <Button variant="outline" disabled={busy} onClick={() => { setPassword(""); setTarget(user); }}>Reset password</Button></div>}
+          <Button variant="outline" disabled={busy} onClick={() => { setPassword(""); setTarget({ user, action: "reset" }); }}>Reset password</Button>
+          {!user.disabled && <Button variant="outline" disabled={busy} onClick={() => { setPassword(""); setTarget({ user, action: "transfer" }); }}>Transfer ownership</Button>}
+          <Button variant="destructive" disabled={busy} onClick={() => { setPassword(""); setTarget({ user, action: "remove" }); }}>Remove</Button></div>}
       </div>)}</div>
     </section>
     <section className="space-y-3"><h2 className="text-lg font-semibold">Audit trail</h2>
@@ -92,14 +103,19 @@ function OwnerControls() {
     </section>
     {temporaryPassword && <div role="status" className="rounded border p-3"><p>Temporary password (shown once): <strong>{temporaryPassword}</strong></p><p className="text-sm text-muted-foreground">Share it securely with the user.</p><Button variant="ghost" onClick={() => setTemporaryPassword("")}>Dismiss</Button></div>}
     <Dialog open={!!target} onOpenChange={open => { if (!open && !busy) { setTarget(null); setPassword(""); } }}><DialogContent>
-      <DialogHeader><DialogTitle>Reset password for {target?.username}?</DialogTitle><DialogDescription>This wipes the user's provider sessions and cancels their jobs. They will need to re-link their providers.</DialogDescription></DialogHeader>
-      <form className="space-y-4" onSubmit={event => { event.preventDefault(); if (!target) return; void run(async () => { const result = await request<{ temporary_password: string | null }>(`/api/owner/users/${encodeURIComponent(target.id)}/reset-password`, { method: "POST", body: { owner_password: password } }); setPassword(""); setTarget(null); setTemporaryPassword(result.temporary_password ?? ""); setNotice("Password reset."); }); }}>
+      {target && <><DialogHeader><DialogTitle>{ACTION_TEXT[target.action].title(target.user.username)}</DialogTitle><DialogDescription>{ACTION_TEXT[target.action].body}</DialogDescription></DialogHeader>
+      <form className="space-y-4" onSubmit={event => { event.preventDefault(); const { user, action } = target; void run(async () => {
+        const base = "/api/owner/users/" + encodeURIComponent(user.id);
+        if (action === "reset") { const result = await request<{ temporary_password: string | null }>(`${base}/reset-password`, { method: "POST", body: { owner_password: password } }); setTemporaryPassword(result.temporary_password ?? ""); setNotice("Password reset."); }
+        else if (action === "remove") { await request(`${base}/remove`, { method: "POST", body: { owner_password: password } }); await users.refetch(); setNotice("User removed."); }
+        else { await request("/api/owner/transfer", { method: "POST", body: { owner_password: password, to_user_id: user.id } }); await queryClient.invalidateQueries({ queryKey: ["auth", "me"] }); setNotice("Ownership transferred."); }
+        setPassword(""); setTarget(null); }); }}>
         <label htmlFor="owner-password" className="block text-sm font-medium">Owner password</label><Input id="owner-password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
         {error && <p role="alert" className="text-destructive">{error}</p>}
-        <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={() => { setTarget(null); setPassword(""); }}>Cancel</Button><Button type="submit" variant="destructive" disabled={busy || !password}>Confirm reset</Button></DialogFooter>
-      </form>
+        <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={() => { setTarget(null); setPassword(""); }}>Cancel</Button><Button type="submit" variant="destructive" disabled={busy || !password}>{ACTION_TEXT[target.action].confirm}</Button></DialogFooter>
+      </form></>}
     </DialogContent></Dialog>
-  </Card></main>;
+  </>;
 }
 
 export default OwnerSettings;

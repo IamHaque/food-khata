@@ -7,13 +7,14 @@ export interface AuthShellProps {
   title?: string;
   subtitle?: string;
   children?: React.ReactNode;
+  wide?: boolean;
 }
 
-export function AuthShell({ title, subtitle, children }: AuthShellProps) {
+export function AuthShell({ title, subtitle, children, wide }: AuthShellProps) {
   const status = useSetupStatus();
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+      <div className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} space-y-4 rounded-xl border bg-card p-6 shadow-sm`}>
         <Link to="/home" className="block text-center text-sm font-semibold">Food Khata</Link>
         {(title || subtitle) && (
           <div className="space-y-1 text-center">

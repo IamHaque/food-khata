@@ -310,7 +310,7 @@ export function buildWeekdayBarsOption(
     symbol: "line",
     rotation: Math.PI / 4,
   };
-  const weekdayDecal = "none";
+  const weekdayDecal = undefined; // ECharts reads decal as an object; the string "none" throws "Cannot create property 'dirty'"
 
   const getOpacity = (isWeekend: boolean) => {
     if (activeDayType === "weekday") return isWeekend ? 0.35 : 1;

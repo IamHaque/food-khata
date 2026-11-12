@@ -614,10 +614,11 @@ function OrderValueDistributionChartInner({
       return bucketOrderValues(rawValues, effectiveBins);
     }
     if (aov_histogram && aov_histogram.length > 0) {
-      return aov_histogram.map((item) => {
-        const parts = item.key.split("-");
-        const min = Number(parts[0]) || 0;
-        const max = parts.length > 1 ? Number(parts[1]) || null : null;
+      // The API sends each bin's lower bound as its key; a bin ends where the next one starts.
+      return aov_histogram.map((item, i) => {
+        const min = Number(item.key) || 0;
+        const next = aov_histogram[i + 1];
+        const max = next ? Number(next.key) || null : null;
         const label =
           max !== null ? `₹${min}–₹${max}` : `₹${min}+`;
         return {
@@ -647,7 +648,7 @@ function OrderValueDistributionChartInner({
 
   const isEmpty =
     isEmptyProp ||
-    (!isLoading && !error && (!rawValues || rawValues.length === 0 || totalOrders === 0));
+    (!isLoading && !error && totalOrders === 0);
 
   const autoCaption = React.useMemo(
     () => computeOrderValueDistributionTakeaway(rawValues),
