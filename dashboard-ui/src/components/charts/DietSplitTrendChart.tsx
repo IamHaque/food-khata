@@ -27,6 +27,8 @@ import {
   type DietDatumLike,
 } from "../../lib/captions";
 import { tokenAlpha } from "../../lib/tokens";
+import { pluralize } from "../../lib/format";
+import { swatchBg } from "../../lib/chart-kit";
 
 export interface DietSplitItem extends DietDatumLike {
   diet: string;
@@ -162,7 +164,7 @@ export function formatDietDonutTooltip(
       : "0%";
 
   const marker = p.color
-    ? `<span style="display:inline-block;margin-right:6px;border-radius:50%;width:8px;height:8px;background-color:${p.color};"></span>`
+    ? `<span style="display:inline-block;margin-right:6px;border-radius:50%;width:8px;height:8px;${swatchBg(p.color)}"></span>`
     : "";
 
   return [
@@ -201,7 +203,7 @@ export function formatDietTrendTooltip(
     const val = typeof item.value === "number" ? item.value : 0;
     total += val;
     const marker = item.color
-      ? `<span style="display:inline-block;margin-right:6px;border-radius:50%;width:8px;height:8px;background-color:${item.color};"></span>`
+      ? `<span style="display:inline-block;margin-right:6px;border-radius:50%;width:8px;height:8px;${swatchBg(item.color)}"></span>`
       : "";
     return `
       <div style="display: flex; justify-content: space-between; gap: 12px; color: ${theme.mutedColor}; margin-top: 2px;">
@@ -575,7 +577,7 @@ export function DietSplitTrendChart({
       return `Dietary classification chart unavailable: ${resolvedEmptyReason}`;
     }
     if (viewMode === "split") {
-      const parts = validDiet.map((d) => `${d.diet}: ${d.quantity} items`);
+      const parts = validDiet.map((d) => `${d.diet}: ${pluralize(d.quantity, "item")}`);
       return `Dietary classification donut breakdown: ${parts.join(", ")}`;
     }
     return `Monthly dietary volume trend across ${validMonthly.length} months`;

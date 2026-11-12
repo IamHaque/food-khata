@@ -14,6 +14,7 @@ import { Info } from "lucide-react";
 import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { pluralize } from "../../lib/format";
 import {
   getCurrentChartTheme,
   buildBaseChartOption,
@@ -274,7 +275,7 @@ export function buildDailySpendCalendarOption(
         if (!dateStr) return "";
 
         const formattedSpend = formatRupees(spend);
-        const formattedOrders = `${Number(orders).toLocaleString("en-IN")} ${Number(orders) === 1 ? "order" : "orders"}`;
+        const formattedOrders = pluralize(Number(orders), "order");
 
         return [
           `<div class="font-bold text-xs mb-1">${dateStr}</div>`,

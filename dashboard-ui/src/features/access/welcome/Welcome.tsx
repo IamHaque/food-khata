@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
-import { AuthShell } from "../primitives";
+import { GuestCard } from "../primitives";
 import { useSetupStatus } from "../api";
 import { Login } from "./Login";
 import { Register } from "./Register";
@@ -37,7 +37,7 @@ export function Welcome() {
   };
 
   return (
-    <AuthShell
+    <GuestCard
       title="Welcome to Food Khata"
       subtitle="Track and understand your food orders across delivery platforms."
     >
@@ -101,7 +101,7 @@ export function Welcome() {
           {activeTab === "register" && <Register hideShell />}
         </div>
       </div>
-    </AuthShell>
+    </GuestCard>
   );
 }
 

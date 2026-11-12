@@ -1,8 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, Info, RefreshCw, X } from "lucide-react";
-import { platformLabel, plural } from "../../../lib/format";
+import { CheckCircle2, RefreshCw, X } from "lucide-react";
+import { platformLabel, pluralize } from "../../../lib/format";
 import { userStorageKey } from "../../../lib/user-storage";
 import { useAccounts } from "../api";
 import { isSyncActive } from "../sync/api";
@@ -24,7 +24,7 @@ export function AccessBanners() {
     if (finished) for (const key of ["accounts", "metadata", "health", "dashboard", "orders", "restaurants", "items", "slim"]) void client.invalidateQueries({ queryKey: [key] });
   }, [client, jobs.data]);
   if (!accounts.data) return null;
-  if (!accounts.data.length) return <p role="status" className="notice notice-info"><Info aria-hidden="true" /><span>No accounts linked yet. <Link className="underline" to="/home">Link an account</Link> to see your orders.</span></p>;
+  if (!accounts.data.length) return null; // each page shows its own empty state
   const active = jobs.data?.find(job => job.status === "needs_code" || job.status === "paused") ?? jobs.data?.find(isSyncActive);
   const latest = jobs.data?.filter(job => job.finished_at != null).sort((a, b) => (b.finished_at ?? 0) - (a.finished_at ?? 0))[0];
   const marker = latest ? `${latest.finished_at}:${latest.id}` : "";
@@ -47,7 +47,7 @@ export function AccessBanners() {
     : job.status === "queued" ? `${name} sync is waiting to start.`
     : job.status === "needs_code" ? `${name} sync needs your verification code.`
     : job.status === "paused" ? `${name} sync is paused and needs your attention.`
-    : `${name} sync finished. ${added > 0 ? `${plural(added, "new order")} added.` : "No new orders."}`;
+    : `${name} sync finished. ${added > 0 ? `${pluralize(added, "new order")} added.` : "No new orders."}`;
   const Icon = done && !active ? CheckCircle2 : RefreshCw;
   return <div role="status" className={`notice ${job.status === "needs_code" || job.status === "paused" ? "notice-warning" : done && !active ? "notice-success" : "notice-info"} items-center`}>
     <Icon aria-hidden="true" />

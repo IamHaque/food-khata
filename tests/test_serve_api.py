@@ -105,6 +105,8 @@ def test_scope_options_health_and_all_statuses(conn):
     assert "lifetime" not in str(health)
     health = client.get("/api/meta/data-health", params={"account_ids": "a"}).json()
     assert health["reconciliation_anomalies"] == 1 and health["verified_percent"] == 100
+    review = client.get("/api/orders", params={"account_ids": "a", "anomaly": "review", "page_size": 1}).json()
+    assert health["needs_review_orders"] == review["total"]  # one definition of "needs review"
     assert health["null_rates"]["user_rating"] == 0 and health["duplicate_orders"] == 0
     opts = client.get(
         "/api/meta/filters",

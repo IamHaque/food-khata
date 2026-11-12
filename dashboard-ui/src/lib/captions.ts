@@ -45,8 +45,8 @@ function groupIndianDigits(digits: string): string {
 /** Formats a rupee amount without paise, e.g. 12450 -> ₹12,450. */
 export function formatRupees(value: number): string {
  if (!isFiniteNumber(value)) return '';
- const sign = value < 0 ? '-' : '';
- return `${sign}₹${groupIndianDigits(String(Math.round(Math.abs(value))))}`;
+ const whole = Math.round(Math.abs(value));
+ return `${value < 0 && whole > 0 ? '-' : ''}₹${groupIndianDigits(String(whole))}`;
 }
 
 function roundPercent(part: number, whole: number): number {

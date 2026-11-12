@@ -6,6 +6,7 @@ import { useAccounts } from '../features/access/api';
 import { StatusBadge } from '../features/access/sync/StatusBadge';
 import { ScopeNotice, isSyncDataComplete } from './SyncStatusPanel';
 import { formatExactTimestamp } from './sync-format';
+import { pluralize } from '../lib/format';
 
 const n = (v: number | null | undefined) => (v ?? 0).toLocaleString('en-IN');
 
@@ -47,7 +48,7 @@ export default function DataHealth() {
   const complete = isSyncDataComplete(h);
   const review = new URLSearchParams(location.search);
   review.set('anomaly', 'review');
-  const needsReview = (h.reconciliation_anomalies ?? 0) + (h.quarantined_orders ?? 0);
+  const needsReview = h.needs_review_orders ?? 0;
 
   return (
     <section className="space-y-6" aria-labelledby="data-health-heading">
@@ -66,7 +67,8 @@ export default function DataHealth() {
         <Stat label="History" value={h.history_complete ? 'Complete' : 'Partial'} />
         <Stat label="Bill details" value={h.details_complete ? 'Complete' : 'Partial'} />
         <Stat label="Verified totals" value={h.verified_percent == null ? 'Unknown' : `${h.verified_percent.toFixed(1)}%`} />
-        <Stat label="Reconciliation anomalies" value={n(h.reconciliation_anomalies)} hint="Bill parts that do not add up to the amount paid" />
+        <Stat label="Orders needing review" value={n(needsReview)} hint="Unverified, or bill parts that do not add up to the amount paid" />
+        <Stat label="Unbalanced bills" value={n(h.reconciliation_anomalies)} hint="Part of the review count: bill parts differ from the amount paid by more than ₹1" />
         <Stat label="Quarantined records" value={n(h.quarantined_orders)} hint="Set aside because they could not be read safely" />
         <Stat label="Duplicate orders" value={n(h.duplicate_orders)} />
       </dl>
@@ -75,7 +77,7 @@ export default function DataHealth() {
         to={{ pathname: '/orders', search: review.toString() }}
         className="inline-flex min-h-[44px] items-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent"
       >
-        {needsReview ? `Review ${n(needsReview)} flagged order${needsReview === 1 ? '' : 's'}` : 'Open Orders filtered to Needs review'}
+        {needsReview ? `Review ${pluralize(needsReview, 'order')} that need${needsReview === 1 ? 's' : ''} review` : 'Open Orders filtered to Needs review'}
       </Link>
 
       <section aria-labelledby="imports-heading" className="space-y-2">

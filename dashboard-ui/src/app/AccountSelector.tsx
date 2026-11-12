@@ -3,8 +3,9 @@ import { useFilters } from './FilterContext';
 import { useAccounts } from '../features/access/api';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Input } from '../components/ui/input';
+import { Link } from 'react-router-dom';
 import { Users, Search, Check, ChevronDown } from 'lucide-react';
-import { platformLabel, plural } from '../lib/format';
+import { platformLabel, pluralize } from '../lib/format';
 
 type Account = {
   id: string;
@@ -19,8 +20,9 @@ function initials(label: string) {
   return label.slice(0, 2).toUpperCase();
 }
 
-export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
-  const { defaultOpen = false } = props;
+/** `asLink`: outside the analytics pages the chip is a plain link to Accounts (no filter to pick). */
+export function AccountSelector(props: { defaultOpen?: boolean; asLink?: boolean } = {}) {
+  const { defaultOpen = false, asLink = false } = props;
   const { filters, update } = useFilters();
   const linked = useAccounts();
   const accounts: Account[] = useMemo(() => {
@@ -133,13 +135,15 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
     }
   };
 
-  if (accounts.length === 1 && selected.length <= 1) {
-    const a = accounts[0];
+  const chip = 'inline-flex items-center gap-1.5 min-h-[44px] md:min-h-[36px] rounded-md px-1.5 text-sm font-medium text-foreground min-w-0 max-w-full hover:bg-accent';
+  if (!linked.data) return null;
+  if (accounts.length === 0 || asLink || (accounts.length === 1 && selected.length <= 1)) {
+    const text = accounts.length === 0 ? 'Link an account' : accounts.length === 1 ? accounts[0].label : triggerLabel;
     return (
-      <p className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground min-w-0" title={a.label}>
+      <Link to="/accounts" className={chip} title={text} aria-label={`Accounts: ${text}`}>
         <Users className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-        <span className="truncate">{a.label}</span>
-      </p>
+        <span className="truncate">{text}</span>
+      </Link>
     );
   }
 
@@ -229,7 +233,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-foreground truncate">{a.label}</div>
                   <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{plural(a.order_count, 'order')}</span>
+                    <span className="text-xs text-muted-foreground">{pluralize(a.order_count, 'order')}</span>
                   </div>
                 </div>
                 {checked && <Check className="h-4 w-4 text-primary shrink-0" />}
@@ -241,6 +245,9 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
             <p className="p-4 text-center text-xs text-muted-foreground">No accounts found.</p>
           )}
         </div>
+        <Link to="/accounts" onClick={() => setOpen(false)} className="block border-t px-3 py-2.5 text-sm font-medium text-primary hover:bg-accent min-h-[44px] leading-[28px]">
+          Manage accounts
+        </Link>
       </PopoverContent>
     </Popover>
   );

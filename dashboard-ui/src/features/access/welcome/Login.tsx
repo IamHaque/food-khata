@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AuthShell, StatusBanner } from "../primitives";
+import { GuestCard, StatusBanner } from "../primitives";
 import { authApi, ApiError } from "../api";
 import { notifyAuthChange, safeReturnPath } from "../auth";
 import { useQueryClient } from "@tanstack/react-query";
+import { pluralize } from "../../../lib/format";
 
 export interface LoginProps {
   onSuccess?: () => void;
@@ -40,7 +41,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
   }, [retryCountdown]);
 
   const searchParams = new URLSearchParams(location.search);
-  const returnUrl = searchParams.get("return") || "/home";
+  const returnUrl = searchParams.get("return") || "/accounts";
   const justRegistered = searchParams.get("registered") === "true";
   const sessionExpired = searchParams.get("reason") === "expired";
   const setupComplete = searchParams.get("setup") === "complete";
@@ -110,7 +111,7 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
 
       {retryCountdown !== null && retryCountdown > 0 ? (
         <StatusBanner variant="warning" role="alert">
-          Too many failed login attempts. Please try again in {retryCountdown} seconds.
+          Too many failed login attempts. Please try again in {pluralize(retryCountdown, "second")}.
         </StatusBanner>
       ) : (
         serverError && <StatusBanner variant="error">{serverError}</StatusBanner>
@@ -223,12 +224,12 @@ export function Login({ onSuccess, hideShell = false }: LoginProps) {
   }
 
   return (
-    <AuthShell
+    <GuestCard
       title="Log in"
       subtitle="Username and password."
     >
       {formContent}
-    </AuthShell>
+    </GuestCard>
   );
 }
 

@@ -417,7 +417,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
           ))}
           {feesShare != null && (
             <div className="flex items-center justify-between gap-3 py-2.5">
-              <dt className="text-muted-foreground">Fees as a share of spend</dt>
+              <dt className="text-muted-foreground">Fees as a percentage of spend</dt>
               <dd className="text-right font-medium text-foreground tabular-nums">{pct(Number(feesShare.toFixed(2)), 2)}</dd>
             </div>
           )}

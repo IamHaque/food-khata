@@ -1,17 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { FILTERS, mockApi } from './mock-api';
 
-// On compact widths navigation, Log out and sync status live in the menu.
+// Below 768px, Log out lives behind the "More" tab.
 type P = import('@playwright/test').Page;
 async function openMenu(page: P) {
-  const menu = page.getByRole('button', { name: 'Open menu' });
+  const menu = page.getByRole('button', { name: 'More', exact: true });
   await expect(menu.or(page.getByRole('button', { name: 'Log out' })).first()).toBeVisible();
   if (await menu.isVisible()) await menu.click();
 }
 async function goTo(page: P, name: string) {
-  const link = page.getByRole('navigation').getByRole('link', { name, exact: true }).first();
-  await openMenu(page);
-  await link.click();
+  const direct = page.getByRole('navigation', { name: /Main navigation|Mobile tabs/ }).getByRole('link', { name, exact: true });
+  if (await direct.count()) return direct.first().click();
+  await openMenu(page); // below 768px, the rest of the destinations sit behind More
+  await page.getByRole('navigation', { name: 'More destinations' }).getByRole('link', { name, exact: true }).click();
 }
 for (const width of [1440, 390]) {
   test(`access integration ${width}`, async ({ page }) => {
@@ -36,7 +37,7 @@ for (const width of [1440, 390]) {
     await page.goto('/');
     await expect(page.getByText('Fetching your first orders.', { exact: false })).toBeVisible();
     await expect(page.getByText('Fake ••••nt A', { exact: false })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: 'Sync orders' })).toBeVisible(); // first sync, no orders yet: in-shell empty state
     hold = true;
     await page.evaluate(() => { void (window as any).__queryClient.invalidateQueries({ queryKey: ['accounts'] }); });
     await waiting;
@@ -48,7 +49,7 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Username').fill('B');
     await page.getByLabel('Password').fill('password');
     await page.getByRole('button', { name: /log in/i }).click();
-    await expect(page).toHaveURL(/home/);
+    await expect(page).toHaveURL(/accounts/);
     await goTo(page, 'Overview');
     await expect(page.getByText('Fake ••••nt B', { exact: false })).toBeVisible();
     release();
@@ -57,9 +58,7 @@ for (const width of [1440, 390]) {
     await page.reload();
     await expect(page.getByText('Syncing Fake orders in the background.', { exact: false })).toBeVisible();
     await expect(page.getByText('\u20b9100.00').first()).toBeVisible();
-    await openMenu(page);
-    await expect(page.getByRole('button', { name: /Sync status: Synced/ })).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: /Sync status: Synced/ })).toBeVisible(); // the sync chip is in the header at every width
     await page.screenshot({ path: `test-results/access-${width}.png` });
     status = 'done';
     await page.reload();
@@ -85,8 +84,8 @@ test('guards routes and handles an empty user', async ({ page }) => {
   await expect(page).toHaveURL(/login/);
   signedIn = true;
   await page.goto('/');
-  await expect(page).toHaveURL(/home/); // no accounts: the dashboard sends the user to Home
-  await expect(page.getByRole('link', { name: 'Link your first account' })).toBeVisible();
+  await expect(page).not.toHaveURL(/accounts/); // no accounts: Overview stays in the shell and shows an empty state
+  await expect(page.getByRole('main').getByRole('link', { name: 'Link an account' })).toBeVisible();
 });
 
 test('linked accounts drive the filter and data health', async ({ page }) => {

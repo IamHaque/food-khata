@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthShell, StatusBanner } from "../primitives";
+import { AppPage, StatusBanner } from "../primitives";
 import { useAccounts } from "../api";
 import { StatusPill } from "@/components/ui/status-pill";
-import { platformLabel, plural } from "@/lib/format";
+import { platformLabel, pluralize } from "@/lib/format";
 import { accountsApi, ApiError } from "../api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -40,12 +40,8 @@ export function Home() {
   };
 
   return (
-    <AuthShell title="Accounts" subtitle="Link, sync or disconnect your Zomato and Swiggy accounts.">
+    <AppPage title="Accounts" subtitle="Link, sync or disconnect your Zomato and Swiggy accounts.">
       <div className="space-y-4">
-        <nav aria-label="Account links" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {[["/jobs", "Jobs"], ["/data-health", "Data health"], ["/settings", "Settings"]].map(([to, label]) =>
-            <Link key={to} className="inline-flex min-h-[44px] items-center underline" to={to}>{label}</Link>)}
-        </nav>
         {message && <StatusBanner variant="info">{message}</StatusBanner>}
 
         <div className="flex items-center justify-between">
@@ -77,7 +73,7 @@ export function Home() {
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                {acc.phone ?? "No phone number"} · {plural(acc.order_count, "order")}
+                {acc.phone ?? "No phone number"} · {pluralize(acc.order_count, "order")}
                 {acc.last_sync ? ` · last synced ${when(acc.last_sync)}` : " · never synced"}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
@@ -112,7 +108,7 @@ export function Home() {
           </DialogContent>
         </Dialog>
       </div>
-    </AuthShell>
+    </AppPage>
   );
 }
 export default Home;

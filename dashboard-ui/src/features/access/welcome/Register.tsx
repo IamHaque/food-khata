@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthShell, StatusBanner } from "../primitives";
+import { GuestCard, StatusBanner } from "../primitives";
 import { authApi, useSetupStatus, ApiError } from "../api";
+import { pluralize } from "../../../lib/format";
 
 export interface RegisterProps {
   onSuccess?: () => void;
@@ -130,7 +131,7 @@ export function Register({ onSuccess, hideShell = false }: RegisterProps) {
 
       {retryCountdown !== null && retryCountdown > 0 ? (
         <StatusBanner variant="warning" role="alert">
-          Too many registration attempts. Please try again in {retryCountdown} seconds.
+          Too many registration attempts. Please try again in {pluralize(retryCountdown, "second")}.
         </StatusBanner>
       ) : (
         serverError && <StatusBanner variant="error">{serverError}</StatusBanner>
@@ -353,12 +354,12 @@ export function Register({ onSuccess, hideShell = false }: RegisterProps) {
   }
 
   return (
-    <AuthShell
+    <GuestCard
       title="Register"
       subtitle="Join with a household join code."
     >
       {formContent}
-    </AuthShell>
+    </GuestCard>
   );
 }
 

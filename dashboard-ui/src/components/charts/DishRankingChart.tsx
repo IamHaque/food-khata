@@ -13,6 +13,7 @@ import { Info } from "lucide-react";
 import { BaseChart, useOptionalFilters } from "../dashboard/BaseChart";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { inr, pluralize } from "../../lib/format";
 import {
   getCurrentChartTheme,
   buildBaseChartOption,
@@ -365,7 +366,7 @@ export function buildDishRankingOption(
           return d.amount > 0 ? `${d.quantity} (${formatRupees(d.amount)})` : `${d.quantity}`;
         } else {
           return d.quantity > 0
-            ? `${formatRupees(d.amount)} (${d.quantity} ${d.quantity === 1 ? "order" : "orders"})`
+            ? `${formatRupees(d.amount)} (${pluralize(d.quantity, "order")})`
             : formatRupees(d.amount);
         }
       },
@@ -395,7 +396,7 @@ export function buildDishRankingOption(
       axisLabel: {
         color: currentTheme.mutedColor,
         fontSize: 11,
-        formatter: (val: number) => (isAmount ? `₹${val.toLocaleString("en-IN")}` : `${val}`),
+        formatter: (val: number) => (isAmount ? inr(val) : `${val}`),
       },
       splitLine: {
         show: true,
@@ -499,7 +500,7 @@ export function DishRankingChart({
     const topMetricDesc =
       activeMetric === "amount"
         ? `${formatRupees(top.amount)} spend`
-        : `${top.quantity} orders`;
+        : pluralize(top.quantity, "order");
     return `Horizontal bar chart showing top ${displayedItems.length} dishes ranked by ${activeMetric === "amount" ? "expenditure" : "order volume"}. Top dish is ${top.name} with ${topMetricDesc}.`;
   }, [displayedItems, activeMetric]);
 

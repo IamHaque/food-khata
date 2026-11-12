@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { AuthShell, StatusBanner } from "../primitives";
+import { GuestCard, StatusBanner } from "../primitives";
 import { ownerApi, useSetupStatus, useOwnerSetupCheck, ApiError } from "../api";
 
 export interface SetupProps {
@@ -78,7 +78,7 @@ export function Setup({ onSuccess }: SetupProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        navigate("/home", { replace: true }); // the server already created the session
+        navigate("/accounts", { replace: true }); // the server already created the session
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -92,7 +92,7 @@ export function Setup({ onSuccess }: SetupProps) {
   };
 
   return (
-    <AuthShell
+    <GuestCard
       title="Set up this server"
       subtitle="Claim owner access. From loopback or with the one-time setup code printed at --lan start."
     >
@@ -272,7 +272,7 @@ export function Setup({ onSuccess }: SetupProps) {
           {submitting ? "Claiming owner…" : "Claim owner"}
         </button>
       </form>
-    </AuthShell>
+    </GuestCard>
   );
 }
 

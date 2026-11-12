@@ -63,7 +63,7 @@ describe("AC-14 Accounts and linking screens", () => {
       expect(html).toContain("needs verification");
       expect(html).toContain("Verify again");
       expect(html).toContain("never synced");
-      for (const to of ["/jobs", "/data-health", "/settings"]) expect(html).toContain(`href="${to}"`);
+      expect(html).toContain('href="/jobs/job-1"'); // the sidebar owns Jobs, Data health and Settings now
     });
   });
 

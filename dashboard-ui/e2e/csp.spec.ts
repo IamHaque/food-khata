@@ -24,7 +24,7 @@ test("built UI runs under the CSP without violations", async ({ page }) => {
     await page.locator("#field-password").fill("synthetic-owner-password");
     await page.locator("#field-confirm-password").fill("synthetic-owner-password");
     await page.getByRole("button", { name: "Claim owner" }).click();
-    await page.waitForURL(/\/home/, { timeout: 30000 });
+    await page.waitForURL(/\/accounts/, { timeout: 30000 });
     await page.goto(base + "/");
     await page.waitForLoadState("networkidle");
     expect(problems).toEqual([]);

@@ -35,6 +35,7 @@ import {
   type HourWeekdayDatum,
 } from "@/lib/captions";
 import type { FilterState } from "@/lib/filters";
+import { pluralize } from "../../lib/format";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -286,9 +287,7 @@ export function buildHourWeekdayHeatmapOption(
         const startStr = `${String(hour).padStart(2, "0")}:00`;
         const endStr = `${String(hour).padStart(2, "0")}:59`;
         const hourRange = `${startStr} - ${endStr}`;
-        const ordersFormatted = `${orders.toLocaleString("en-IN")} ${
-          orders === 1 ? "order" : "orders"
-        }`;
+        const ordersFormatted = pluralize(orders, "order");
         const spendFormatted = formatRupees(spend);
 
         return [

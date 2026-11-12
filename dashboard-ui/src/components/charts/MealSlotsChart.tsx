@@ -1,5 +1,5 @@
 import * as React from "react";
-import { plural } from "../../lib/format";
+import { pluralize } from "../../lib/format";
 import * as echarts from "echarts/core";
 import { BarChart } from "echarts/charts";
 import {
@@ -34,6 +34,7 @@ import {
   formatRupees,
 } from "@/lib/captions";
 import type { FilterState } from "@/lib/filters";
+import { swatchBg } from "../../lib/chart-kit";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -179,11 +180,11 @@ export function formatMealSlotTooltip(
   markerColor?: string,
 ): string {
   const color = markerColor || theme.colors[0];
-  const orderCountText = plural(slot.orders, "order");
+  const orderCountText = pluralize(slot.orders, "order");
   return [
     `<div style="font-family: inherit; font-size: 12px; line-height: 1.5; min-width: 170px;">`,
     `  <div style="font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">`,
-    `    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${color};"></span>`,
+    `    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;${swatchBg(color)}"></span>`,
     `    <span style="color: ${theme.textColor};">${slot.label}</span>`,
     `    <span style="color: ${theme.mutedColor}; font-size: 11px; margin-left: auto;">${slot.window}</span>`,
     `  </div>`,

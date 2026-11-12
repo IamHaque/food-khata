@@ -1,5 +1,5 @@
 import { getPatterns } from "../../app/theme";
-import { compactInr } from "../../lib/chart-kit";
+import { compactInr, swatchBg } from "../../lib/chart-kit";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { LineChart, type LineSeriesOption } from "echarts/charts";
@@ -152,7 +152,7 @@ export function formatYearOverYearTooltip(
     return `
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 4px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></span>
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; ${swatchBg(color)}"></span>
           <span style="color: ${theme.textColor}; font-weight: 500;">${p.seriesName}</span>
         </div>
         <span style="font-weight: 600; color: ${hasValue ? theme.textColor : theme.mutedColor};">${valFormatted}</span>

@@ -293,6 +293,8 @@
     @apply flex items-start gap-2 rounded-lg border bg-muted px-3.5 py-2.5 text-sm text-foreground;
   }
   .notice > svg:first-child { @apply mt-0.5 h-4 w-4 shrink-0; }
+  /* Warnings also get a heavy left border, so they never read as "the Amber accent" by colour alone. */
+  .notice-warning { border-color: hsl(var(--warning) / 0.6); border-left-width: 4px; }
   .notice-warning > svg:first-child { color: hsl(var(--warning)); }
   .notice-info > svg:first-child { color: hsl(var(--info)); }
   .notice-danger { border-color: hsl(var(--danger) / 0.4); }

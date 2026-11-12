@@ -1459,6 +1459,11 @@ export interface components {
             /** Reconciliation Anomalies */
             reconciliation_anomalies: number;
             /**
+             * Needs Review Orders
+             * @default 0
+             */
+            needs_review_orders: number;
+            /**
              * Quarantined Orders
              * @default 0
              */

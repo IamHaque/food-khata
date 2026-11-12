@@ -106,6 +106,7 @@ class Health(Metadata):
     null_rates: dict[str, float | None]
     duplicate_orders: int
     reconciliation_anomalies: int
+    needs_review_orders: int = 0
     quarantined_orders: int = 0
     note: str
 

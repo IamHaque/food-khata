@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { AuthShell, StatusBanner } from "../primitives";
+import { AppPage, StatusBanner } from "../primitives";
 import { ApiError, authApi } from "../api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +58,9 @@ export function AccountSecurity() {
 
 export function Password() {
   return (
-    <AuthShell title="Password" subtitle="Change your password or log out all sessions." back={{ to: "/home", label: "Accounts" }}>
+    <AppPage title="Password" subtitle="Change your password or log out all sessions." back={{ to: "/accounts", label: "Accounts" }}>
       <AccountSecurity />
-    </AuthShell>
+    </AppPage>
   );
 }
 

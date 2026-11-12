@@ -7,6 +7,7 @@ import {
   handleCuisineTreemapClick,
   CuisineTreemapChart,
 } from "./CuisineTreemapChart";
+import { color as zcolor } from "echarts/core";
 import { resolveChartTheme } from "@/lib/chart-theme";
 import { computeCuisineTakeaway, formatRupees } from "@/lib/captions";
 
@@ -32,7 +33,8 @@ describe("CuisineTreemapChart hierarchy & option builder (CC-11, Scenario: Treem
     const northIndian = tree.find((n) => n.name === "North Indian");
     expect(northIndian).toBeTruthy();
     expect(northIndian?.value).toBe(5000);
-    expect(northIndian?.itemStyle?.color).toBe(theme.colors[0]);
+    // One accent ramp by spend: the biggest cuisine gets the full accent.
+    expect(northIndian?.itemStyle?.color).toBe(zcolor.lerp(1, [theme.rampLow, theme.rampHigh]));
 
     // Has child restaurant nodes plus remainder
     expect(Array.isArray(northIndian?.children)).toBe(true);
