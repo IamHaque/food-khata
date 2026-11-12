@@ -182,3 +182,65 @@ def test_unlock_or_create_refuses_when_encrypted_data_exists(tmp_path):
         with pytest.raises(KhataError, match="Vault missing"):
             UserVault.unlock_or_create(folder, PW)
         assert not (folder / "vault.json").exists()
+
+
+# --- item 4 -----------------------------------------------------------------
+def _crafted_backup(path, files, manifest_files=None):
+    import hashlib
+    import io
+    import json
+    import tarfile
+
+    manifest = {"version": 1, "files": manifest_files or {k: hashlib.sha256(v).hexdigest() for k, v in files.items()}}
+    with tarfile.open(path, "w:gz") as tar:
+        for name, body in {**files, "manifest.json": json.dumps(manifest).encode()}.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(body)
+            tar.addfile(info, io.BytesIO(body))
+
+
+def test_restore_rejects_escaping_manifest_paths(tmp_path):
+    import hashlib
+
+    import pytest
+
+    from food_khata.backup import restore
+
+    stage_like = tmp_path / "work"
+    stage_like.mkdir()
+    outside = stage_like / "escape"  # the stage dir is created next to data_dir, so ../escape lands here
+    outside.write_text("original")
+    _crafted_backup(stage_like / "b.tar.gz", {"ok.txt": b"ok"}, {"ok.txt": hashlib.sha256(b"ok").hexdigest(), "../escape": hashlib.sha256(b"original").hexdigest()})
+    data = stage_like / "data"
+    with pytest.raises(ValueError):
+        restore(stage_like / "b.tar.gz", data)
+    assert outside.read_text() == "original" and not (data.exists() and any(data.iterdir()))
+
+
+def test_restore_rolls_back_on_failed_move_and_caps_size(tmp_path, monkeypatch):
+    import os
+
+    import pytest
+
+    from food_khata import backup as bk
+
+    work = tmp_path / "work"
+    work.mkdir()
+    _crafted_backup(work / "b.tar.gz", {f"d/f{i}.txt": b"x" * (i + 1) for i in range(5)})
+    real, calls = os.replace, []
+
+    def flaky(src, dst):
+        calls.append(dst)
+        if len(calls) == 3:
+            raise OSError("disk full")
+        return real(src, dst)
+
+    monkeypatch.setattr(bk.os, "replace", flaky)
+    with pytest.raises(OSError):
+        bk.restore(work / "b.tar.gz", work / "data")
+    assert not list((work / "data").rglob("*")) if (work / "data").exists() else True
+    monkeypatch.setattr(bk.os, "replace", real)
+    assert bk.restore(work / "b.tar.gz", work / "data") == 5
+    monkeypatch.setattr(bk, "RESTORE_MAX_BYTES", 3)
+    with pytest.raises(ValueError, match="limit"):
+        bk.restore(work / "b.tar.gz", work / "data2")
