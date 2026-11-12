@@ -502,20 +502,20 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | DONE | 2026-11-11 | mixed load 0 5xx of 3,303; kill 20 of 20 runs identical; soak 30 min flat; tests/stress 9 pass; numbers in docs/PERFORMANCE.md | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | DONE | 2026-11-11 | README first-hour path, architecture with system and job-state diagrams, honest limits; commands checked with --help and a throwaway folder; verify green | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
-| GC | Production acceptance | P4 | P0 | TODO | | | W7 |
+| GC | Production acceptance | P4 | P0 | IN_PROGRESS | 2026-11-12 | all stories DONE; full verify, browser, build, bundle, load, kill, soak green; independent review done and fixed; waiting for your manual smoke and backup/restore, and your call on DEC-P1 | W7 |
 
 ### 5.2 Decision log
 
 | ID | Date | Story | Decision | Reason | Impact | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| DEC-P1 | 2026-11-11 | Plan | Section 2 targets are proposals to be confirmed after measuring | No timing was run in this review | Gates GC | Proposed |
-| DEC-P2 | 2026-11-11 | PR-02 | Delete all sessions at server start | Keys live only in memory, so a surviving session is unusable and causes the half-logged-in state | One re-login after each restart | Proposed |
-| DEC-P3 | 2026-11-11 | PR-07 | Remove the mid-sync code route; recovery is Verify again then auto-resume | A code cannot repair an expired provider session without a new login | C-2 breaking change, logged as DEV | Proposed |
-| DEC-P4 | 2026-11-11 | PR-11 | Default provider concurrency stays 1 each, configurable | Raising it risks provider blocks; queue visibility fixes the wait | Config flag | Proposed |
+| DEC-P1 | 2026-11-11 | Plan | Section 2 targets are proposals to be confirmed after measuring | No timing was run in this review | Gates GC | Measured; two misses (DEV-24), owner to confirm |
+| DEC-P2 | 2026-11-11 | PR-02 | Delete all sessions at server start | Keys live only in memory, so a surviving session is unusable and causes the half-logged-in state | One re-login after each restart | Applied |
+| DEC-P3 | 2026-11-11 | PR-07 | Remove the mid-sync code route; recovery is Verify again then auto-resume | A code cannot repair an expired provider session without a new login | C-2 breaking change, logged as DEV | Applied |
+| DEC-P4 | 2026-11-11 | PR-11 | Default provider concurrency stays 1 each, configurable | Raising it risks provider blocks; queue visibility fixes the wait | Config flag | Applied |
 | DEC-P5 | 2026-11-11 | PR-17 | Keep `food-khata export` (there is no `/legacy` route in the code any more); README gets one line in PR-19 | Removing it means deleting its tests, which verify forbids, and it has a test | Docs and tests | Approved by owner |
-| DEC-P6 | 2026-11-11 | PR-08 | Add `source_hash` and refresh recent non-final orders | Without it the dashboard can never show refunds or fix repaired orders | Additive migration | Proposed |
-| DEC-P7 | 2026-11-11 | PR-14 | Password minimum 10 characters; session absolute lifetime 7 days | Household server, possibly on a LAN | UI copy | Proposed |
-| DEC-P8 | 2026-11-11 | Plan | The main agent writes all high-risk code; sub-agents get only the work in 3.2 | One reviewer holds the whole auth, storage and runner picture | Wave plan | Proposed |
+| DEC-P6 | 2026-11-11 | PR-08 | Add `source_hash` and refresh recent non-final orders | Without it the dashboard can never show refunds or fix repaired orders | Additive migration | Applied |
+| DEC-P7 | 2026-11-11 | PR-14 | Password minimum 10 characters; session absolute lifetime 7 days | Household server, possibly on a LAN | UI copy | Applied |
+| DEC-P8 | 2026-11-11 | Plan | The main agent writes all high-risk code; sub-agents get only the work in 3.2 | One reviewer holds the whole auth, storage and runner picture | Wave plan | Applied |
 | DEC-P9 | 2026-11-11 | PR-20 | Audit gate fails only on high or critical findings that have a fix; unfixed ones warn and go to the Backlog; allowlist with expiry | A gate nobody can satisfy blocks every merge | CI and verify | Approved by owner |
 | DEC-P10 | 2026-11-11 | Plan | Model ladder: Gemini strongest for high-risk, opencode free then Gemini Flash for mechanical work, Haiku last resort; packets 12k tokens; lean rules in 3.7 | Only these models are available and tokens are limited | Wave plan, 3.2, 3.4, 3.7 | Approved by owner |
 | DEC-P11 | 2026-11-11 | Plan | U-1 (double login prompt) is deferred; reopen only if it still occurs after PR-02 | Ordinary login did not reproduce; owner chose to test later | BL-206 | Approved by owner |
@@ -608,6 +608,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-12 | GC | `verify . --backend --browser` on trunk after the review fixes | all PASS (pytest 102 s, browser 51 s at 3 workers); bundle 102.9 kB; load, kill and soak from PR-18 | 160 s | master |
 | 2026-11-11 | PR-19 | `verify . --backend` on trunk after merge | all PASS | — | pr-19-review |
 | 2026-11-11 | PR-18 | `load_test.py --duration 300`; `kill --runs 20`; `--soak --duration 1800` | 0 5xx and 0 locked of 3,303; kill 20 of 20 ok (300 orders, 0 duplicates); RSS 93 MB idle, 438 MB peak, 368 MB at minute 30, threads 21 to 23 | 5 + 10 + 30 min | pr-18 |
 | 2026-11-11 | PR-17 | `verify . --backend` on trunk after merge | see below | — | pr-17-review |
