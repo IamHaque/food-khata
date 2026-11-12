@@ -264,15 +264,15 @@ function ChartCard({
 
   const card = (
       <Card className={fullscreen ? "border-0 shadow-none bg-transparent p-0 flex flex-col flex-1 min-h-0 w-full" : className}>
-        <CardHeader className={fullscreen ? "flex flex-row items-start justify-between space-y-0 pb-3 px-0 pt-0 border-b mb-3" : "flex flex-row items-start justify-between space-y-0 pb-2"}>
-          <div className="space-y-1">
+        <CardHeader className={fullscreen ? "flex flex-row flex-wrap items-start justify-between gap-2 space-y-0 pb-3 px-0 pt-0 border-b mb-3" : "flex flex-row flex-wrap items-start justify-between gap-x-2 gap-y-1 space-y-0 pb-2"}>
+          <div className="min-w-0 flex-1 basis-[12rem] space-y-1">
             <div className="flex items-center gap-1.5">
               <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
               {infoPopover}
             </div>
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {hasTable && (
               <Button
                 variant="ghost"

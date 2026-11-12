@@ -243,12 +243,12 @@ export function RestaurantRow({
         isSelected ? 'bg-accent' : ''
       }`}
     >
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-3">
         <span className="block break-words text-sm font-medium text-foreground">{row.name}</span>
         {locality && <span className="block text-xs text-muted-foreground">{locality}</span>}
       </td>
-      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
-      <td className="px-3 py-2.5 text-right">
+      <td className="px-3 py-3 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
+      <td className="px-3 py-3 text-right">
         <ProportionalBarCell
           value={row.amount}
           maxValue={maxAmount}
@@ -291,7 +291,7 @@ export function DishRow({
         isSelected ? 'bg-accent' : ''
       }`}
     >
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-3">
         <span className="block break-words text-sm font-medium text-foreground">{row.name}</span>
         {/* Explicit text instead of a bare magnifier icon: says what the button does. */}
         <button
@@ -308,8 +308,8 @@ export function DishRow({
           Find orders with this dish
         </button>
       </td>
-      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
-      <td className="px-3 py-2.5 text-right">
+      <td className="px-3 py-3 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
+      <td className="px-3 py-3 text-right">
         <ProportionalBarCell
           value={row.amount}
           maxValue={maxAmount}

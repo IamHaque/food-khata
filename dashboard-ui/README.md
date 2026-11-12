@@ -28,6 +28,21 @@ Run the backend API and frontend dev server in separate terminals:
    ```
    Vite proxies all `/api` requests to `127.0.0.1:8765`.
 
+## Design system
+
+All design tokens live in `src/style.css` as CSS variables; nothing else may hold a colour literal (`npm run lint` enforces it).
+
+- **Surfaces and text**: `--background`, `--surface`, `--surface-2`, `--border`, `--foreground`, `--muted-foreground`.
+- **Accent** (`emerald`, `indigo`, `amber`, `rose`, `slate`, each in light and dark): `--primary`, `--primary-foreground`, `--accent`, `--chart-1..8`.
+- **Semantic colours, independent of the accent**: `--success`, `--warning`, `--danger`, `--info`. Notices use a neutral tinted surface (`.notice`) with a coloured icon only.
+- **Platform colours**: `--platform-zomato`, `--platform-swiggy`, used by charts, pills and tables.
+- **Focus**: `--focus` (not tied to the accent, so Slate stays visible).
+- **Type scale**: `--fs-caption` 12px, `--fs-body` 14px, `--fs-lead` 16px, `--fs-title` 20px, `--fs-heading` 24px, `--fs-display` fluid (Total spend only). Sentence case everywhere.
+- **Spacing, radius, shadow, motion**: `--space-card`, `--space-gap`, `--radius*`, `--shadow-*`, `--motion-*` (all motion honours `prefers-reduced-motion`).
+- Charts read these tokens at draw time (`getCurrentChartTheme`), and the page remounts its charts on a mode, accent or pattern change, so nothing lags. "Accessible patterns" (hatch fills) is opt-in in the Appearance menu.
+- Shared primitives: `PageHeader`, `Card`, `Money`, `StatusPill`/`PlatformPill`, `ChartCard` (alias `ChartFrame`), `PageLoading`/`PageError`/`PageEmpty`. Navigation items come from one array, `src/app/nav.ts`.
+- `npm run lint` also runs `scripts/contrast-check.mjs`: text levels and semantic colours on every surface, all 10 light/dark x accent combinations.
+
 ## Verification & Testing
 
 Run these commands from `dashboard-ui/`:

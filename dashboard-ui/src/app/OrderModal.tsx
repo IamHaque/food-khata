@@ -322,34 +322,34 @@ export function OrderModal({
                   <table className="w-full text-sm" aria-label="Order items table">
                     <thead className="border-b text-muted-foreground">
                       <tr>
-                        <th className="text-left p-2.5 font-medium">Item</th>
-                        <th className="text-center p-2.5 font-medium">Diet</th>
-                        <th className="text-right p-2.5 font-medium">Qty</th>
-                        <th className="text-right p-2.5 font-medium">Unit price</th>
-                        <th className="text-right p-2.5 font-medium">Total</th>
+                        <th className="text-left p-2 font-medium">Item</th>
+                        <th className="text-center p-2 font-medium">Diet</th>
+                        <th className="text-right p-2 font-medium">Qty</th>
+                        <th className="text-right p-2 font-medium">Price</th>
+                        <th className="text-right p-2 font-medium">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y tabular-nums">
                       {data.items.map((item, index) => (
                         <tr key={index}>
-                          <td className="p-2.5 font-sans font-medium">
+                          <td className="p-2 font-sans font-medium">
                             <span className="block" title={item.item_name}>
                               {item.item_name}
                             </span>
                             {item.category && <small className="text-muted-foreground block text-xs font-normal">{item.category}</small>}
                           </td>
-                          <td className="p-2.5 text-center font-sans text-sm">
+                          <td className="p-2 text-center font-sans text-sm whitespace-nowrap">
                             {item.is_veg == null ? (
                               <span className="text-muted-foreground">Not tagged</span>
                             ) : item.is_veg ? (
-                              <span className="text-success font-medium">● Veg</span>
+                              <span className="text-success font-medium">●<span className="sr-only sm:not-sr-only"> Veg</span></span>
                             ) : (
-                              <span className="text-destructive font-medium">◆ Non-veg</span>
+                              <span className="text-destructive font-medium">◆<span className="sr-only sm:not-sr-only"> Non-veg</span></span>
                             )}
                           </td>
-                          <td className="p-2.5 text-right">{item.quantity}</td>
-                          <td className="p-2.5 text-right">{money(item.unit_price)}</td>
-                          <td className="p-2.5 text-right font-semibold">{money(item.total_price)}</td>
+                          <td className="p-2 text-right">{item.quantity}</td>
+                          <td className="p-2 text-right whitespace-nowrap">{money(item.unit_price)}</td>
+                          <td className="p-2 text-right font-medium whitespace-nowrap">{money(item.total_price)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -438,7 +438,7 @@ export function OrderModal({
         </div>
 
         {/* Sheet Footer with Actions */}
-        <footer className="order-sheet-footer flex items-center justify-between p-4 border-t bg-card mt-auto">
+        <footer className="order-sheet-footer flex items-center justify-between gap-2 p-3 sm:p-4 border-t bg-card mt-auto">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -452,7 +452,7 @@ export function OrderModal({
               aria-label="Previous order"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              <span>Previous order</span>
+              <span><span className="sm:hidden">Previous</span><span className="hidden sm:inline">Previous order</span></span>
             </button>
             <button
               type="button"
@@ -465,7 +465,7 @@ export function OrderModal({
               className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
               aria-label="Next order"
             >
-              <span>Next order</span>
+              <span><span className="sm:hidden">Next</span><span className="hidden sm:inline">Next order</span></span>
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
@@ -475,7 +475,7 @@ export function OrderModal({
               onClick={close}
               className="min-h-[44px] rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent transition-colors"
             >
-              Close receipt
+              <span className="sm:hidden">Close</span><span className="hidden sm:inline">Close receipt</span>
             </button>
           </SheetClose>
         </footer>

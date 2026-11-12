@@ -274,8 +274,10 @@ describe('S-072: Order side sheet', () => {
       expect(html).toContain('Raita');
       expect(html).toContain('₹250.00');
       expect(html).toContain('₹500.00');
-      expect(html).toContain('● Veg');
-      expect(html).toContain('◆ Non-veg');
+      expect(html).toContain('●');
+      expect(html).toContain('> Veg<');
+      expect(html).toContain('◆');
+      expect(html).toContain('> Non-veg<');
 
       // Payment breakdown ladder
       expect(html).toContain('Payment breakdown');
