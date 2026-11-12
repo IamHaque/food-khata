@@ -153,7 +153,10 @@ def _count_orders(account_path: Path, provider: str) -> int:
 
 def _get_account_meta(storage: Storage, account_id: str) -> dict[str, Any] | None:
     """Look up an account by ID from the given storage."""
-    acc_path = storage.accounts_dir / account_id
+    try:
+        acc_path = storage.account_path(account_id)  # refuses anything that is not a plain account id
+    except KhataError:
+        return None
     acc_file = acc_path / "account.json"
     if not acc_file.is_file():
         return None
@@ -341,7 +344,7 @@ def link_verify(
         )
 
     # 3. Check reverify mismatch if this handle was initiated via verify-again
-    reverify_info = getattr(request.app.state, "reverify_handles", {}).pop(handle, None)
+    reverify_info = getattr(request.app.state, "reverify_handles", {}).get(handle)
     if reverify_info:
         expected_id = reverify_info.get("expected_provider_id")
         if expected_id and provider_id != str(expected_id).strip():
@@ -352,6 +355,7 @@ def link_verify(
                     "message": "Provider account identity mismatch; link failed.",
                 },
             )
+        request.app.state.reverify_handles.pop(handle, None)  # only after the identity check passed
 
     # 4. Exclusivity: the provider_links primary key decides, so two simultaneous links cannot both win.
     identity = provider_identity(provider_id)

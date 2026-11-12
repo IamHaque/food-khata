@@ -352,6 +352,8 @@ def reset_user_password(
     if not user:
         raise ValueError("User not found.")
 
+    if new_password and (problem := check_password_rules(new_password, "")) is not None:
+        raise ValueError(problem)
     effective_pw = new_password or secrets.token_urlsafe(12)
     new_hash = hash_password(effective_pw)
 
@@ -445,7 +447,13 @@ def remove_user(
     if not conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone():
         raise ValueError("User not found.")
 
-    JobControl.cancel_user(user_id, conn)  # waits for running jobs to stop
+    JobControl.cancel_user(user_id, conn)
+    for _ in range(60):  # a job that is still running would write into the folder after it is removed
+        if not conn.execute("SELECT 1 FROM jobs WHERE user_id = ? AND status = 'running'", (user_id,)).fetchone():
+            break
+        time.sleep(0.5)
+    else:
+        raise ValueError("A running sync has not stopped yet; try again in a moment.")
     folder = trash = None
     if data_root is not None:
         from food_khata.users.context import user_root

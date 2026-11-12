@@ -36,6 +36,9 @@ def get_auth_db(request: Request) -> Iterator[sqlite3.Connection]:
 
 def _is_loopback_client(request: Request) -> bool:
     host = request.client.host if request.client else "127.0.0.1"
+    # A proxy on this machine makes every remote request arrive from loopback; it is not proof of a local caller.
+    if host == getattr(request.app.state, "trusted_proxy", None):
+        return False
     if host in {"testclient", "localhost", "127.0.0.1", "::1"}:
         return True
     try:

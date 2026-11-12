@@ -177,8 +177,12 @@ def create_app(
         # Request bodies are small JSON; refuse anything over 64 KB before it is read.
         if request.method in {"POST", "PUT", "PATCH"}:
             length = request.headers.get("content-length")
-            too_big = int(length) > MAX_BODY_BYTES if (length or "").isdigit() else len(await request.body()) > MAX_BODY_BYTES
-            if too_big:
+            if length is None and "chunked" in request.headers.get("transfer-encoding", "").lower():
+                # Never buffer a body of unknown size; our own client always sends Content-Length.
+                return JSONResponse(
+                    {"error": {"code": "length_required", "message": "Content-Length is required."}}, status_code=411
+                )
+            if (length or "").isdigit() and int(length) > MAX_BODY_BYTES:
                 return JSONResponse(
                     {"error": {"code": "payload_too_large", "message": "Request body is too large."}}, status_code=413
                 )
@@ -623,7 +627,7 @@ def create_app(
                 ) from None
             with cache_lock:
                 if key[2] == database_version(database):
-                    for stale in [k for k in cache if k[2] != key[2]]:
+                    for stale in [k for k in cache if k[0] == user_id and k[2] != key[2]]:
                         cache.pop(stale, None)  # an older database version can never be served again
                     cache.pop(key, None)
                     cache[key] = result  # most recent last

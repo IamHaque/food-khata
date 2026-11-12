@@ -46,6 +46,7 @@ def backup(data_dir: Path | str, out: Path | str) -> dict:
         (stage / "manifest.json").write_text(json.dumps(manifest, indent=2))
         with tarfile.open(out, "w:gz") as tar:
             tar.add(stage, arcname=".")
+    out.chmod(0o600)  # it holds unencrypted databases and vaults
     return manifest
 
 
