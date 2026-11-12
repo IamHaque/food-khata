@@ -51,3 +51,38 @@ def test_prune_audit_removes_only_old_rows(tmp_path):
     from food_khata.maintenance import TASKS
 
     assert prune_audit in TASKS
+
+
+# --- item 2 -----------------------------------------------------------------
+def test_use_partial_does_not_hold_write_lock_and_imports_once(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from food_khata.auth import init_app_db
+    from food_khata.db import AnalyticsDB
+    from food_khata.jobs import JobControl
+    from food_khata.jobs.db import create_job
+
+    init_app_db(tmp_path / "app.db")
+    conn = connect_app_db(tmp_path / "app.db")
+    conn.execute("INSERT INTO users VALUES ('u', 'bob', 'x', 0, 0, 'now')")
+    conn.commit()
+    create_job(tmp_path / "app.db", job_id="j", user_id="u", account_id="a", provider="zomato", status="failed")
+    control = JobControl(tmp_path / "app.db", data_root=tmp_path / "data")
+
+    def slow(self, *a, **k):
+        time.sleep(2)
+        return {"total": 1, "imported": 1}
+
+    monkeypatch.setattr(AnalyticsDB, "ingest_account", slow)
+    with ThreadPoolExecutor(3) as pool:
+        first = pool.submit(control.use_partial, "j")
+        second = pool.submit(control.use_partial, "j")
+        time.sleep(0.5)
+        t0 = time.time()
+        other = connect_app_db(tmp_path / "app.db")
+        other.execute("INSERT INTO sessions VALUES ('s', 'u', 'c', 1, 1, 9e9)")
+        other.commit()
+        assert time.time() - t0 < 1
+        results = sorted([first.result()["total"], second.result()["total"]])
+    assert results == [0, 1]
+    assert conn.execute("SELECT COUNT(*) FROM job_events WHERE code = 'IMPORTED_PARTIAL'").fetchone()[0] == 1

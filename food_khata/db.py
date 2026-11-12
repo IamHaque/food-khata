@@ -389,7 +389,11 @@ class AnalyticsDB:
                 "source_hash": "TEXT",
             }.items():
                 if name not in columns:
-                    conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}")
+                    try:
+                        conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}")
+                    except sqlite3.OperationalError as exc:  # a concurrent init added it first
+                        if "duplicate column" not in str(exc):
+                            raise
             conn.commit()
 
     def record_quarantine(

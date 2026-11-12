@@ -865,30 +865,43 @@ class JobControl:
                 job["partial_decision"] = "imported"
 
     def use_partial(self, job_id: str, user_id: str | None = None) -> dict[str, Any]:
-        """Scenario: import once. Import partial history for a failed/cancelled job."""
+        """Scenario: import once. Import partial history for a failed/cancelled job.
+
+        The ingest runs without holding app.db's write lock; the receipt it writes makes it safe to repeat.
+        """
         with get_db_conn(self.app_db_path) as conn:
-            conn.execute("BEGIN IMMEDIATE")
             job = get_job(conn, job_id, user_id=user_id)
             if not job:
                 raise JobNotFoundError()
             self._reconcile_partial_receipt(conn, job)
-            if job["partial_decision"] == "discarded":
+        if job["partial_decision"] == "discarded":
+            raise KhataError("Partial data was discarded.")
+        if job["partial_decision"] == "imported":
+            return {"total": 0, "imported": 0}
+        if job["status"] not in (FAILED, CANCELLED):
+            raise KhataError("Partial data is available only for failed or cancelled jobs.")
+        if not self.data_root:
+            raise KhataError("Cannot import: data_root not configured.")
+        storage = Storage(user_root(self.data_root, job["user_id"]))
+        user_db_path = user_database(self.data_root, job["user_id"])
+        user_db_path.parent.mkdir(parents=True, exist_ok=True)
+        result = AnalyticsDB(user_db_path).ingest_account(storage, job["account_id"], incremental=True, partial_job_id=job_id)
+        with get_db_conn(self.app_db_path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            current = get_job(conn, job_id, user_id=user_id)
+            if not current:
+                raise JobNotFoundError()
+            if current["partial_decision"] == "discarded":
+                conn.rollback()
                 raise KhataError("Partial data was discarded.")
-            if job["partial_decision"] == "imported":
+            if current["partial_decision"] == "imported":
+                conn.rollback()
                 return {"total": 0, "imported": 0}
-            if job["status"] not in (FAILED, CANCELLED):
-                raise KhataError("Partial data is available only for failed or cancelled jobs.")
-            if not self.data_root:
-                raise KhataError("Cannot import: data_root not configured.")
-            storage = Storage(user_root(self.data_root, job["user_id"]))
-            user_db_path = user_database(self.data_root, job["user_id"])
-            user_db_path.parent.mkdir(parents=True, exist_ok=True)
-            result = AnalyticsDB(user_db_path).ingest_account(storage, job["account_id"], incremental=True, partial_job_id=job_id)
             conn.execute("UPDATE jobs SET partial_decision = 'imported', updated_at = ? WHERE id = ?", (time.time(), job_id))
             conn.execute("INSERT INTO job_events (job_id, status, code, message, created_at) VALUES (?, ?, ?, ?, ?)",
                          (job_id, job["status"], "IMPORTED_PARTIAL", f"Partial history imported: {result.get('total', 0)} orders", time.time()))
             conn.commit()
-            return result
+        return result
 
     def discard_partial(self, job_id: str, user_id: str | None = None) -> dict[str, Any]:
         with get_db_conn(self.app_db_path) as conn:
