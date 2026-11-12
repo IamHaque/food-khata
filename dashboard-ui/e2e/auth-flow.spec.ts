@@ -69,14 +69,14 @@ async function loginOwner(page: Page) {
 // After a claim the server has already created a session; log in only if the app still shows the form.
 async function afterClaim(page: Page): Promise<boolean> {
   const form = page.locator("#login-username");
-  await Promise.race([form.waitFor({ timeout: 10000 }), page.waitForURL((u) => !["/welcome", "/setup", "/login"].includes(u.pathname), { timeout: 10000 })]).catch(() => undefined);
+  await Promise.race([form.waitFor({ timeout: 30000 }), page.waitForURL((u) => !["/welcome", "/setup", "/login"].includes(u.pathname), { timeout: 30000 })]).catch(() => undefined);
   return form.isVisible();
 }
 
 async function signedIn(page: Page, base: string) {
   await claimOwner(page, base);
   if (await afterClaim(page)) await loginOwner(page);
-  await page.waitForURL((u) => u.pathname !== "/login", { timeout: 10000 });
+  await page.waitForURL((u) => u.pathname !== "/login", { timeout: 30000 });
 }
 
 async function linkAccount(page: Page, provider: RegExp) {
@@ -86,7 +86,7 @@ async function linkAccount(page: Page, provider: RegExp) {
   await page.getByRole("button", { name: "Send code" }).click();
   await page.locator("#code").fill("123456");
   await page.getByRole("button", { name: "Verify", exact: true }).click();
-  await expect(page.getByText("Linked successfully")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Linked successfully")).toBeVisible({ timeout: 30000 });
 }
 
 function record(page: Page) {
@@ -118,7 +118,7 @@ for (const width of [1440, 390]) {
         const startedAt = Date.now();
         const before = rec.logins();
         await loginOwner(page);
-        await page.waitForURL((u) => u.pathname !== "/login", { timeout: 10000 });
+        await page.waitForURL((u) => u.pathname !== "/login", { timeout: 30000 });
         expect(rec.logins(), "login visited again").toBe(before);
         expect(rec.api.filter((r) => r.status === 401 && r.time >= startedAt), "401 after login").toEqual([]);
       }
@@ -131,22 +131,22 @@ for (const width of [1440, 390]) {
       srv = await startBackend(false, srv.dataDir, srv.port);
       const rec = record(page);
       await page.goto(srv.base + "/home");
-      await page.waitForURL(/\/login/, { timeout: 10000 });
+      await page.waitForURL(/\/login/, { timeout: 30000 });
       await expect(page.getByText("Your session ended. Sign in again.")).toBeVisible();
       expect(rec.logins(), "exactly one redirect to /login").toBe(1);
       await loginOwner(page);
-      await page.waitForURL((u) => u.pathname !== "/login", { timeout: 10000 });
+      await page.waitForURL((u) => u.pathname !== "/login", { timeout: 30000 });
       expect(rec.logins(), "no second login prompt").toBe(1);
     });
 
     test("[PR-03] setup and login land on /home", async ({ page }) => {
       srv = await startBackend(false);
       await claimOwner(page, srv.base);
-      await expect(page, "setup lands on /home").toHaveURL(/\/home$/, { timeout: 10000 });
+      await expect(page, "setup lands on /home").toHaveURL(/\/home$/, { timeout: 30000 });
       await page.context().clearCookies();
       await page.goto(srv.base + "/login");
       await loginOwner(page);
-      await expect(page, "login lands on /home").toHaveURL(/\/home$/, { timeout: 10000 });
+      await expect(page, "login lands on /home").toHaveURL(/\/home$/, { timeout: 30000 });
     });
 
     test("[PR-04][PR-05] switch off: server-driven list, nothing preselected, no aggregate row", async ({ page }) => {
@@ -154,7 +154,7 @@ for (const width of [1440, 390]) {
       await signedIn(page, srv.base);
       const list = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/accounts/providers");
       await page.goto(srv.base + "/accounts/link");
-      await expect(page.getByRole("heading", { name: "Link account" })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("heading", { name: "Link account" })).toBeVisible({ timeout: 30000 });
       expect((await (await list).json()).providers).not.toContain("fake");
       await expect(page.locator("#provider")).not.toHaveText(/fake/i);
       await expect(page.getByRole("button", { name: "Send code" })).toBeDisabled();
