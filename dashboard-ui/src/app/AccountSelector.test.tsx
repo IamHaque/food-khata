@@ -24,6 +24,6 @@ vi.mock('./FilterContext', () => ({
 describe('AccountSelector (S-012)', () => {
   it('renders trigger with All Accounts', () => {
     const html = renderToString(<AccountSelector />);
-    expect(html).toContain('All my accounts');
+    expect(html).toContain('All accounts');
   });
 });

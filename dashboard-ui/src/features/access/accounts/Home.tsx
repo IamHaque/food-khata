@@ -2,24 +2,15 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, StatusBanner } from "../primitives";
 import { useAccounts } from "../api";
-import { SessionControls } from "../banners/SessionControls";
+import { StatusPill } from "@/components/ui/status-pill";
+import { platformLabel, plural } from "@/lib/format";
 import { accountsApi, ApiError } from "../api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 function statusChip(status: string) {
-  const cls =
-    status === "ok"
-      ? "bg-emerald-100 text-emerald-700"
-      : status === "expiring"
-        ? "bg-amber-100 text-amber-700"
-        : "bg-rose-100 text-rose-700";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {status}
-    </span>
-  );
+  return <StatusPill tone={status === "ok" ? "success" : status === "expiring" ? "warning" : "danger"}>{status}</StatusPill>;
 }
 
 export function Home() {
@@ -69,35 +60,20 @@ export function Home() {
   };
 
   return (
-    <AuthShell title="Home" subtitle="Linked accounts">
+    <AuthShell title="Accounts" subtitle="Link, sync or disconnect your Zomato and Swiggy accounts.">
       <div className="space-y-4">
-        <div className="flex gap-4 text-sm">
-          <Link className="underline" to="/">Open dashboard</Link>
-          <Link className="underline" to="/sync">Sync now</Link>
-          <Link className="underline" to="/account/password">Password</Link>
-        </div>
-        <SessionControls />
         {message && <StatusBanner variant="info">{message}</StatusBanner>}
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Linked accounts</h2>
-          <button
-            type="button"
-            onClick={() => navigate("/accounts/link")}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-          >
-            Link account
-          </button>
+          <Button onClick={() => navigate("/accounts/link")}>Link account</Button>
         </div>
 
         {accounts.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {!accounts.isLoading && (!accounts.data || accounts.data.length === 0) && (
           <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No linked accounts yet.{" "}
-            <Link to="/accounts/link" className="text-primary underline">
-              Link your first account
-            </Link>
+            No accounts linked yet. <Link to="/accounts/link" className="text-primary underline">Link your first account</Link> to start syncing orders.
           </div>
         )}
 
@@ -105,20 +81,20 @@ export function Home() {
           {(accounts.data ?? []).map((acc) => (
             <div key={`${acc.id}:${acc.provider}`} className="rounded-lg border bg-card p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <strong className="capitalize">{acc.provider}</strong>
+                <strong>{platformLabel(acc.provider)}</strong>
                 {statusChip(acc.status)}
               </div>
               <div className="text-sm text-muted-foreground">
-                {acc.phone ?? "no phone"} • {acc.order_count} orders
-                {acc.last_sync ? ` • last sync ${acc.last_sync}` : ""}
+                {acc.phone ?? "No phone number"} · {plural(acc.order_count, "order")}
+                {acc.last_sync ? ` · last synced ${acc.last_sync}` : ""}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                <Link className="rounded-md border px-2 py-1 text-xs font-medium" to={`/sync?account=${encodeURIComponent(acc.local_id)}&provider=${encodeURIComponent(acc.provider)}`}>Sync</Link>
+                <Link className="inline-flex items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent min-h-[44px]" to={`/sync?account=${encodeURIComponent(acc.local_id)}&provider=${encodeURIComponent(acc.provider)}`}>Sync</Link>
                 {acc.status === "expired" && (
                   <button
                     type="button"
                     onClick={() => startVerifyAgain(acc.id, acc.provider)}
-                    className="rounded-md border px-2 py-1 text-xs font-medium"
+                    className="rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent min-h-[44px]"
                   >
                     Verify again
                   </button>
@@ -126,7 +102,7 @@ export function Home() {
                 <button
                   type="button"
                   onClick={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(`${acc.id}|${acc.provider}`); }}
-                  className="rounded-md border px-2 py-1 text-xs font-medium"
+                  className="rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent min-h-[44px]"
                 >
                   Disconnect
                 </button>
@@ -149,7 +125,7 @@ export function Home() {
 
         {verifyHandle && (
           <div className="rounded-md border bg-muted p-3 space-y-2">
-            <p className="text-sm font-medium">Verify again</p>
+            <p className="text-sm font-medium">Enter the SMS code</p>
             <Input
               aria-label="SMS code"
               type="text"
@@ -159,10 +135,10 @@ export function Home() {
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
             <div className="flex gap-2">
-              <button type="button" onClick={submitVerifyAgain} className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground">
+              <button type="button" onClick={submitVerifyAgain} className="rounded-md bg-primary px-3 text-sm text-primary-foreground min-h-[44px]">
                 Verify
               </button>
-              <button type="button" onClick={() => { setVerifyHandle(null); setVerifyCode(""); }} className="rounded-md border px-3 py-1 text-xs">
+              <button type="button" onClick={() => { setVerifyHandle(null); setVerifyCode(""); }} className="rounded-md border border-input px-3 text-sm min-h-[44px]">
                 Cancel
               </button>
             </div>

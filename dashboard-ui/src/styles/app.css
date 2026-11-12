@@ -11,6 +11,10 @@ body:has(.v2) {
 
 .v2 * {
   box-sizing: border-box;
+}
+
+/* Flex/grid children may shrink, but explicit min-w-* utilities (e.g. 44px touch targets) still win. */
+:where(.v2) :where(div, section, main, p, span, h1, h2, h3) {
   min-width: 0;
 }
 

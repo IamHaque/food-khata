@@ -6,6 +6,8 @@ import { calculatePresetDates, defaultFilters, serializeFilters } from '../lib/f
 import { loadSavedViews, saveView, type SavedView } from '../lib/saved-views';
 import { saveTablePrefs } from '../lib/table-prefs';
 import { useTheme } from './theme';
+import { NAV_ITEMS } from './nav';
+import { platformLabel } from '../lib/format';
 import type { ThemeMode, ThemeAccent } from './theme';
 import {
   Search,
@@ -204,6 +206,13 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
     };
   }, [location.search, mode, navigate, setMode]);
 
+  // The compact-width menu opens the palette through this event.
+  useEffect(() => {
+    const open = () => setOpen(true);
+    window.addEventListener('food-khata-open-palette', open);
+    return () => window.removeEventListener('food-khata-open-palette', open);
+  }, []);
+
   // Focus input when opening
   useEffect(() => {
     if (open) {
@@ -233,12 +242,7 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
   };
 
   const commands: Command[] = [
-    // Navigate
-    { group: 'Navigate', label: 'Overview', icon: Compass, run: () => go('/', 'Overview') },
-    { group: 'Navigate', label: 'Spending', icon: Compass, run: () => go('/spending', 'Spending') },
-    { group: 'Navigate', label: 'Food', icon: Compass, run: () => go('/food', 'Food') },
-    { group: 'Navigate', label: 'Habits', icon: Compass, run: () => go('/habits', 'Habits') },
-    { group: 'Navigate', label: 'Orders', icon: Compass, run: () => go('/orders', 'Orders') },
+    ...NAV_ITEMS.map(i => ({ group: 'Navigate' as Group, label: i.label, icon: Compass, run: () => go(i.to, i.label) })),
     // Filters
     { group: 'Filters', label: 'Period: 7d', icon: Filter, run: () => applyPreset('7d') },
     { group: 'Filters', label: 'Period: 30d', icon: Filter, run: () => applyPreset('30d') },
@@ -246,7 +250,7 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
     { group: 'Filters', label: 'Period: all-time', icon: Filter, run: () => applyPreset('all') },
     ...PLATFORMS.map(p => ({
       group: 'Filters' as Group,
-      label: `Toggle platform: ${p}`,
+      label: `Toggle platform: ${platformLabel(p)}`,
       icon: Filter,
       run: () => togglePlatform(p),
     })),
@@ -360,10 +364,10 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 min-h-[36px] text-xs font-medium text-muted-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="hidden lg:inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 min-h-[36px] text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
         <span>Commands</span>
-        <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
+        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-sans text-xs font-medium text-muted-foreground">
           Ctrl K
         </kbd>
       </button>
@@ -415,7 +419,7 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
             ) : (
               groups.map(g => (
                 <section key={g.group} aria-label={g.group}>
-                  <h3 className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     {g.group}
                   </h3>
                   <div className="space-y-1">

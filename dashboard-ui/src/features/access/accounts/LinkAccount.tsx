@@ -77,7 +77,7 @@ export function LinkAccount() {
   };
 
   return (
-    <AuthShell title="Link account" subtitle="Phone number → SMS code.">
+    <AuthShell title="Link account" subtitle="Enter your phone number, then the SMS code we send." back={{ to: "/home", label: "Accounts" }}>
       <div className="space-y-4">
         {success && <StatusBanner variant="success">{addedTo ?? "Linked successfully"}</StatusBanner>}
         {error && <StatusBanner variant="error">{error}</StatusBanner>}

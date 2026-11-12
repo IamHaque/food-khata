@@ -18,6 +18,8 @@ const Sync = lazy(() => import("./sync/Sync"));
 const Settings = lazy(() => import("./owner"));
 const Password = lazy(() => import("./account/Password"));
 
+export const AuthedPages = { Home, LinkAccount, Sync, Settings, Password };
+
 export function AccessRoutes() {
   return (
     <Suspense fallback={<RouteSkeleton />}>

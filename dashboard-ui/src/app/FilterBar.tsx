@@ -8,11 +8,26 @@ import {
   detectPreset,
   type FilterState,
 } from '../lib/filters';
-import { SlidersHorizontal, Search } from 'lucide-react';
+import { SlidersHorizontal, Search, ChevronDown } from 'lucide-react';
+import { platformLabel } from '../lib/format';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { Badge } from '../components/ui/badge';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Chip } from '../components/ui/chip';
+
+const PRESETS: [string, string][] = [
+  ['7d', 'Last 7 days'],
+  ['30d', 'Last 30 days'],
+  ['90d', 'Last 90 days'],
+  ['month', 'This month'],
+  ['last_month', 'Last month'],
+  ['fy', 'This financial year'],
+  ['year', 'Year to date'],
+  ['all', 'All time'],
+  ['custom', 'Custom'],
+];
+const COMPARE_LABELS: Record<string, string> = { none: 'No comparison', previous_period: 'Previous period', previous_year: 'Previous year' };
+const sentence = (v: string) => (v === 'all' ? 'All' : v === 'nonveg' ? 'Non-veg' : v.charAt(0).toUpperCase() + v.slice(1).replaceAll('_', ' '));
 
 export function Amount({
   field,
@@ -92,11 +107,11 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
         <button
           type="button"
           aria-label={`${label}: ${selected.length ? `${selected.length} selected` : 'All'}`}
-          className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium shadow-xs hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+          className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-2.5 text-sm font-medium hover:bg-accent text-foreground"
         >
           <span className="truncate">{label}</span>
           <span
-            className={`ml-1 text-xs px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
+            className={`ml-1 text-xs px-1.5 rounded-full font-medium shrink-0 ${
               selected.length > 0 ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
             }`}
           >
@@ -106,7 +121,7 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2.5 space-y-2 bg-popover text-popover-foreground shadow-md rounded-md border border-border" align="start">
         <div className="flex items-center justify-between border-b pb-1.5">
-          <span className="text-xs font-semibold">{label}</span>
+          <span className="text-sm font-semibold">{label}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -173,6 +188,8 @@ export function FilterBar() {
   const [dateError, setDateError] = useState('');
   const [amountError, setAmountError] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
+  // Open on wide screens, closed on compact ones, so content is visible without scrolling past filters.
+  const [open, setOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px)').matches === true);
 
   function clearMessages() {
     if (saved) setSaved('');
@@ -301,14 +318,39 @@ export function FilterBar() {
     'anomaly',
   ];
   const advancedActiveCount = active.filter(([key]) => advancedKeys.includes(key)).length;
+  const preset = detectPreset(filters.date_from, filters.date_to);
+  const PRESET_LABELS: Record<string, string> = Object.fromEntries(PRESETS);
+  const activeCount =
+    (preset !== 'all' ? 1 : 0) + (filters.platforms.length ? 1 : 0) + (filters.compare !== 'none' ? 1 : 0) + advancedActiveCount;
+  const summary = [
+    preset === 'custom' ? `${filters.date_from ?? 'Start'} to ${filters.date_to ?? 'today'}` : PRESET_LABELS[preset] ?? 'All time',
+    filters.platforms.length ? filters.platforms.map(platformLabel).join(' + ') : 'All platforms',
+    filters.compare !== 'none' ? `Compared with ${COMPARE_LABELS[filters.compare].toLowerCase()}` : null,
+    advancedActiveCount ? `${advancedActiveCount} more ${advancedActiveCount === 1 ? 'filter' : 'filters'}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
-    <section aria-label="Global filters" className="filter-panel rounded-xl border bg-card p-4 sm:p-5 shadow-xs space-y-4">
-      {/* Summary row */}
+    <section aria-label="Global filters" className="filter-panel rounded-xl border bg-card">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 p-2.5 sm:px-4">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="filter-panel-body"
+          onClick={() => setOpen(o => !o)}
+          className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent min-h-[36px]"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          Filters ({activeCount})
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground" title={summary}>{summary}</p>
+      </div>
+      {open && (
+      <div id="filter-panel-body" className="space-y-3 border-t p-3 sm:px-4">
       <div className="flex flex-wrap items-end gap-3">
         {/* Date preset */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-          <span className="text-xs text-muted-foreground">Date preset</span>
+          <span className="text-sm text-muted-foreground">Date range</span>
           <select
             aria-label="Date preset"
             value={detectPreset(filters.date_from, filters.date_to)}
@@ -320,19 +362,9 @@ export function FilterBar() {
               const dates = calculatePresetDates(val);
               update(dates);
             }}
-            className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-9 rounded-md border border-input bg-background px-2.5 text-sm font-medium text-foreground"
           >
-            {[
-              ['7d', 'Last 7 days'],
-              ['30d', 'Last 30 days'],
-              ['90d', 'Last 90 days'],
-              ['month', 'This month'],
-              ['last_month', 'Last month'],
-              ['fy', 'This FY'],
-              ['year', 'YTD'],
-              ['all', 'All time'],
-              ['custom', 'Custom'],
-            ].map(([v, l]) => (
+            {PRESETS.map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
           </select>
@@ -346,7 +378,7 @@ export function FilterBar() {
             aria-label="From date"
             value={filters.date_from ?? ''}
             onChange={e => handleDateFromChange(e.target.value)}
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
           />
         </label>
 
@@ -358,7 +390,7 @@ export function FilterBar() {
             aria-label="To date"
             value={filters.date_to ?? ''}
             onChange={e => handleDateToChange(e.target.value)}
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs font-mono shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
           />
         </label>
 
@@ -367,7 +399,7 @@ export function FilterBar() {
           <span className="text-xs text-muted-foreground">Platform</span>
           <MultiSelectFilter
             label="Platforms"
-            options={(meta?.platforms ?? []).map(v => ({ value: v, label: v }))}
+            options={(meta?.platforms ?? []).map(v => ({ value: v, label: platformLabel(v) }))}
             selected={filters.platforms}
             onChange={selected => {
               clearMessages();
@@ -386,10 +418,10 @@ export function FilterBar() {
               clearMessages();
               update({ compare: e.target.value as FilterState['compare'] });
             }}
-            className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+            className="h-9 rounded-md border border-input bg-background px-2.5 text-sm font-medium text-foreground"
           >
             {['none', 'previous_period', 'previous_year'].map(v => (
-              <option key={v} value={v}>{v}</option>
+              <option key={v} value={v}>{COMPARE_LABELS[v]}</option>
             ))}
           </select>
         </label>
@@ -399,13 +431,12 @@ export function FilterBar() {
           <SheetTrigger asChild>
             <button
               type="button"
-              className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-xs hover:bg-accent text-foreground"
+              className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent text-foreground"
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
               More filters
               {advancedActiveCount > 0 && (
-                <Badge variant="default" className="text-xs h-4 px-1.5 font-bold">
-                  {advancedActiveCount} active
+                <Badge variant="default" className="text-xs h-5 px-1.5 font-medium">
+                  {advancedActiveCount}
                 </Badge>
               )}
             </button>
@@ -428,9 +459,9 @@ export function FilterBar() {
                   aria-label="Diet"
                   value={filters.veg}
                   onChange={e => { clearMessages(); update({ veg: e.target.value as FilterState['veg'] }); }}
-                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm font-medium text-foreground"
                 >
-                  {['all', 'veg', 'nonveg', 'unknown'].map(v => <option key={v} value={v}>{v}</option>)}
+                  {['all', 'veg', 'nonveg', 'unknown'].map(v => <option key={v} value={v}>{sentence(v)}</option>)}
                 </select>
               </label>
 
@@ -441,9 +472,9 @@ export function FilterBar() {
                   aria-label="Day type"
                   value={filters.day_type}
                   onChange={e => { clearMessages(); update({ day_type: e.target.value as FilterState['day_type'] }); }}
-                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm font-medium text-foreground"
                 >
-                  {['all', 'weekday', 'weekend'].map(v => <option key={v} value={v}>{v}</option>)}
+                  {['all', 'weekday', 'weekend'].map(v => <option key={v} value={v}>{sentence(v)}</option>)}
                 </select>
               </label>
 
@@ -477,15 +508,15 @@ export function FilterBar() {
                   aria-label="Anomaly"
                   value={filters.anomaly}
                   onChange={e => { clearMessages(); update({ anomaly: e.target.value as FilterState['anomaly'] }); }}
-                  className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm font-medium text-foreground"
                 >
-                  {['all', 'review'].map(v => <option key={v} value={v}>{v}</option>)}
+                  {['all', 'review'].map(v => <option key={v} value={v}>{v === 'review' ? 'Needs review' : 'All'}</option>)}
                 </select>
               </label>
 
               {/* Categorical multiselects */}
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Categorical scopes</div>
+                <div className="text-sm font-semibold text-foreground">Narrow down by</div>
                 <div className="grid grid-cols-1 gap-2.5">
                   {lists.map(key => {
                     const options =
@@ -522,7 +553,7 @@ export function FilterBar() {
               </div>
 
               {amountError && (
-                <p role="alert" className="text-xs font-semibold text-destructive">{amountError}</p>
+                <p role="alert" className="text-sm font-medium text-destructive">{amountError}</p>
               )}
             </div>
           </SheetContent>
@@ -530,17 +561,17 @@ export function FilterBar() {
       </div>
 
       {dateError && (
-        <p role="alert" className="text-xs font-semibold text-destructive">{dateError}</p>
+        <p role="alert" className="text-sm font-medium text-destructive">{dateError}</p>
       )}
 
       {/* Chips */}
-      <div className="chips flex flex-wrap items-center gap-1.5 pt-3 border-t">
+      <div className="chips flex flex-wrap items-center gap-1.5">
         {active.map(([key, value]) => {
-          const displayVal = Array.isArray(value) ? value.join(', ') : String(value);
+          const displayVal = Array.isArray(value) ? value.map(v => (key === 'platforms' ? platformLabel(v) : v)).join(', ') : String(value);
           return (
             <Chip
               key={key}
-              label={`${key.replaceAll('_', ' ')}: ${displayVal}`}
+              label={`${sentence(key)}: ${displayVal}`}
               active
               onRemove={() => {
                 clearMessages();
@@ -553,7 +584,7 @@ export function FilterBar() {
         <button
           type="button"
           onClick={handleClear}
-          className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[32px]"
+          className="rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[36px]"
         >
           Clear all
         </button>
@@ -561,7 +592,7 @@ export function FilterBar() {
         <button
           type="button"
           onClick={handleSavePreset}
-          className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[32px]"
+          className="rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[36px]"
         >
           Save preset
         </button>
@@ -569,17 +600,19 @@ export function FilterBar() {
         <button
           type="button"
           onClick={handleLoadPreset}
-          className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[32px]"
+          className="rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-h-[36px]"
         >
           Load preset
         </button>
       </div>
 
       {saved && (
-        <p role="status" className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{saved}</p>
+        <p role="status" className="text-sm font-medium text-success">{saved}</p>
       )}
       {error && (
         <p role="alert" className="text-xs font-medium text-destructive">{error}</p>
+      )}
+      </div>
       )}
     </section>
   );

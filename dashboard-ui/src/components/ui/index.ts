@@ -9,3 +9,6 @@ export * from './sheet';
 export * from './skeleton';
 export * from './toolbar-button';
 export * from './tooltip';
+export * from './page-header';
+export * from './status-pill';
+export * from './money';

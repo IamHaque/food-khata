@@ -38,7 +38,7 @@ export function Password() {
   };
 
   return (
-    <AuthShell title="Password" subtitle="Change your password or sign out everywhere.">
+    <AuthShell title="Password" subtitle="Change your password or sign out everywhere." back={{ to: "/home", label: "Accounts" }}>
       <form onSubmit={submit} className="space-y-4">
         {message && <StatusBanner variant={message.ok ? "success" : "error"}>{message.text}</StatusBanner>}
         <label className="block text-sm font-medium" htmlFor="pw-current">Current password</label>
@@ -51,7 +51,6 @@ export function Password() {
         <Button type="submit" disabled={busy || !current || !next} className="w-full">{busy ? "Saving…" : "Change password"}</Button>
       </form>
       <Button variant="outline" className="w-full" onClick={() => void signOutEverywhere()}>Sign out everywhere</Button>
-      <Link className="block underline text-sm" to="/home">Back to Home</Link>
     </AuthShell>
   );
 }

@@ -3,7 +3,8 @@ import { useFilters } from './FilterContext';
 import { useAccounts } from '../features/access/api';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Input } from '../components/ui/input';
-import { Users, Search, Check } from 'lucide-react';
+import { Users, Search, Check, ChevronDown } from 'lucide-react';
+import { platformLabel, plural } from '../lib/format';
 
 type Account = {
   id: string;
@@ -26,7 +27,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
     // The API has one row per (account, provider); the filter is per account.
     const byId = new Map<string, Account>();
     for (const a of linked.data ?? []) {
-      const name = `${a.provider.charAt(0).toUpperCase()}${a.provider.slice(1)}`;
+      const name = platformLabel(a.provider);
       const seen = byId.get(a.local_id);
       if (seen) { seen.label = seen.label.replace(' ••••', ` + ${name} ••••`); seen.platforms.push(a.provider); seen.order_count += a.order_count; }
       else byId.set(a.local_id, { id: a.local_id, label: `${name} ••••${(a.phone ?? a.local_id).slice(-4)}`, platforms: [a.provider], order_count: a.order_count });
@@ -63,12 +64,12 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   }, [open]);
 
   const triggerLabel = useMemo(() => {
-    if (selected.length === 0) return `All my accounts (${accounts.length})`;
+    if (selected.length === 0) return accounts.length === 1 ? accounts[0].label : `All accounts (${accounts.length})`;
     if (selected.length === 1) {
       const match = accounts.find(a => a.id === selected[0]);
       return match ? match.label : selected[0];
     }
-    return `${selected.length} Accounts selected`;
+    return `${selected.length} accounts selected`;
   }, [selected, accounts]);
 
   function toggleAll() {
@@ -135,8 +136,9 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
   if (accounts.length === 1 && selected.length <= 1) {
     const a = accounts[0];
     return (
-      <p className="text-xs font-medium text-foreground py-1">
-        Account: {a.label} ({a.platforms.join('/')})
+      <p className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground min-w-0" title={a.label}>
+        <Users className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+        <span className="truncate">{a.label}</span>
       </p>
     );
   }
@@ -147,10 +149,11 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
         <button
           type="button"
           aria-label="Account"
-          className="inline-flex items-center gap-1.5 min-h-[36px] rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground max-w-[240px] truncate"
+          className="inline-flex items-center gap-1.5 min-h-[44px] lg:min-h-[36px] rounded-md border border-input bg-background px-2.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors text-foreground max-w-full"
         >
-          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Users className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="truncate">{triggerLabel}</span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -170,7 +173,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
               ref={searchInputRef}
               type="search"
               aria-label="Search accounts"
-              placeholder="Search accounts..."
+              placeholder="Search accounts"
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
@@ -189,7 +192,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
             onKeyDown={e => handleItemKeyDown(e, 0)}
             onFocus={() => setActiveIndex(0)}
             title="Covers only the accounts you have linked while signed in"
-            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs transition-colors text-left ${
+            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm min-h-[44px] transition-colors text-left ${
               activeIndex === 0 ? 'bg-accent' : 'hover:bg-accent/50'
             }`}
           >
@@ -197,8 +200,8 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
               All
             </span>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-foreground">All my accounts ({accounts.length})</div>
-              <div className="text-[10px] text-muted-foreground">All platforms</div>
+              <div className="font-medium text-foreground">All accounts ({accounts.length})</div>
+              <div className="text-xs text-muted-foreground">All platforms</div>
             </div>
             {selected.length === 0 && <Check className="h-4 w-4 text-primary shrink-0" />}
           </button>
@@ -216,7 +219,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
                 onClick={() => toggleAccount(a.id)}
                 onKeyDown={e => handleItemKeyDown(e, index)}
                 onFocus={() => setActiveIndex(index)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs transition-colors text-left ${
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm min-h-[44px] transition-colors text-left ${
                   activeIndex === index ? 'bg-accent' : 'hover:bg-accent/50'
                 }`}
               >
@@ -226,15 +229,7 @@ export function AccountSelector(props: { defaultOpen?: boolean } = {}) {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-foreground truncate">{a.label}</div>
                   <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                    {a.platforms.map(p => (
-                      <span
-                        key={p}
-                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
-                      >
-                        {p}
-                      </span>
-                    ))}
-                    <span className="text-[10px] text-muted-foreground ml-1">{a.order_count} orders</span>
+                    <span className="text-xs text-muted-foreground">{plural(a.order_count, 'order')}</span>
                   </div>
                 </div>
                 {checked && <Check className="h-4 w-4 text-primary shrink-0" />}

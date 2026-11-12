@@ -24,7 +24,7 @@ export function SyncChooser({ accountId, provider, onStarted }: { accountId: str
       </label>)}
     </fieldset>
     {start.error && <StatusBanner variant="error">{start.error.message}</StatusBanner>}
-    <Button disabled={!accountId || start.isPending}>{start.isPending ? "Starting…" : "Start sync"}</Button>
+    <Button disabled={!accountId || start.isPending}>{start.isPending ? "Starting…" : "Sync"}</Button>
   </form>;
 }
 
@@ -59,7 +59,7 @@ export function SyncJobScreen({ jobId }: { jobId: string }) {
       </div>
       {job.error_message && <StatusBanner variant="warning">{job.error_message}</StatusBanner>}
       {isSyncActive(job) && <><p>You can leave this page; the sync continues in the background.</p><Button variant="outline" disabled={action.isPending} onClick={() => action.mutate("cancel")}>Cancel sync</Button></>}
-      {job.status === "needs_code" && <><p>Your provider session expired. Verify the account again; this sync then resumes by itself.</p><Link to="/home">Verify again on Home</Link></>}
+      {job.status === "needs_code" && <><p>Your provider session expired. Verify the account again; this sync then resumes by itself.</p><Link className="underline" to="/home">Verify again on Accounts</Link></>}
       {["interrupted", "paused"].includes(job.status) && <><p>Log in again if needed, then resume this sync.</p><Link to={`/login?return=${encodeURIComponent(`/sync?job=${jobId}`)}`}>Log in again</Link><Button disabled={action.isPending} onClick={() => action.mutate("resume")}>Resume after login</Button></>}
       {job.import_pending && <><StatusBanner variant="warning">Fetched, import failed</StatusBanner><Button disabled={action.isPending} onClick={() => action.mutate("retryImport")}>Retry import</Button></>}
       {["failed", "cancelled"].includes(job.status) && !job.import_pending && (job.partial_decision ?? "pending") === "pending" && <div className="space-y-3"><p>Use any orders fetched before the sync stopped, or leave them out of your dashboard.</p><div className="flex flex-wrap gap-2"><Button disabled={action.isPending} onClick={() => action.mutate("partial")}>Use partial data</Button><Button variant="outline" disabled={action.isPending} onClick={() => action.mutate("discard")}>Discard</Button></div></div>}
@@ -68,7 +68,7 @@ export function SyncJobScreen({ jobId }: { jobId: string }) {
       {job.status === "done" && <StatusBanner variant="success">Sync complete. Your dashboard is ready.</StatusBanner>}
     </>}
     {action.error && <StatusBanner variant="error">{action.error.message}</StatusBanner>}
-    <Link className="block underline" to="/home">Back to Home</Link>
+    
   </section>;
 }
 
@@ -76,5 +76,5 @@ export default function Sync() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
   const accountId = params.get("account");
-  return <AuthShell title="Sync orders">{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId + (params.get("provider") ?? "")} accountId={accountId} provider={params.get("provider") ?? undefined} onStarted={job => setParams({ job: job.id })} /> : <><p>Choose a linked account from Home to start a sync.</p><Link to="/home">Back to Home</Link></>}</AuthShell>;
+  return <AuthShell title="Sync orders" subtitle="Fetch new orders from a linked account." back={{ to: "/home", label: "Accounts" }}>{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId + (params.get("provider") ?? "")} accountId={accountId} provider={params.get("provider") ?? undefined} onStarted={job => setParams({ job: job.id })} /> : <><p className="text-sm text-muted-foreground">Choose a linked account to sync.</p><Button asChild><Link to="/home">Go to accounts</Link></Button></>}</AuthShell>;
 }

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 
 export interface StatusBannerProps {
   variant?: "info" | "success" | "warning" | "error";
@@ -7,19 +8,18 @@ export interface StatusBannerProps {
   role?: string;
 }
 
+const ICONS = { info: Info, success: CheckCircle2, warning: AlertTriangle, error: AlertCircle };
+const TONES = { info: "notice-info", success: "notice-success", warning: "notice-warning", error: "notice-danger" };
+
+/** Neutral tinted surface with a coloured icon; colours come from semantic tokens, never the accent. */
 export function StatusBanner({ variant = "info", children, className, role }: StatusBannerProps) {
-  const colors: Record<string, string> = {
-    info: "border-primary/20 bg-primary/10 text-primary",
-    success: "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-300",
-    warning: "border-amber-500/20 bg-amber-500/10 text-amber-900 dark:text-amber-200",
-    error: "border-destructive/20 bg-destructive/10 text-destructive",
-  };
   const computedRole = role ?? (variant === "error" ? "alert" : "status");
+  const Icon = ICONS[variant];
   return (
-    <div role={computedRole} className={`rounded-lg border p-3 text-sm ${colors[variant]} ${className ?? ""}`}>
-      {children}
+    <div role={computedRole} className={`notice ${TONES[variant]} ${className ?? ""}`}>
+      <Icon aria-hidden="true" />
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
 export default StatusBanner;
-
