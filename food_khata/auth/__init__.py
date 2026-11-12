@@ -60,6 +60,7 @@ from .sessions import (
 from .throttle import (
     INVALID_CREDENTIALS_MESSAGE,
     THROTTLE_ERROR_MESSAGE,
+    check_ip_throttle,
     check_throttle,
     record_failed_login,
     reset_failed_logins,
@@ -79,6 +80,7 @@ __all__ = [
     "SetupForbiddenError",
     "can_register",
     "check_registration_throttle",
+    "check_ip_throttle",
     "check_throttle",
     "claim_owner",
     "clear_session_cookies",

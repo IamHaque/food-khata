@@ -546,6 +546,7 @@ def _wipe(request, user_id, storage, acc, account_id, acc_path, provider, others
     try:
         if not others and acc_path.exists():
             trash = acc_path.parent.parent / f".deleting-{uuid.uuid4().hex}"
+            (acc_path / ".deleted-account").write_text(account_id)  # read by the startup reconcile
             acc_path.rename(trash)
         if user_db and user_db.is_file():
             delete_account_data(user_db, account_id, provider if others else None, [j["id"] for j in jobs])
@@ -559,13 +560,17 @@ def _wipe(request, user_id, storage, acc, account_id, acc_path, provider, others
     except Exception as exc:
         if trash is not None and trash.exists() and not acc_path.exists():
             trash.rename(acc_path)
+            (acc_path / ".deleted-account").unlink(missing_ok=True)
         log.error("wipe failed for account %s: %s", account_id, type(exc).__name__)  # no personal data
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"code": "WIPE_FAILED", "message": "Wipe failed; nothing was deleted."},
         ) from exc
     if trash is not None:
-        shutil.rmtree(trash, ignore_errors=True)
+        try:
+            shutil.rmtree(trash)
+        except Exception as exc:  # left for the next startup reconcile; no personal data in the log
+            log.error("could not remove %s: %s", trash, type(exc).__name__)
 
 
 @router.delete("/{account_id}", response_model=DisconnectResponse)
