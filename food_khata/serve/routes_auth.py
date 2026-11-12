@@ -160,11 +160,14 @@ def register(
     pw_hash = hash_password(data.password)
     created_at = datetime.now(UTC).isoformat()
 
-    conn.execute(
-        "INSERT INTO users (id, username, password_hash, is_owner, disabled, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (user_id, username, pw_hash, is_owner, 0, created_at),
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            "INSERT INTO users (id, username, password_hash, is_owner, disabled, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, username, pw_hash, is_owner, 0, created_at),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:  # two registrations raced for one username
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists.") from None
 
     # Successful registration resets attempt counter for this IP
     reset_registration_throttle(conn, ip)

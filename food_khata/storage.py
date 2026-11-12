@@ -406,6 +406,8 @@ class Storage:
             "app.db",
             "app.db-wal",
             "app.db-shm",
+            ".server.lock",
+            "logs",
             "app.db-journal",
             "food_analytics.db-wal",
             "food_analytics.db-shm",
@@ -415,7 +417,7 @@ class Storage:
         if not self.root.is_dir():
             return entries
         for entry in self.root.iterdir():
-            if entry.name in skip or entry.name.startswith("legacy-backup-"):
+            if entry.name in skip or entry.name.startswith(("legacy-backup-", ".deleting-")) or entry.name.endswith(".bak"):
                 continue
             if entry.is_symlink():
                 continue
