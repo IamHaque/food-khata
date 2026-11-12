@@ -41,5 +41,5 @@ it("the error boundary offers Reload and Go to Home instead of a white page", ()
   boundary.state = { hasError: true };
   const html = renderToStaticMarkup(boundary.render() as never);
   expect(html).toContain("Reload");
-  expect(html).toContain('href="/home"');
+  expect(html).toContain('href="/accounts"');
 });

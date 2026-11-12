@@ -1,6 +1,7 @@
 import * as React from "react";
-import { plural } from "../../lib/format";
+import { pluralize } from "../../lib/format";
 import * as echarts from "echarts/core";
+import { color as zcolor } from "echarts/core";
 import { TreemapChart } from "echarts/charts";
 import {
   TooltipComponent,
@@ -121,10 +122,12 @@ export function buildCuisineHierarchy(
     matchedRestaurants: LoyaltyRowLike[];
   }>();
 
-  validCuisines.forEach((c, idx) => {
+  // One accent ramp by spend: cuisines are not categories with their own hue, so colour only says "more or less".
+  const maxSpend = Math.max(...validCuisines.map((c) => c.spend));
+  validCuisines.forEach((c) => {
     cuisineMap.set(c.name.toLowerCase(), {
       cuisine: c,
-      color: activeTheme.colors[idx % activeTheme.colors.length],
+      color: zcolor.lerp(0.25 + 0.75 * (maxSpend > 0 ? c.spend / maxSpend : 0), [activeTheme.rampLow, activeTheme.rampHigh]),
       matchedRestaurants: [],
     });
   });
@@ -275,7 +278,7 @@ export function buildCuisineTreemapOption(
         const formattedVal = formatRupees(val);
         const orders = params?.data?.orders;
         const ordersText = typeof orders === "number" && orders > 0
-          ? plural(orders, "order")
+          ? pluralize(orders, "order")
           : "";
 
         const share = totalSpend > 0 ? ((val / totalSpend) * 100).toFixed(1) + "%" : "";
@@ -335,7 +338,10 @@ export function buildCuisineTreemapOption(
             return val ? `${name}\n${val}` : name;
           },
           fontSize: 12,
-          color: theme.tooltipBg,
+          // A halo keeps the label readable on every step of the ramp.
+          color: theme.textColor,
+          textBorderColor: theme.tooltipBg,
+          textBorderWidth: 2,
         },
         upperLabel: {
           show: true,

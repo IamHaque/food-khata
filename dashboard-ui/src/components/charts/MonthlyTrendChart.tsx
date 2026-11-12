@@ -41,6 +41,7 @@ function registerOnce() {
 registerOnce();
 
 import type { components } from "@/types/api";
+import { inr, pluralize } from "../../lib/format";
 
 export type DashboardResponse = components["schemas"]["Dashboard"];
 
@@ -252,8 +253,8 @@ export function buildMonthlyTrendOption(
           if (item.value == null || Number.isNaN(Number(item.value))) continue;
           const formatted =
             item.seriesName.includes("Spend") || item.seriesName.includes("Previous")
-              ? `₹${Number(item.value).toLocaleString("en-IN")}`
-              : `${Number(item.value).toLocaleString("en-IN")} orders`;
+              ? inr(Number(item.value))
+              : pluralize(Number(item.value), "order");
           res += `<div class="flex justify-between gap-3 text-xs"><span>${item.seriesName}:</span> <strong>${formatted}</strong></div>`;
         }
         return res;

@@ -4,7 +4,7 @@ import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
 import { SegmentedControl } from '../components/ui/segmented-control';
 import { Search, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { inr, plural } from '../lib/format';
+import { inr, pluralize } from '../lib/format';
 import { compactInr } from '../lib/chart-kit';
 import { PageError } from '../components/dashboard';
 
@@ -541,7 +541,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Restaurants</h3>
                 {restaurants.data?.total != null && (
-                  <span className="text-sm text-muted-foreground">{plural(restaurants.data.total, 'restaurant')}</span>
+                  <span className="text-sm text-muted-foreground">{pluralize(restaurants.data.total, 'restaurant')}</span>
                 )}
               </div>
               {restaurants.isError ? (
@@ -641,7 +641,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Dishes</h3>
                 {items.data?.total != null && (
-                  <span className="text-sm text-muted-foreground">{plural(items.data.total, 'dish', 'dishes')}</span>
+                  <span className="text-sm text-muted-foreground">{pluralize(items.data.total, 'dish', 'dishes')}</span>
                 )}
               </div>
               {items.isError ? (

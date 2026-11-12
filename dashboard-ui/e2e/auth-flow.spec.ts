@@ -130,7 +130,7 @@ for (const width of [1440, 390]) {
       await srv.stop();
       srv = await startBackend(false, srv.dataDir, srv.port);
       const rec = record(page);
-      await page.goto(srv.base + "/home");
+      await page.goto(srv.base + "/accounts");
       await page.waitForURL(/\/login/, { timeout: 30000 });
       await expect(page.getByText("Your session ended. Sign in again.")).toBeVisible();
       expect(rec.logins(), "exactly one redirect to /login").toBe(1);
@@ -139,14 +139,14 @@ for (const width of [1440, 390]) {
       expect(rec.logins(), "no second login prompt").toBe(1);
     });
 
-    test("[PR-03] setup and login land on /home", async ({ page }) => {
+    test("[PR-03] setup and login land on /accounts", async ({ page }) => {
       srv = await startBackend(false);
       await claimOwner(page, srv.base);
-      await expect(page, "setup lands on /home").toHaveURL(/\/home$/, { timeout: 30000 });
+      await expect(page, "setup lands on /accounts").toHaveURL(/\/accounts$/, { timeout: 30000 });
       await page.context().clearCookies();
       await page.goto(srv.base + "/login");
       await loginOwner(page);
-      await expect(page, "login lands on /home").toHaveURL(/\/home$/, { timeout: 30000 });
+      await expect(page, "login lands on /accounts").toHaveURL(/\/accounts$/, { timeout: 30000 });
     });
 
     test("[PR-04][PR-05] switch off: server-driven list, nothing preselected, no aggregate row", async ({ page }) => {

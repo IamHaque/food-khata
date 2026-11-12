@@ -40,7 +40,7 @@ from food_khata.users.context import user_root
 from .behavior import behavior
 from .charts import kpi_history, overview, remaining
 from .db import connect_readonly, database_version, resolve_user_database
-from .filters import build_where
+from .filters import NEEDS_REVIEW_SQL, build_where
 from .food import food
 from .metrics import FEES_SQL, compute_metrics, monthly_totals
 from .places import places
@@ -490,11 +490,12 @@ def create_app(
             "SELECT AVG(CASE WHEN o.financial_verified=1 THEN 100.0 ELSE 0 END), "
             + "".join(f"AVG(CASE WHEN {c} IS NULL THEN 100.0 ELSE 0 END), " for c in columns.values())
             + "COUNT(*) - COUNT(DISTINCT o.account_id || '|' || o.platform || '|' || o.platform_order_id), "
-            "COUNT(CASE WHEN ABS(o.reconciliation_difference)>1 THEN 1 END)" + base,
+            "COUNT(CASE WHEN ABS(o.reconciliation_difference)>1 THEN 1 END), "
+            f"COUNT(CASE WHEN {NEEDS_REVIEW_SQL} THEN 1 END)" + base,
             params,
         ).fetchone()
-        verified, duplicates, anomalies = agg[0], agg[-2], agg[-1]
-        null_rates = {n: (round(v, 2) if v is not None else None) for n, v in zip(columns, agg[1:-2], strict=True)}
+        verified, duplicates, anomalies, needs_review = agg[0], agg[-3], agg[-2], agg[-1]
+        null_rates = {n: (round(v, 2) if v is not None else None) for n, v in zip(columns, agg[1:-3], strict=True)}
         quarantined = conn.execute(
             "SELECT COUNT(*) FROM quarantine a WHERE " + (" AND ".join(clauses) or "1=1"), scope
         ).fetchone()[0]
@@ -513,6 +514,7 @@ def create_app(
             "null_rates": null_rates,
             "duplicate_orders": duplicates,
             "reconciliation_anomalies": anomalies,
+            "needs_review_orders": needs_review,
             "quarantined_orders": quarantined,
             "note": "Food orders only; Instamart/Dineout excluded; API-visible history only. Saved details are snapshots; later refunds or status changes may be missing.",
         }

@@ -12,7 +12,7 @@ import {
   type ChartRegistrationOptions,
 } from "../../lib/highlight-bus";
 import { useFilters } from "../../app/FilterContext";
-import { subscribeTheme } from "../../app/theme";
+import { getPatterns, subscribeTheme } from "../../app/theme";
 import type { CrossFilterDimension } from "../../lib/crossfilter";
 
 export function useOptionalFilters() {
@@ -202,8 +202,10 @@ export function BaseChart<TData = any>({
       window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const option = computeOption(theme, prefersReducedMotion);
-    chart.setOption(option, {
+    const built = computeOption(theme, prefersReducedMotion) as { aria?: { decal?: unknown } };
+    // Every chart honours "Accessible patterns"; a chart that sets its own aria.decal keeps it.
+    const option = built.aria?.decal ? built : { ...built, aria: { enabled: true, ...built.aria, decal: { show: getPatterns() } } };
+    chart.setOption(option as EChartsCoreOption, {
       notMerge,
       lazyUpdate,
     });

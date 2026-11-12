@@ -1,6 +1,6 @@
 import { getPatterns } from "../../app/theme";
 import * as React from "react";
-import { monthLabel } from "../../lib/chart-kit";
+import { monthLabel, swatchBg } from "../../lib/chart-kit";
 import * as echarts from "echarts/core";
 import { LineChart, type LineSeriesOption } from "echarts/charts";
 import {
@@ -151,14 +151,14 @@ export function formatNewVsRepeatTooltip(
       <div style="margin-bottom: 8px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 4px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${newColor};"></span>
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; ${swatchBg(newColor)}"></span>
             <span style="color: ${theme.textColor}; font-weight: 500;">New restaurants:</span>
           </div>
           <span style="font-weight: 600; color: ${theme.textColor};">${newOrders.toLocaleString("en-IN")}</span>
         </div>
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 4px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background-color: ${repeatColor};"></span>
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; ${swatchBg(repeatColor)}"></span>
             <span style="color: ${theme.textColor}; font-weight: 500;">Repeat restaurants:</span>
           </div>
           <span style="font-weight: 600; color: ${theme.textColor};">${repeatOrders.toLocaleString("en-IN")}</span>

@@ -26,6 +26,7 @@ import {
   type LoyaltyParetoDatumLike,
 } from "../../lib/captions";
 import { isDimensionMatch } from "../../lib/highlight-bus";
+import { pluralize } from "../../lib/format";
 
 export interface LoyaltyParetoDatum extends LoyaltyParetoDatumLike {
   key?: string | null;
@@ -180,7 +181,7 @@ export function formatLoyaltyParetoTooltip(
       </div>
       <div style="display: flex; justify-content: space-between; gap: 14px; margin-bottom: 4px;">
         <span style="color: ${theme.mutedColor};">Orders:</span>
-        <strong style="color: ${theme.textColor}; font-family: monospace;">${orders} orders (cumulative ${cumPercent}%)</strong>
+        <strong style="color: ${theme.textColor}; font-family: monospace;">${pluralize(orders, "order")} (cumulative ${cumPercent}%)</strong>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 14px; margin-bottom: 4px;">
         <span style="color: ${theme.mutedColor};">Total spend:</span>

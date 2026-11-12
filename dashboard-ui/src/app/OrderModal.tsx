@@ -26,7 +26,7 @@ type Order = components['schemas']['Order'];
 
 const money = (value: number | null | undefined) => inr(value, 2);
 /** Deductions read as minus in a ledger. */
-const minus = (value: number | null | undefined) => (value == null ? '–' : `−${inr(Math.abs(value), 2)}`);
+const minus = (value: number | null | undefined) => inr(value == null ? null : -Math.abs(value), 2);
 const DEDUCTIONS = new Set(['Food discount', 'Delivery discount', 'Refunds']);
 
 export function OrderModal({

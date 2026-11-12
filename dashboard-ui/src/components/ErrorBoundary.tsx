@@ -23,7 +23,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
               Reload
             </button>
             <a
-              href="/home"
+              href="/accounts"
               className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent"
             >
               Go to Home

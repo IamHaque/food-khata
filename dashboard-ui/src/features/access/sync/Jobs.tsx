@@ -2,18 +2,19 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
-import { AuthShell, StatusBanner } from "../primitives";
+import { AppPage, StatusBanner } from "../primitives";
 import { useAccounts } from "../api";
 import { MODE_LABEL, formatWhen, isSyncActive, syncApi, type SyncEvent, type SyncJob } from "./api";
 import { StatusBadge } from "./StatusBadge";
 import { SyncJobScreen } from "./Sync";
+import { pluralize } from "../../../lib/format";
 
 const PAGE = 20;
 const STATUSES = ["queued", "running", "paused", "needs_code", "failed", "interrupted", "cancelled", "done"];
 
 const counts = (job: SyncJob) => {
   const c = (job.counts ?? {}) as Record<string, unknown>;
-  return typeof c.orders === "number" ? `${c.orders} orders · ${c.details ?? 0} bills` : "—";
+  return typeof c.orders === "number" ? `${pluralize(c.orders, "order")} · ${pluralize(Number(c.details ?? 0), "bill")}` : "—";
 };
 
 export function JobsList() {
@@ -48,7 +49,6 @@ export function JobsList() {
       <Button variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Previous</Button>
       <Button variant="outline" disabled={(jobs.data?.length ?? 0) <= PAGE} onClick={() => setOffset(offset + PAGE)}>Next</Button>
     </div>
-    <Link className="block underline" to="/home">Back to Home</Link>
   </div>;
 }
 
@@ -69,5 +69,5 @@ export function JobDetail({ jobId }: { jobId: string }) {
 
 export default function Jobs() {
   const { jobId } = useParams();
-  return <AuthShell title={jobId ? "Sync job" : "Sync jobs"} wide>{jobId ? <JobDetail key={jobId} jobId={jobId} /> : <JobsList />}</AuthShell>;
+  return <AppPage title={jobId ? "Sync job" : "Sync jobs"} back={jobId ? { to: "/jobs", label: "Jobs" } : undefined} wide>{jobId ? <JobDetail key={jobId} jobId={jobId} /> : <JobsList />}</AppPage>;
 }

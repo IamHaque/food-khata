@@ -1,9 +1,10 @@
 import { inr } from "./format";
+import { getPatterns } from "../app/theme";
 
 /** ₹950, ₹12k, ₹1.2L, ₹3.4Cr: short enough that axis ticks never need rotating. */
 export function compactInr(v: number): string {
   const a = Math.abs(v);
-  const sign = v < 0 ? "−" : "";
+  const sign = v < 0 && a >= 0.5 ? "−" : ""; // a value that rounds to ₹0 carries no sign
   const trim = (n: number) => String(Number(n.toFixed(1)));
   if (a >= 1e7) return `${sign}₹${trim(a / 1e7)}Cr`;
   if (a >= 1e5) return `${sign}₹${trim(a / 1e5)}L`;
@@ -43,3 +44,7 @@ export function thin<T>(items: readonly T[], max: number): T[] {
   const step = items.length / max;
   return Array.from({ length: max }, (_, i) => items[Math.floor(i * step)]);
 }
+
+/** Tooltip swatch fill: hatched too when "Accessible patterns" is on, so it matches the chart marks. */
+export const swatchBg = (color: string) =>
+  `background-color:${color};${getPatterns() ? "background-image:repeating-linear-gradient(45deg,hsl(var(--foreground) / .5) 0 2px,transparent 2px 4px);" : ""}`;

@@ -5435,6 +5435,11 @@
             "type": "integer",
             "title": "Reconciliation Anomalies"
           },
+          "needs_review_orders": {
+            "type": "integer",
+            "title": "Needs Review Orders",
+            "default": 0
+          },
           "quarantined_orders": {
             "type": "integer",
             "title": "Quarantined Orders",

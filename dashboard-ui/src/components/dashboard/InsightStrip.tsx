@@ -48,6 +48,9 @@ function InsightButton({ insight, onApply }: { insight: Insight; onApply: (patch
   );
 }
 
+// The fee percentage is already a KPI row on Overview; showing it here too made it appear twice.
+const shown = (list: Insight[]) => list.filter(i => i.key !== "fee_percentage").slice(0, 4);
+
 const STRIP = "insight-strip grid grid-cols-1 gap-2 sm:grid-cols-3";
 
 export function InsightStrip(props: InsightStripProps = {}) {
@@ -55,7 +58,7 @@ export function InsightStrip(props: InsightStripProps = {}) {
 
   if (props.insights !== undefined || props.items !== undefined || props.data?.charts?.insights !== undefined) {
     const insights = props.insights ?? props.items ?? props.data?.charts?.insights ?? [];
-    const visible = insights.slice(0, 4);
+    const visible = shown(insights);
     if (!visible.length) return null;
     const applyPatch = props.onApplyFilterPatch ?? update;
     return (
@@ -71,7 +74,7 @@ export function InsightStrip(props: InsightStripProps = {}) {
 function InsightStripFromQuery() {
   const { filters, update } = useFilters();
   const query = useDashboard(filters);
-  const visible = (query.data?.charts?.insights ?? []).slice(0, 4);
+  const visible = shown(query.data?.charts?.insights ?? []);
   if (!visible.length) return null;
   return (
     <div className={STRIP} role="group" aria-label="Insights">

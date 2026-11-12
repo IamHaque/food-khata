@@ -18,8 +18,9 @@ import {
   type ChartTheme,
   platformColor,
 } from "../../lib/chart-theme";
-import { platformLabel, plural } from "../../lib/format";
+import { platformLabel, pluralize } from "../../lib/format";
 import { computePlatformTakeaway, formatRupees } from "../../lib/captions";
+import { swatchBg } from "../../lib/chart-kit";
 
 export interface PlatformSplitItem {
   platform: string;
@@ -102,7 +103,7 @@ export function formatPlatformTooltip(
   return `
     <div style="font-family: inherit; font-size: 12px; line-height: 1.5; min-width: 140px;">
       <div style="font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${markerColor};"></span>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;${swatchBg(markerColor)}"></span>
         <span>${platformLabel(platform)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
@@ -115,7 +116,7 @@ export function formatPlatformTooltip(
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
         <span style="color: ${theme.mutedColor};">Orders:</span>
-        <span style="font-weight: 600;">${plural(orders, "order")}</span>
+        <span style="font-weight: 600;">${pluralize(orders, "order")}</span>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
         <span style="color: ${theme.mutedColor};">Discounts:</span>

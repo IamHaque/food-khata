@@ -1,6 +1,6 @@
 import { getPatterns } from "../../app/theme";
 import * as React from "react";
-import { monthLabel } from "../../lib/chart-kit";
+import { monthLabel, swatchBg } from "../../lib/chart-kit";
 import { compactInr } from "../../lib/chart-kit";
 import * as echarts from "echarts/core";
 import { LineChart, type LineSeriesOption } from "echarts/charts";
@@ -153,7 +153,7 @@ export function formatFeeComponentsTooltip(
     return `
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 4px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background-color: ${color};"></span>
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; ${swatchBg(color)}"></span>
           <span style="color: ${theme.textColor}; font-weight: 500;">${p.seriesName}:</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">

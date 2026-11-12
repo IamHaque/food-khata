@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthShell, StatusBanner } from "../primitives";
+import { AppPage, StatusBanner } from "../primitives";
 import { accountsApi, ApiError } from "../api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,7 @@ export function LinkAccount() {
       if (res.added_to_existing) setAddedTo(`${provider.charAt(0).toUpperCase()}${provider.slice(1)} added to the account for ••••${phone.slice(-4)}`);
       await queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setSuccess(true);
-      timer.current = setTimeout(() => navigate("/home"), 800);
+      timer.current = setTimeout(() => navigate("/accounts"), 800);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "HANDLE_EXPIRED" || err.code === "INVALID_HANDLE") {
@@ -77,7 +77,7 @@ export function LinkAccount() {
   };
 
   return (
-    <AuthShell title="Link account" subtitle="Enter your phone number, then the SMS code we send." back={{ to: "/home", label: "Accounts" }}>
+    <AppPage title="Link account" subtitle="Enter your phone number, then the SMS code we send." back={{ to: "/accounts", label: "Accounts" }}>
       <div className="space-y-4">
         {success && <StatusBanner variant="success">{addedTo ?? "Linked successfully"}</StatusBanner>}
         {error && <StatusBanner variant="error">{error}</StatusBanner>}
@@ -145,7 +145,7 @@ export function LinkAccount() {
           </form>
         )}
       </div>
-    </AuthShell>
+    </AppPage>
   );
 }
 export default LinkAccount;

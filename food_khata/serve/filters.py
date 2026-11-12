@@ -12,6 +12,12 @@ MEAL_SLOTS = {
 }
 
 
+# The one definition of "needs review": the Orders filter and the Data health count both use it.
+NEEDS_REVIEW_SQL = (
+    "(o.financial_verified IS NULL OR o.financial_verified<>1 "
+    "OR o.reconciliation_difference IS NULL OR ABS(o.reconciliation_difference)>1)"
+)
+
 def build_where(filters: Filters) -> tuple[str, list]:
     clauses, params = [], []
 
@@ -82,10 +88,7 @@ def build_where(filters: Filters) -> tuple[str, list]:
     if filters.verified_only:
         clauses.append("o.financial_verified = 1")
     if filters.anomaly == "review":
-        clauses.append(
-            "(o.financial_verified IS NULL OR o.financial_verified<>1 "
-            "OR o.reconciliation_difference IS NULL OR ABS(o.reconciliation_difference)>1)"
-        )
+        clauses.append(NEEDS_REVIEW_SQL)
     if filters.search:
         term = (
             "%" + filters.search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"

@@ -34,9 +34,13 @@ describe('InsightStrip', () => {
     expect(html).toContain('Top restaurant');
     expect(html).toContain('Biryani House');
     expect(html).toContain('Fourth');
-    expect(html).not.toContain('Fifth');
+    expect(html).toContain('Fifth');
     const buttons = html.match(/<button/g) ?? [];
     expect(buttons.length).toBe(4);
+  });
+
+  it('leaves the fee percentage to the Overview KPI row', () => {
+    expect(renderToString(<InsightStrip insights={insights} />)).not.toContain('Fee share');
   });
 
   it('click invokes filter update with filter_patch', () => {

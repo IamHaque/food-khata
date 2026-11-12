@@ -1,5 +1,6 @@
 import { request } from "../api/client";
 import type { components } from "../../../types/api";
+import { pluralize } from "../../../lib/format";
 
 export type SyncJob = components["schemas"]["SyncJobResponse"];
 export type SyncEvent = components["schemas"]["JobEventOut"];
@@ -26,6 +27,6 @@ export const isSyncActive = (job: SyncJob) => ACTIVE_STATUSES.includes(job.statu
 export const SYNC_LOGOUT_WARNING = "Your sync continues after logout. A server restart would interrupt it.";
 
 export const jobLabel = (status: string) => (status === "needs_code" ? "needs verification" : status.replaceAll("_", " "));
-export const formatSeconds = (s: number) => (s >= 90 ? `${Math.round(s / 60)} minutes` : `${s} seconds`);
+export const formatSeconds = (s: number) => (s >= 90 ? pluralize(Math.round(s / 60), "minute") : pluralize(s, "second"));
 export const formatWhen = (t?: number | null) => (t ? new Date(t * 1000).toLocaleString() : "—");
 export const MODE_LABEL: Record<string, string> = { incremental: "New orders", full: "All history", repair: "Missing bill details" };

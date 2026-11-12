@@ -19,7 +19,7 @@ import {
 import { Skeleton } from '../components/ui/skeleton';
 import { PageHeader } from '../components/ui/page-header';
 import { StatusPill } from '../components/ui/status-pill';
-import { inr, plural, platformLabel } from '../lib/format';
+import { inr, pluralize, platformLabel } from '../lib/format';
 import { EmptyState } from '../components/dashboard/EmptyState';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { SegmentedControl, type SegmentedControlOption } from '../components/ui/segmented-control';
@@ -787,7 +787,7 @@ export function Orders({
         header: () => sortable('discount', 'Discount'),
         cell: info => (
           <span className="whitespace-nowrap text-sm text-muted-foreground">
-            {info.row.original.total_discount ? `−${money(Math.abs(info.row.original.total_discount))}` : money(0)}
+            {money(-Math.abs(info.row.original.total_discount ?? 0))}
           </span>
         ),
       },
@@ -1229,7 +1229,7 @@ export function Orders({
                       </span>
                       {o.items_summary && <span className="line-clamp-2 text-sm text-muted-foreground">{o.items_summary}</span>}
                       <span className="flex justify-between gap-3 text-xs text-muted-foreground tabular-nums">
-                        <span>Discount {o.total_discount ? `−${money(Math.abs(o.total_discount))}` : money(0)}</span>
+                        <span>Discount {money(-Math.abs(o.total_discount ?? 0))}</span>
                         <span>Fees {money(o.fees)}</span>
                       </span>
                     </button>
@@ -1308,7 +1308,7 @@ export function Orders({
           <div className="orders-footer space-y-3 border-t-2 border-foreground/80 pt-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
               <p className="text-sm font-medium text-foreground">
-                Total for {plural(total, 'order')}
+                Total for {pluralize(total, 'order')}
                 <span className="font-normal text-muted-foreground"> · {statusScope}</span>
               </p>
               <p className="text-lg font-semibold tabular-nums text-foreground">{money(query.data?.filtered_total_amount)}</p>

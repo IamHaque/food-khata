@@ -12,6 +12,7 @@ import type { EChartsCoreOption } from "echarts/core";
 
 import { BaseChart, useOptionalFilters } from "@/components/dashboard/BaseChart";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { inr, pluralize } from "../../lib/format";
 import {
   getCurrentChartTheme,
   buildBaseChartOption,
@@ -221,8 +222,8 @@ export function buildCalendarHeatmapOption(
 
         if (!dateStr) return "";
 
-        const formattedOrders = `${Number(orders).toLocaleString("en-IN")} ${Number(orders) === 1 ? "order" : "orders"}`;
-        const formattedSpend = `₹${Number(spend).toLocaleString("en-IN")}`;
+        const formattedOrders = pluralize(Number(orders), "order");
+        const formattedSpend = inr(Number(spend));
 
         return [
           `<div class="font-bold text-xs mb-1">${dateStr}</div>`,

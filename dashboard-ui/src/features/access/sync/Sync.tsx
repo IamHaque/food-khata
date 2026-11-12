@@ -2,10 +2,11 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
-import { AuthShell, StatusBanner } from "../primitives";
+import { AppPage, StatusBanner } from "../primitives";
 import { ApiError, useAccounts } from "../api";
 import { VerifyAgain } from "../accounts/VerifyAgain";
 import { ACTIVE_STATUSES, formatSeconds, isSyncActive, jobLabel, syncApi, type SyncJob, type SyncMode } from "./api";
+import { pluralize } from "../../../lib/format";
 export { SyncLogoutWarning } from "./SyncLogoutWarning";
 
 const modes: [SyncMode, string, string][] = [
@@ -19,7 +20,7 @@ const jobMode: Record<SyncMode, string> = { new: "incremental", all: "full", mis
 export function lastRunText(jobs: SyncJob[] | undefined, provider: string | undefined, mode: SyncMode) {
   const run = Array.isArray(jobs) ? jobs.find(j => j.status === "done" && j.provider === provider && j.mode === jobMode[mode] && j.started_at && j.finished_at) : undefined;
   if (!run) return "No timing yet; your first run of this kind will set it.";
-  const orders = typeof run.counts?.orders === "number" ? ` for ${run.counts.orders} orders` : "";
+  const orders = typeof run.counts?.orders === "number" ? ` for ${pluralize(run.counts.orders, "order")}` : "";
   return `Last time this took about ${formatSeconds(Math.max(1, Math.round(run.finished_at! - run.started_at!)))}${orders}.`;
 }
 
@@ -61,7 +62,7 @@ export function SyncProgress({ job }: { job: SyncJob }) {
       <div className={`h-full bg-primary ${percent === null ? "w-1/3 animate-pulse" : ""}`} style={percent === null ? undefined : { width: `${percent}%` }} />
     </div>
     <p className="text-sm text-muted-foreground">
-      {p.page ? `${p.page} pages fetched` : "Starting"}{p.orders ? ` · ${p.details ?? 0} of ${p.orders} bills downloaded` : ""}
+      {p.page ? `${pluralize(p.page, "page")} fetched` : "Starting"}{p.orders ? ` · ${p.details ?? 0} of ${pluralize(p.orders, "bill")} downloaded` : ""}
       {job.eta_seconds != null && job.status === "running" ? ` · about ${formatSeconds(job.eta_seconds)} left` : ""}
     </p>
   </div>;
@@ -131,10 +132,9 @@ export function SyncAccountPicker() {
   if (!list.length) return <><p>No linked accounts yet.</p><Link className="underline" to="/accounts/link">Link an account</Link></>;
   return <div className="space-y-3">
     <p>Pick an account to sync, or fetch new orders for all of them.</p>
-    <ul className="space-y-2">{list.map(a => <li key={`${a.local_id}:${a.provider}`}><Link className="flex min-h-[44px] items-center justify-between rounded-lg border p-3" to={`/sync?account=${encodeURIComponent(a.local_id)}&provider=${encodeURIComponent(a.provider)}`}><span className="capitalize">{a.provider} <span className="font-mono normal-case">{a.phone}</span></span><span className="text-sm text-muted-foreground">{a.order_count} orders</span></Link></li>)}</ul>
+    <ul className="space-y-2">{list.map(a => <li key={`${a.local_id}:${a.provider}`}><Link className="flex min-h-[44px] items-center justify-between rounded-lg border p-3" to={`/sync?account=${encodeURIComponent(a.local_id)}&provider=${encodeURIComponent(a.provider)}`}><span className="capitalize">{a.provider} <span className="font-mono normal-case">{a.phone}</span></span><span className="text-sm text-muted-foreground">{pluralize(a.order_count, "order")}</span></Link></li>)}</ul>
     <Button disabled={all.isPending} onClick={() => all.mutate()}>{all.isPending ? "Starting…" : "Sync all (new orders)"}</Button>
     {all.data?.length ? <StatusBanner variant="warning">{all.data.map(f => <p key={f}>{f}</p>)}</StatusBanner> : null}
-    <Link className="block underline" to="/home">Back to Home</Link>
   </div>;
 }
 
@@ -142,5 +142,5 @@ export default function Sync() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
   const accountId = params.get("account");
-  return <AuthShell title="Sync orders" subtitle="Fetch new orders from a linked account." back={{ to: "/home", label: "Accounts" }}>{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId + (params.get("provider") ?? "")} accountId={accountId} provider={params.get("provider") ?? undefined} onStarted={job => setParams({ job: job.id })} /> : <SyncAccountPicker />}</AuthShell>;
+  return <AppPage title="Sync orders" subtitle="Fetch new orders from a linked account." back={{ to: "/accounts", label: "Accounts" }}>{jobId ? <SyncJobScreen key={jobId} jobId={jobId} /> : accountId ? <SyncChooser key={accountId + (params.get("provider") ?? "")} accountId={accountId} provider={params.get("provider") ?? undefined} onStarted={job => setParams({ job: job.id })} /> : <SyncAccountPicker />}</AppPage>;
 }

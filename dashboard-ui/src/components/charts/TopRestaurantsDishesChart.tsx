@@ -12,7 +12,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 
 import { ChartCard } from "@/components/dashboard/ChartCard";
-import { inr, plural } from "@/lib/format";
+import { inr, pluralize } from "@/lib/format";
 import { compactInr } from "@/lib/chart-kit";
 import { getCurrentChartTheme, buildBaseChartOption, resolveChartTheme } from "@/lib/chart-theme";
 import { computeTopRestaurantTakeaway } from "@/lib/captions";
@@ -138,7 +138,7 @@ export function buildTopRestaurantsDishesOption(
         const idx = (p as any)?.dataIndex ?? 0;
         const row = rows[idx];
         const amount = row ? inr(row.value) : "";
-        const qty = row ? plural(row.quantity, "order") : "";
+        const qty = row ? pluralize(row.quantity, "order") : "";
         return `<div class="font-semibold text-xs mb-1">${(p as any)?.name ?? ""}</div><div class="text-xs">${amount} · ${qty}</div>`;
       },
     },
@@ -168,7 +168,7 @@ export function buildTopRestaurantsDishesOption(
           position: "right",
           formatter: (params: any) => {
             const row = rows[params?.dataIndex];
-            return row ? `${inr(row.value)} · ${plural(row.quantity, "order")}` : "";
+            return row ? `${inr(row.value)} · ${pluralize(row.quantity, "order")}` : "";
           },
           fontSize: 11,
           color: theme.textColor,

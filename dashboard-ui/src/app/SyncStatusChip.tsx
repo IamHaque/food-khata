@@ -59,7 +59,7 @@ export function SyncStatusChipControl({
       ) : (
         <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
       )}
-      <span>{label}</span>
+      <span className="max-[420px]:hidden">{label}</span>
     </button>
   );
 }
