@@ -1,5 +1,6 @@
 """Owner management, setup codes, registration windows, and admin actions (AC-07)."""
 
+import logging
 import re
 import secrets
 import sqlite3
@@ -8,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from food_khata.auth.passwords import check_password_rules, hash_password, verify_password
+
+log = logging.getLogger(__name__)
 
 
 class OwnerError(Exception):
@@ -461,6 +464,7 @@ def remove_user(
         folder = user_root(data_root, user_id)
         if folder.exists():
             trash = folder.with_name(f".deleting-{uuid.uuid4().hex}")
+            (folder / ".deleted-user").write_text(user_id)  # the trash name loses the id; startup reconcile reads this
             folder.rename(trash)
     try:
         conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
@@ -469,6 +473,10 @@ def remove_user(
         conn.rollback()
         if trash is not None:
             trash.rename(folder)
+            (folder / ".deleted-user").unlink(missing_ok=True)
         raise
     if trash is not None:
-        shutil.rmtree(trash, ignore_errors=True)
+        try:
+            shutil.rmtree(trash)
+        except Exception as exc:  # left for the next startup reconcile; no user data in the log
+            log.error("could not remove %s: %s", trash, type(exc).__name__)

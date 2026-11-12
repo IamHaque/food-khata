@@ -86,3 +86,99 @@ def test_use_partial_does_not_hold_write_lock_and_imports_once(tmp_path, monkeyp
         results = sorted([first.result()["total"], second.result()["total"]])
     assert results == [0, 1]
     assert conn.execute("SELECT COUNT(*) FROM job_events WHERE code = 'IMPORTED_PARTIAL'").fetchone()[0] == 1
+
+
+# --- item 3 -----------------------------------------------------------------
+def test_remove_user_crash_is_recovered_at_startup(tmp_path):
+    import pytest
+
+    from food_khata.auth import init_app_db
+    from food_khata.auth.owner import remove_user
+    from food_khata.auth.passwords import hash_password
+    from food_khata.users.context import UserContext
+
+    init_app_db(tmp_path / "app.db")
+    conn = connect_app_db(tmp_path / "app.db")
+    conn.execute("INSERT INTO users VALUES ('o', 'owner1', ?, 1, 0, 'now')", (hash_password(PW),))
+    conn.execute("INSERT INTO users VALUES ('u', 'bob', ?, 0, 0, 'now')", (hash_password(PW),))
+    conn.commit()
+    UserContext(tmp_path / "data", "u").unlock(PW)
+
+    class Crashing:
+        def __init__(self, inner):
+            self.inner = inner
+
+        def execute(self, sql, *a):
+            if sql.startswith("DELETE FROM users"):
+                raise SystemExit
+            return self.inner.execute(sql, *a)
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+
+    with pytest.raises(SystemExit):
+        remove_user(Crashing(conn), "u", "o", PW, tmp_path / "data")
+    users = (tmp_path / "data" / "users").resolve()
+    assert not (users / "u").exists() and list(users.glob(".deleting-*"))
+    c = _client(_app(tmp_path))
+    assert (users / "u" / "vault.json").is_file() and not list(users.glob(".deleting-*"))
+    assert c.post("/api/auth/login", json={"username": "bob", "password": PW}).status_code == 200
+
+
+def test_wipe_crash_is_recovered_and_stray_trash_removed(tmp_path, monkeypatch):
+    import pytest
+
+    from food_khata.providers.fake import FakeProvider
+    from food_khata.serve.app import authenticate_client
+
+    app = _app(tmp_path)
+    app.state.provider_factory = lambda p, phone=None: FakeProvider(provider="zomato", account_id="fake-1")
+    c = TestClient(app, base_url="http://127.0.0.1:8765")
+    authenticate_client(c, username="alice", is_owner=True)
+    st = c.post("/api/accounts/link/start", json={"provider": "zomato", "phone": "9876543210"}).json()
+    acc_id = c.post("/api/accounts/link/verify", json={"handle": st["handle"], "code": "123456"}).json()["id"]
+    monkeypatch.setattr("food_khata.serve.routes_accounts.delete_account_data", lambda *a, **k: (_ for _ in ()).throw(SystemExit()))
+    # force the database step to run even if no analytics db exists yet
+    user_dir = next((tmp_path / "data" / "users").resolve().iterdir())
+    (user_dir / "food_analytics.db").touch()
+    from types import SimpleNamespace
+
+    from food_khata.serve.routes_accounts import _wipe
+
+    user_id = user_dir.name
+    with pytest.raises(SystemExit):
+        _wipe(SimpleNamespace(app=app), user_id, None, None, acc_id, user_dir / "accounts" / acc_id, "zomato", [])
+    assert not (user_dir / "accounts" / acc_id).exists() and list(user_dir.glob(".deleting-*"))
+    _app(tmp_path)
+    assert (user_dir / "accounts" / acc_id / "account.json").is_file() and not list(user_dir.glob(".deleting-*"))
+
+    stray = (tmp_path / "data" / "users").resolve() / ".deleting-abc"
+    stray.mkdir()
+    (stray / ".deleted-user").write_text("gone-user")
+    (stray / "x.txt").write_text("x")
+    _app(tmp_path)
+    assert not stray.exists()
+
+
+def test_unlock_or_create_refuses_when_encrypted_data_exists(tmp_path):
+    import json
+
+    import pytest
+
+    from food_khata.contracts import KhataError
+    from food_khata.users.crypto import UserVault
+
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert UserVault.unlock_or_create(empty, PW) is not None
+    for name, rel, body in (
+        ("a", "accounts/x/account.json", {"phone_encrypted": {"v": 1}}),
+        ("b", "accounts/x/sessions/zomato.json", {"__encrypted__": "abc"}),
+        ("c", ".credential-generation", "gen"),
+    ):
+        folder = tmp_path / name
+        (folder / rel).parent.mkdir(parents=True)
+        (folder / rel).write_text(json.dumps(body))
+        with pytest.raises(KhataError, match="Vault missing"):
+            UserVault.unlock_or_create(folder, PW)
+        assert not (folder / "vault.json").exists()

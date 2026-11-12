@@ -135,6 +135,9 @@ def create_app(
     app.state.unlocked_sessions = {}
     init_app_db(resolved_app_db)
     run_migrations(resolved_app_db, resolved_data_root)
+    from food_khata.users.context import reconcile_trash
+
+    reconcile_trash(resolved_data_root, resolved_app_db)
     # Vault keys live only in memory, so a session that survived a restart can never be unlocked (DEC-P2).
     _conn = connect_app_db(resolved_app_db)
     try:

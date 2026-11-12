@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
+import sqlite3
 import uuid
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,7 @@ from ..contracts import KhataError
 from ..storage import Storage, credential_generation, credential_lock, save_json
 from .crypto import DataCipher, UserVault
 
+log = logging.getLogger(__name__)
 USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
@@ -223,3 +227,81 @@ def reset_password(data_root: Path | str, user: Any, new_password: str | None = 
 def wipe_provider_sessions(data_root: Path | str, user: Any) -> int:
     """Delete all provider sessions for one user."""
     return UserContext(data_root, user_id_of(user)).wipe_provider_sessions()
+
+
+def _remove_trash(trash: Path) -> None:
+    try:
+        shutil.rmtree(trash)
+    except Exception as exc:
+        log.error("could not remove %s: %s", trash, type(exc).__name__)
+
+
+def _restore_trash(trash: Path, target: Path, marker: Path) -> None:
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        trash.rename(target)
+        (target / marker.name).unlink(missing_ok=True)
+    except Exception as exc:
+        log.error("could not restore %s: %s", trash, type(exc).__name__)
+
+
+def _marker(trash: Path, name: str) -> str | None:
+    try:
+        return (trash / name).read_text().strip() or None
+    except OSError:
+        return None
+
+
+def reconcile_trash(data_root: Path | str, app_db_path: Path | str) -> None:
+    """Finish or undo removals that a crash interrupted (.deleting-* folders of users and accounts)."""
+    root = users_root(data_root)
+    if not root.is_dir():
+        return
+    try:
+        conn = sqlite3.connect(app_db_path)
+    except Exception as exc:
+        log.error("trash reconcile skipped: %s", type(exc).__name__)
+        return
+    try:
+        for trash in root.glob(".deleting-*"):
+            if not trash.is_dir() or trash.is_symlink():
+                continue
+            user_id = _marker(trash, ".deleted-user")
+            try:
+                validate_user_id(user_id)
+                exists = conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone() is not None
+            except Exception as exc:
+                log.error("cannot reconcile %s: %s", trash, type(exc).__name__)
+                continue
+            target = root / user_id
+            if not exists:
+                _remove_trash(trash)
+            elif not target.exists():
+                _restore_trash(trash, target, trash / ".deleted-user")
+        for user_dir in root.iterdir():
+            if user_dir.name.startswith(".") or not user_dir.is_dir() or user_dir.is_symlink():
+                continue
+            for trash in user_dir.glob(".deleting-*"):
+                if not trash.is_dir() or trash.is_symlink():
+                    continue
+                account_id = _marker(trash, ".deleted-account")
+                if account_id is None:
+                    log.error("cannot reconcile %s: no marker", trash)
+                    continue
+                target = user_dir / "accounts" / account_id
+                has_rows = True  # a database that cannot be read counts as "still has rows"
+                db_file = user_dir / "food_analytics.db"
+                if db_file.is_file():
+                    try:
+                        with closing(sqlite3.connect(db_file)) as analytics:
+                            has_rows = analytics.execute(
+                                "SELECT 1 FROM accounts WHERE id = ? OR local_id = ?", (account_id, account_id)
+                            ).fetchone() is not None
+                    except Exception:
+                        pass
+                if has_rows and not target.exists() and USER_ID_PATTERN.fullmatch(account_id):
+                    _restore_trash(trash, target, trash / ".deleted-account")
+                else:
+                    _remove_trash(trash)
+    finally:
+        conn.close()

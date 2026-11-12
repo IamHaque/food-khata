@@ -10,10 +10,25 @@ from pathlib import Path
 from typing import Any
 
 from ..contracts import KhataError
-from ..storage import read_json, save_json
+from ..storage import ENCRYPTED_KEY, PHONE_ENCRYPTED_KEY, read_json, save_json
 from . import aead
 
 VAULT_FILENAME = "vault.json"
+
+
+def _has_encrypted_data(folder: Path) -> bool:
+    """True when the folder holds data that only the (missing) vault key could read; unreadable files count."""
+    if (folder / ".credential-generation").exists():
+        return True
+    for pattern, key in (("accounts/*/account.json", PHONE_ENCRYPTED_KEY), ("accounts/*/sessions/*.json", ENCRYPTED_KEY)):
+        for path in folder.glob(pattern):
+            try:
+                value = read_json(path)
+            except Exception:
+                return True
+            if isinstance(value, dict) and key in value:
+                return True
+    return False
 VAULT_VERSION = 1
 SCRYPT_N = 16384
 SCRYPT_R = 8
@@ -190,6 +205,8 @@ class UserVault:
         folder = Path(folder)
         if (folder / VAULT_FILENAME).is_file():
             return cls.unlock(folder, password)
+        if _has_encrypted_data(folder):
+            raise KhataError("Vault missing for existing encrypted data; restore vault.json")
         return cls.create(folder, password)
 
     def rewrap(self, new_password: str) -> None:
