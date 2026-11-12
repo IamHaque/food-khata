@@ -19,13 +19,13 @@ import {
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
+  sequentialRamp,
 } from "@/lib/chart-theme";
 import {
   computeDailySpendTakeaway,
   formatRupees,
   type DailySpendDatumLike,
 } from "@/lib/captions";
-import { tokenAlpha } from "@/lib/tokens";
 
 // Ensure ECharts modules registered once
 let registered = false;
@@ -234,18 +234,7 @@ export function buildDailySpendCalendarOption(
 
   const base = buildBaseChartOption(theme, reducedMotion);
 
-  const baseColor = theme["chart-1"] || theme.colors[0];
-  const successTokens = typeof window !== "undefined"
-    ? [0.25, 0.5, 0.75, 1].map((a) => tokenAlpha("--success", a)).filter(Boolean)
-    : [];
-  const inRangeColors = successTokens.length === 4
-    ? successTokens
-    : [
-        baseColor + "26",
-        baseColor + "66",
-        baseColor + "aa",
-        baseColor,
-      ];
+  const inRangeColors = sequentialRamp(theme, 5);
 
   const option: EChartsCoreOption = {
     ...base,
@@ -318,12 +307,12 @@ export function buildDailySpendCalendarOption(
         firstDay: 1,
         nameMap: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
       monthLabel: {
         nameMap: "en",
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
     },
     visualMap: {
@@ -341,7 +330,7 @@ export function buildDailySpendCalendarOption(
       },
       textStyle: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
       formatter: (val: number) => formatRupees(Math.round(val)),
     },

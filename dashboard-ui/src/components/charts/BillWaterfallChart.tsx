@@ -1,4 +1,5 @@
 import { getPatterns } from "../../app/theme";
+import { compactInr } from "../../lib/chart-kit";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { BarChart } from "echarts/charts";
@@ -56,6 +57,7 @@ export interface BuildBillWaterfallOptionParams {
   costWaterfall?: CostWaterfallData | null;
   theme?: ChartTheme;
   prefersReducedMotion?: boolean;
+  compact?: boolean;
 }
 
 export interface BillWaterfallChartProps {
@@ -210,6 +212,7 @@ export function buildBillWaterfallOption({
   costWaterfall,
   theme,
   prefersReducedMotion = false,
+  compact = false,
 }: BuildBillWaterfallOptionParams): EChartsCoreOption {
   const currentTheme = theme ?? resolveChartTheme("light", "emerald");
 
@@ -271,19 +274,23 @@ export function buildBillWaterfallOption({
     grid: {
       left: 16,
       right: 16,
-      top: 32,
-      bottom: 28,
+      top: 28,
+      bottom: 8,
       containLabel: true,
     },
-    xAxis: {
+    // Wide: steps run left to right with wrapped (never rotated) labels. Narrow: steps run top to bottom.
+    [compact ? "yAxis" : "xAxis"]: {
       type: "category",
       data: labels,
+      inverse: compact,
       axisLabel: {
         color: currentTheme.mutedColor,
         fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         interval: 0,
-        rotate: labels.length > 7 ? 20 : 0,
+        rotate: 0,
+        width: compact ? 96 : 72,
+        overflow: "break",
       },
       axisLine: {
         lineStyle: {
@@ -294,13 +301,13 @@ export function buildBillWaterfallOption({
         alignWithLabel: true,
       },
     },
-    yAxis: {
+    [compact ? "xAxis" : "yAxis"]: {
       type: "value",
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
-        formatter: (val: number) => formatRupees(val),
+        formatter: (val: number) => compactInr(val),
       },
       splitLine: {
         lineStyle: {
@@ -333,14 +340,14 @@ export function buildBillWaterfallOption({
         barMaxWidth: 38,
         label: {
           show: true,
-          position: "top",
+          position: compact ? "right" : "top",
           formatter: (p: any) => {
             const step = resolvedSteps[p.dataIndex];
             if (!step) return "";
             const sign = step.direction === "down" ? "-" : step.direction === "total" ? "=" : "+";
             return `${sign}${formatRupees(Math.abs(step.amount))}`;
           },
-          fontSize: 10,
+          fontSize: 11,
           color: currentTheme.textColor,
           fontFamily: '"Inter Variable", sans-serif',
         },
@@ -392,6 +399,7 @@ export function BillWaterfallChart({
 }: BillWaterfallChartProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const chartRef = React.useRef<echarts.ECharts | null>(null);
+  const [compact, setCompact] = React.useState(false);
 
   const navigate = useOptionalNavigate();
   const location = useOptionalLocation();
@@ -523,6 +531,7 @@ export function BillWaterfallChart({
       if (chart && !chart.isDisposed()) {
         chart.resize();
       }
+      setCompact(node.clientWidth < 560);
     });
     resizeObserver.observe(node);
 
@@ -551,6 +560,7 @@ export function BillWaterfallChart({
         costWaterfall: resolvedCostWaterfall,
         theme,
         prefersReducedMotion,
+        compact,
       });
 
       chart.setOption(opt, { notMerge: true, lazyUpdate: true });
@@ -576,7 +586,7 @@ export function BillWaterfallChart({
       unsubscribe();
       observer.disconnect();
     };
-  }, [resolvedSteps, resolvedCostWaterfall]);
+  }, [resolvedSteps, resolvedCostWaterfall, compact, isEmpty, isLoading, error, handleStepClick]);
 
   const infoPopover = (
     <Popover>
@@ -644,7 +654,7 @@ export function BillWaterfallChart({
         {providerPaid != null && (
           <div
             data-testid="provider-paid-callout"
-            className="rounded-lg border border-border/60 bg-muted/30 px-3.5 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2"
+            className="rounded-lg border bg-muted px-3.5 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2"
           >
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground font-medium">Provider-paid total:</span>
@@ -652,7 +662,7 @@ export function BillWaterfallChart({
                 {formatRupees(providerPaid)}
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-normal max-w-lg">
+            <p className="text-xs text-muted-foreground leading-normal max-w-lg">
               Provider-paid total is recorded by platform; bill components may not reconcile mathematically (residual is tracked separately).
             </p>
           </div>
@@ -663,7 +673,7 @@ export function BillWaterfallChart({
           role="img"
           aria-label={ariaDescription}
           tabIndex={0}
-          style={{ height: 350, width: "100%", minHeight: 300 }}
+          style={{ height: compact ? 460 : 350, width: "100%", minHeight: 300 }}
           className="cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring rounded-md"
         />
       </div>

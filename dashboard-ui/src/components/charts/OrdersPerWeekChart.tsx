@@ -319,7 +319,7 @@ export function buildOrdersPerWeekOption(
             show: true,
             position: "insideEndTop",
             formatter: `Overall avg: ${benchmarkVal}/wk`,
-            fontSize: 10,
+            fontSize: 11,
             color: currentTheme.mutedText || currentTheme.text,
           },
         },
@@ -368,9 +368,10 @@ export function buildOrdersPerWeekOption(
       data: categories,
       boundaryGap: false,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
-        rotate: categories.length > 14 ? 30 : 0,
+        rotate: 0,
+        hideOverlap: true,
       },
       axisLine: {
         lineStyle: {
@@ -385,12 +386,12 @@ export function buildOrdersPerWeekOption(
       type: "value",
       name: "Orders",
       nameTextStyle: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       minInterval: 1,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       splitLine: {

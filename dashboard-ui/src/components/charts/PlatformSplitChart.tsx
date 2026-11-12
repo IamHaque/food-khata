@@ -16,7 +16,9 @@ import {
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
+  platformColor,
 } from "../../lib/chart-theme";
+import { platformLabel, plural } from "../../lib/format";
 import { computePlatformTakeaway, formatRupees } from "../../lib/captions";
 
 export interface PlatformSplitItem {
@@ -101,10 +103,10 @@ export function formatPlatformTooltip(
     <div style="font-family: inherit; font-size: 12px; line-height: 1.5; min-width: 140px;">
       <div style="font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${markerColor};"></span>
-        <span>${platform}</span>
+        <span>${platformLabel(platform)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
-        <span style="color: ${theme.mutedColor};">Spend Share:</span>
+        <span style="color: ${theme.mutedColor};">Share of spend:</span>
         <span style="font-weight: 600;">${share}</span>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
@@ -113,7 +115,7 @@ export function formatPlatformTooltip(
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
         <span style="color: ${theme.mutedColor};">Orders:</span>
-        <span style="font-weight: 600;">${orders}</span>
+        <span style="font-weight: 600;">${plural(orders, "order")}</span>
       </div>
       <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px;">
         <span style="color: ${theme.mutedColor};">Discounts:</span>
@@ -155,7 +157,7 @@ export function buildPlatformSplitOption({
       fees: item.fees,
       advertised_savings: item.advertised_savings,
       itemStyle: {
-        color: currentTheme.colors[index % currentTheme.colors.length],
+        color: platformColor(currentTheme, item.platform, index),
         opacity: hasSelection && !isSelected ? 0.35 : 1,
       },
       selected: isSelected,
@@ -189,17 +191,18 @@ export function buildPlatformSplitOption({
         fontFamily: '"Inter Variable", sans-serif',
       },
       icon: "circle",
+      formatter: (name: string) => platformLabel(name),
     },
     title: {
       text: formatRupees(totalSpend),
-      subtext: "Total Spend",
+      subtext: "Total spend",
       left: "center",
       top: "center",
       textAlign: "center",
       textVerticalAlign: "middle",
       textStyle: {
-        fontSize: 20,
-        fontWeight: "bold",
+        fontSize: 16,
+        fontWeight: 600,
         color: currentTheme.textColor,
         fontFamily: '"Inter Variable", sans-serif',
       },
@@ -213,7 +216,7 @@ export function buildPlatformSplitOption({
       {
         name: "Platform Spend",
         type: "pie",
-        radius: ["50%", "75%"],
+        radius: ["62%", "80%"],
         center: ["50%", "50%"],
         avoidLabelOverlap: true,
         selectedMode: "multiple",
@@ -252,8 +255,8 @@ export function PlatformSplitChart({
   error,
   onRetry,
   className,
-  title = "Platform Split",
-  subtitle = "Spend share, orders, discounts and fees by platform",
+  title = "Platform split",
+  subtitle = "How your spend divides between Zomato and Swiggy.",
   caption: captionProp,
   selectedPlatforms: selectedPlatformsProp,
   onPlatformClick,

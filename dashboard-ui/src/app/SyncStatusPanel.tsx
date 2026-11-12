@@ -73,9 +73,9 @@ export function ScopeNotice({ className = '' }: { className?: string }) {
     <p
       role="note"
       data-testid="scope-notice"
-      className={`flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning ${className}`}
+      className={`notice notice-info ${className}`}
     >
-      <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <Info aria-hidden="true" />
       <span>{SCOPE_NOTICE}</span>
     </p>
   );

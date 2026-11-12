@@ -26,6 +26,24 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   fee_percentage: Percent,
 };
 
+function InsightButton({ insight, onApply }: { insight: Insight; onApply: (patch: any) => void }) {
+  const Icon = iconMap[insight.key] ?? Sparkles;
+  const value = insight.key === "fee_percentage" && !String(insight.value).includes("%") ? `${insight.value}%` : insight.value;
+  return (
+    <button
+      type="button"
+      onClick={() => onApply(insight.filter_patch)}
+      className="insight-card flex min-h-[44px] items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left hover:bg-accent transition-colors"
+    >
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 text-sm text-muted-foreground">{insight.text}</span>
+      <strong className="text-right text-sm font-semibold text-foreground tabular-nums">{value}</strong>
+    </button>
+  );
+}
+
+const STRIP = "insight-strip grid grid-cols-1 gap-2 sm:grid-cols-3";
+
 export function InsightStrip(props: InsightStripProps = {}) {
   const { update } = useFilters();
 
@@ -35,26 +53,8 @@ export function InsightStrip(props: InsightStripProps = {}) {
     if (!visible.length) return null;
     const applyPatch = props.onApplyFilterPatch ?? update;
     return (
-      <div
-        className={props.className ?? "insight-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"}
-        role="group"
-        aria-label="Insights"
-      >
-        {visible.map(insight => {
-          const Icon = iconMap[insight.key] ?? Sparkles;
-          return (
-            <button
-              type="button"
-              key={insight.key}
-              onClick={() => applyPatch(insight.filter_patch)}
-              className="insight-card inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left shadow-xs hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
-              <span className="text-sm text-foreground truncate">{insight.text}</span>
-              <strong className="text-sm font-bold text-primary ml-auto">{insight.value}</strong>
-            </button>
-          );
-        })}
+      <div className={props.className ?? STRIP} role="group" aria-label="Insights">
+        {visible.map(insight => <InsightButton key={insight.key} insight={insight} onApply={applyPatch} />)}
       </div>
     );
   }
@@ -63,34 +63,13 @@ export function InsightStrip(props: InsightStripProps = {}) {
 }
 
 function InsightStripFromQuery() {
-  const { filters } = useFilters();
+  const { filters, update } = useFilters();
   const query = useDashboard(filters);
-  const insights = query.data?.charts?.insights ?? [];
-  const visible = insights.slice(0, 4);
+  const visible = (query.data?.charts?.insights ?? []).slice(0, 4);
   if (!visible.length) return null;
-  // delegate rendering to a nested component to keep hooks valid
-  return <InsightStripQueryView insights={visible} />;
-}
-
-function InsightStripQueryView({ insights }: { insights: Insight[] }) {
-  const { update } = useFilters();
   return (
-    <div className="insight-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" role="group" aria-label="Insights">
-      {insights.map(insight => {
-        const Icon = iconMap[insight.key] ?? Sparkles;
-        return (
-          <button
-            type="button"
-            key={insight.key}
-            onClick={() => update(insight.filter_patch)}
-            className="insight-card inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left shadow-xs hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
-            <span className="text-sm text-foreground truncate">{insight.text}</span>
-            <strong className="text-sm font-bold text-primary ml-auto">{insight.value}</strong>
-          </button>
-        );
-      })}
+    <div className={STRIP} role="group" aria-label="Insights">
+      {visible.map(insight => <InsightButton key={insight.key} insight={insight} onApply={update} />)}
     </div>
   );
 }

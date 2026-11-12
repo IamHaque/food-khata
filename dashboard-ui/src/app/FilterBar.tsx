@@ -350,7 +350,7 @@ export function FilterBar() {
       <div className="flex flex-wrap items-end gap-3">
         {/* Date preset */}
         <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
-          <span className="text-sm text-muted-foreground">Date range</span>
+          <span className="text-xs text-muted-foreground">Date range</span>
           <select
             aria-label="Date preset"
             value={detectPreset(filters.date_from, filters.date_to)}
@@ -565,7 +565,7 @@ export function FilterBar() {
       )}
 
       {/* Chips */}
-      <div className="chips flex flex-wrap items-center gap-1.5">
+      <div className="chips flex flex-wrap items-center gap-1.5 border-t pt-3 sm:border-0 sm:pt-0">
         {active.map(([key, value]) => {
           const displayVal = Array.isArray(value) ? value.map(v => (key === 'platforms' ? platformLabel(v) : v)).join(', ') : String(value);
           return (

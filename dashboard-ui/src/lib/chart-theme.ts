@@ -62,6 +62,12 @@ export interface ChartTheme {
   surface: string;
 }
 
+/** One fixed colour per platform, shared by charts, pills and tables. */
+export function platformColor(theme: ChartTheme, platform: string, index = 0): string {
+  const key = platform.toLowerCase();
+  return key === "zomato" ? theme.zomato : key === "swiggy" ? theme.swiggy : theme.colors[(index + 2) % theme.colors.length];
+}
+
 /** n colours from rampLow to rampHigh. */
 export function sequentialRamp(theme: ChartTheme, n = 5): string[] {
   const stops = [theme.rampLow, theme.rampHigh];
@@ -254,7 +260,9 @@ export function buildBaseChartOption(
         color: theme.mutedColor,
       },
     },
+    // Charts that want a legend declare their own; an implicit one only listed helper series.
     legend: {
+      show: false,
       textStyle: {
         color: theme.mutedColor,
       },

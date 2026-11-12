@@ -17,15 +17,17 @@ import {
   OrderStatusChip,
   PlatformBadge,
 } from './Orders';
-import { ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Receipt } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertCircle, Receipt } from 'lucide-react';
+import { StatusPill } from '../components/ui/status-pill';
+import { inr } from '../lib/format';
 import '../styles/modal.css';
 
 type Order = components['schemas']['Order'];
 
-const money = (value: number | null | undefined) =>
-  value == null
-    ? 'Unknown'
-    : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
+const money = (value: number | null | undefined) => inr(value, 2);
+/** Deductions read as minus in a ledger. */
+const minus = (value: number | null | undefined) => (value == null ? '–' : `−${inr(Math.abs(value), 2)}`);
+const DEDUCTIONS = new Set(['Food discount', 'Delivery discount', 'Refunds']);
 
 export function OrderModal({
   rows,
@@ -130,7 +132,7 @@ export function OrderModal({
         }
       } catch (reason) {
         if (!(reason instanceof Error && reason.name === 'AbortError'))
-          setError('Could not load the adjacent order. Please retry.');
+          setError('Could not load the next order. Check your connection and try again.');
       } finally {
         setNavigating(false);
       }
@@ -216,19 +218,19 @@ export function OrderModal({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Receipt className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order receipt</span>
+              <span className="text-sm font-medium text-muted-foreground">Order receipt</span>
             </div>
             {o && (
-              <span className="font-mono text-xs text-muted-foreground font-semibold" data-testid="order-sheet-id">
+              <span className="text-sm text-muted-foreground tabular-nums" data-testid="order-sheet-id">
                 {`#${o.platform_order_id}`}
               </span>
             )}
           </div>
           <div>
-            <SheetTitle className="text-lg font-bold text-foreground text-left" title={o?.restaurant_name ?? undefined}>
+            <SheetTitle className="text-xl font-medium text-foreground text-left" title={o?.restaurant_name ?? undefined}>
               {o?.restaurant_name ?? 'Order details'}
             </SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground mt-1 text-left" asChild>
+            <SheetDescription className="text-sm text-muted-foreground mt-1 text-left" asChild>
               <div>
                 {o ? (
                   <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -238,9 +240,7 @@ export function OrderModal({
                       {formatOrderDate(o.order_timestamp || o.order_date)}
                       {o.order_time ? ` · ${o.order_time}` : ''}
                     </span>
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground uppercase">
-                      {o.order_status}
-                    </span>
+                    <span className="text-muted-foreground capitalize">· {o.order_status.toLowerCase().replaceAll('_', ' ')}</span>
                   </div>
                 ) : (
                   <span>Loading the selected order…</span>
@@ -256,71 +256,71 @@ export function OrderModal({
           aria-busy={bill.isFetching || navigating}
         >
           {bill.isError ? (
-            <div role="alert" className="p-4 rounded-lg border border-destructive/20 bg-destructive/10 text-xs text-destructive">
-              <p>Order details could not load.</p>
+            <div role="alert" className="notice notice-danger flex-col">
+              <p>This receipt could not load. Check your connection, then try again.</p>
               <button
                 type="button"
                 onClick={() => void bill.refetch()}
-                className="mt-2 min-h-[44px] rounded border px-3 py-1 bg-background shadow-xs hover:bg-accent font-medium text-foreground"
+                className="mt-2 min-h-[44px] rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent"
               >
-                Retry
+                Try again
               </button>
             </div>
           ) : !data ? (
-            <div className="bill-skeleton p-8 text-center text-xs text-muted-foreground animate-pulse" role="status">
+            <div className="bill-skeleton p-8 text-center text-sm text-muted-foreground animate-pulse" role="status">
               Loading receipt…
             </div>
           ) : (
             <>
               {/* Order Meta Attributes */}
-              <dl className="order-context grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-lg border bg-muted/20 text-xs">
+              <dl className="order-context grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-lg border bg-muted text-sm">
                 <div>
-                  <dt className="text-xs text-muted-foreground font-medium">Order ID</dt>
-                  <dd className="font-mono font-semibold text-foreground truncate">{o?.platform_order_id}</dd>
+                  <dt className="text-xs text-muted-foreground">Order ID</dt>
+                  <dd className="font-medium text-foreground truncate tabular-nums">{o?.platform_order_id}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground font-medium">Account</dt>
-                  <dd className="font-semibold text-foreground truncate">
+                  <dt className="text-xs text-muted-foreground">Account</dt>
+                  <dd className="font-medium text-foreground truncate">
                     {o?.account_label} · {o?.account_id}
                   </dd>
                 </div>
                 {o?.payment_method && (
                   <div>
-                    <dt className="text-xs text-muted-foreground font-medium">Payment</dt>
-                    <dd className="font-semibold text-foreground">{o.payment_method}</dd>
+                    <dt className="text-xs text-muted-foreground">Payment</dt>
+                    <dd className="font-medium text-foreground">{o.payment_method}</dd>
                   </div>
                 )}
                 {o?.address_label && (
                   <div>
-                    <dt className="text-xs text-muted-foreground font-medium">Delivery</dt>
-                    <dd className="font-semibold text-foreground">{o.address_label}</dd>
+                    <dt className="text-xs text-muted-foreground">Delivery</dt>
+                    <dd className="font-medium text-foreground">{o.address_label}</dd>
                   </div>
                 )}
                 {o?.city && (
                   <div>
-                    <dt className="text-xs text-muted-foreground font-medium">City</dt>
-                    <dd className="font-semibold text-foreground">{o.city}</dd>
+                    <dt className="text-xs text-muted-foreground">City</dt>
+                    <dd className="font-medium text-foreground">{o.city}</dd>
                   </div>
                 )}
                 {o?.user_rating != null && (
                   <div>
-                    <dt className="text-xs text-muted-foreground font-medium">Rating</dt>
-                    <dd className="font-semibold text-foreground">★ {o.user_rating}</dd>
+                    <dt className="text-xs text-muted-foreground">Rating</dt>
+                    <dd className="font-medium text-foreground">★ {o.user_rating}</dd>
                   </div>
                 )}
               </dl>
 
               {/* Items List */}
               <div className="space-y-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What was ordered</h2>
+                <h2 className="text-sm font-semibold text-foreground">What was ordered</h2>
                 <div
                   className="bill-table-scroll rounded-lg border overflow-x-auto"
                   tabIndex={0}
                   role="region"
                   aria-label="Order items"
                 >
-                  <table className="w-full text-xs" aria-label="Order items table">
-                    <thead className="bg-muted/40 border-b">
+                  <table className="w-full text-sm" aria-label="Order items table">
+                    <thead className="border-b text-muted-foreground">
                       <tr>
                         <th className="text-left p-2.5 font-medium">Item</th>
                         <th className="text-center p-2.5 font-medium">Diet</th>
@@ -329,22 +329,22 @@ export function OrderModal({
                         <th className="text-right p-2.5 font-medium">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y font-mono">
+                    <tbody className="divide-y tabular-nums">
                       {data.items.map((item, index) => (
-                        <tr key={index} className="hover:bg-muted/30">
+                        <tr key={index}>
                           <td className="p-2.5 font-sans font-medium">
-                            <span className="block truncate max-w-[200px]" title={item.item_name}>
+                            <span className="block" title={item.item_name}>
                               {item.item_name}
                             </span>
                             {item.category && <small className="text-muted-foreground block text-xs font-normal">{item.category}</small>}
                           </td>
                           <td className="p-2.5 text-center font-sans text-sm">
                             {item.is_veg == null ? (
-                              <span className="text-muted-foreground">? Unknown</span>
+                              <span className="text-muted-foreground">Not tagged</span>
                             ) : item.is_veg ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">● Veg</span>
+                              <span className="text-success font-medium">● Veg</span>
                             ) : (
-                              <span className="text-amber-600 dark:text-amber-400 font-bold">◆ Non-veg</span>
+                              <span className="text-destructive font-medium">◆ Non-veg</span>
                             )}
                           </td>
                           <td className="p-2.5 text-right">{item.quantity}</td>
@@ -357,21 +357,21 @@ export function OrderModal({
                 </div>
               </div>
 
-              {/* Payment Breakdown Ladder */}
+              {/* Payment breakdown, as a ledger: deductions in minus, one rule above the total */}
               <div className="space-y-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment breakdown</h2>
-                <dl className="bill-ladder rounded-lg border p-3 bg-muted/20 text-xs space-y-1.5 font-mono">
+                <h2 className="text-sm font-semibold text-foreground">Payment breakdown</h2>
+                <dl className="bill-ladder text-sm">
                   {ladder
                     .filter(([, value]) => value != null)
                     .map(([label, value]) => (
-                      <div key={label} className="flex items-center justify-between py-1 border-b border-border/40 font-sans last:border-0">
-                        <dt className="text-muted-foreground text-xs">{label}</dt>
-                        <dd className="font-mono font-medium">{money(value)}</dd>
+                      <div key={label} className="flex items-baseline justify-between gap-4 border-b py-1.5">
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="text-right tabular-nums">{DEDUCTIONS.has(label) ? minus(value) : money(value)}</dd>
                       </div>
                     ))}
-                  <div className="bill-final flex items-center justify-between pt-2 border-t font-sans text-sm font-bold text-foreground">
-                    <dt>Net paid</dt>
-                    <dd className="text-base font-mono text-primary font-bold">{money(o?.final_amount_paid)}</dd>
+                  <div className="bill-final flex items-baseline justify-between gap-4 border-t-2 border-foreground/80 pt-2 text-base font-semibold text-foreground">
+                    <dt>Paid</dt>
+                    <dd className="text-right tabular-nums">{money(o?.final_amount_paid)}</dd>
                   </div>
                 </dl>
               </div>
@@ -379,19 +379,19 @@ export function OrderModal({
               {/* Itemized discounts */}
               {(data.discount_items.length > 0 || (o?.total_discount != null && o.total_discount > 0)) && (
                 <section className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Itemized discounts</h3>
-                  <dl className="bill-ladder rounded-lg border p-3 bg-muted/20 text-xs space-y-1 font-mono">
+                  <h3 className="text-sm font-semibold text-foreground">Discounts applied</h3>
+                  <dl className="bill-ladder text-sm">
                     {data.discount_items.length > 0 ? (
                       data.discount_items.map((discount, index) => (
-                        <div key={index} className="flex items-center justify-between py-1 border-b border-border/40 font-sans last:border-0">
-                          <dt className="text-muted-foreground text-xs">{discount.label}</dt>
-                          <dd className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{`-${money(discount.amount)}`}</dd>
+                        <div key={index} className="flex items-baseline justify-between gap-4 border-b py-1.5 last:border-0">
+                          <dt className="text-muted-foreground">{discount.label}</dt>
+                          <dd className="text-right tabular-nums">{minus(discount.amount)}</dd>
                         </div>
                       ))
                     ) : (
-                      <div className="flex items-center justify-between py-1 font-sans">
-                        <dt className="text-muted-foreground text-xs">Total discount</dt>
-                        <dd className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{`-${money(o?.total_discount)}`}</dd>
+                      <div className="flex items-baseline justify-between gap-4 py-1.5">
+                        <dt className="text-muted-foreground">Total discount</dt>
+                        <dd className="text-right tabular-nums">{minus(o?.total_discount)}</dd>
                       </div>
                     )}
                   </dl>
@@ -400,30 +400,30 @@ export function OrderModal({
 
               {/* Verification & Reconciliation Banner */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span
-                  className="balance-badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  title="Known components balance within INR 1. This does not verify bank transactions."
+                <StatusPill
+                  tone={data.reconciliation_status === 'off' ? 'warning' : 'success'}
+                  className="balance-badge"
+                  title="Known components balance within ₹1. This does not verify bank transactions."
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
                   {data.reconciliation_label}
-                </span>
+                </StatusPill>
                 {data.reconciliation_status === 'off' && (
-                  <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                    <AlertCircle className="h-3.5 w-3.5" /> Provider total retained; known bill components do not fully reconcile.
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4 text-warning" aria-hidden="true" /> The provider's total is kept, but the known bill parts do not fully add up to it.
                   </span>
                 )}
                 {!o?.source_complete && (
-                  <span className="text-xs text-muted-foreground">Some source bill details are incomplete.</span>
+                  <span className="text-sm text-muted-foreground">Some bill details from the app are missing.</span>
                 )}
               </div>
 
               {/* Raw bill data disclosure */}
               {data.source_bill != null && (
-                <details className="text-xs group border-t pt-2">
+                <details className="text-sm group border-t pt-2">
                   <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground select-none">
                     Raw bill data
                   </summary>
-                  <pre tabIndex={0} className="mt-2 p-3 rounded-lg border bg-muted/40 font-mono text-sm overflow-auto max-h-48 text-muted-foreground">
+                  <pre tabIndex={0} className="mt-2 p-3 rounded-lg border bg-muted font-mono text-xs overflow-auto max-h-48 text-muted-foreground">
                     {JSON.stringify(data.source_bill, null, 2)}
                   </pre>
                 </details>
@@ -431,7 +431,7 @@ export function OrderModal({
             </>
           )}
           {error && (
-            <p role="alert" className="text-xs font-medium text-destructive">
+            <p role="alert" className="text-sm font-medium text-destructive">
               {error}
             </p>
           )}
@@ -448,10 +448,10 @@ export function OrderModal({
                 if (isFirst || navigating || bill.isPending) return;
                 void adjacent(-1);
               }}
-              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
               aria-label="Previous order"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               <span>Previous order</span>
             </button>
             <button
@@ -462,18 +462,18 @@ export function OrderModal({
                 if (isLast || navigating || bill.isPending) return;
                 void adjacent(1);
               }}
-              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3.5 text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none transition-colors"
               aria-label="Next order"
             >
               <span>Next order</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <SheetClose asChild>
             <button
               type="button"
               onClick={close}
-              className="min-h-[44px] rounded-md border border-input bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
+              className="min-h-[44px] rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent transition-colors"
             >
               Close receipt
             </button>

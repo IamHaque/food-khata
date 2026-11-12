@@ -33,7 +33,6 @@ import { NAV_ITEMS, isDashboardPath, type NavItem } from './nav';
 import { InsecureNotice } from './InsecureNotice';
 import {
   Palette,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
   UtensilsCrossed,
@@ -45,6 +44,7 @@ import {
 import '../styles/app.css';
 import AccessRoutes from '../features/access/routes';
 import { RequireAuth, safeReturnPath } from '../features/access/auth';
+import { useTheme } from './theme';
 import { InAppShell } from '../features/access/primitives/AuthShell';
 import { AuthedPages } from '../features/access/routes';
 const { Home: HomePage, LinkAccount, Sync: SyncPage, Settings: SettingsPage, Password: PasswordPage } = AuthedPages;
@@ -134,6 +134,7 @@ function Shell() {
   const health = useHealth(filters);
   const accounts = useAccounts();
   const dashboard = isDashboardPath(location.pathname);
+  const theme = useTheme();
 
   if (accounts.data?.length === 0 && dashboard) return <Navigate to="/home" replace />; // no data yet: Accounts is the hub
 
@@ -277,7 +278,7 @@ function Shell() {
             </p>
           )}
 
-          <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
+          <main id="main-content" key={`${theme.isDark}-${theme.accent}-${theme.patterns}`} tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Overview />} />

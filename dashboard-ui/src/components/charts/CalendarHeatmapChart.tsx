@@ -17,6 +17,7 @@ import {
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
+  sequentialRamp,
 } from "@/lib/chart-theme";
 
 // Ensure ECharts modules registered once
@@ -183,13 +184,7 @@ export function buildCalendarHeatmapOption(
 
   const base = buildBaseChartOption(theme, reducedMotion);
 
-  const baseColor = theme["chart-1"] || theme.colors[0];
-  const inRangeColors = [
-    baseColor + "33",
-    baseColor + "66",
-    baseColor + "99",
-    baseColor,
-  ];
+  const inRangeColors = sequentialRamp(theme, 5);
 
   const option: EChartsCoreOption = {
     ...base,
@@ -260,12 +255,12 @@ export function buildCalendarHeatmapOption(
         firstDay: 1,
         nameMap: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
       monthLabel: {
         nameMap: "en",
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
     },
     visualMap: {
@@ -286,7 +281,7 @@ export function buildCalendarHeatmapOption(
       },
       textStyle: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
     },
     series: [

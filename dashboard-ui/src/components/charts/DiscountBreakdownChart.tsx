@@ -1,5 +1,6 @@
 import { getPatterns } from "../../app/theme";
 import * as React from "react";
+import { compactInr } from "../../lib/chart-kit";
 import * as echarts from "echarts/core";
 import { BarChart, type BarSeriesOption } from "echarts/charts";
 import {
@@ -260,7 +261,8 @@ export function buildDiscountBreakdownOption({
         fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         interval: 0,
-        rotate: categories.length > 6 ? 30 : 0,
+        rotate: 0,
+        hideOverlap: true,
       },
       axisLine: {
         lineStyle: {
@@ -275,9 +277,9 @@ export function buildDiscountBreakdownOption({
       type: "value",
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
-        formatter: (val: number) => formatRupees(val),
+        formatter: (val: number) => compactInr(val),
       },
       splitLine: {
         lineStyle: {

@@ -515,7 +515,7 @@ export function buildDeliveryDestinationsOption(
       name: isSpend ? "Spend (₹)" : "Orders",
       nameTextStyle: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         align: "right",
       },
       minInterval: isSpend ? undefined : 1,
@@ -533,7 +533,7 @@ export function buildDeliveryDestinationsOption(
       },
       axisLabel: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         formatter: (val: number) =>
           isSpend ? formatRupees(val) : String(val),
       },
@@ -567,7 +567,7 @@ export function buildDeliveryDestinationsOption(
           position: "right",
           distance: 6,
           color: theme.mutedColor,
-          fontSize: 10,
+          fontSize: 11,
           formatter: (params: any) => {
             const item = params?.data?.destination as
               | NormalizedDestinationItem

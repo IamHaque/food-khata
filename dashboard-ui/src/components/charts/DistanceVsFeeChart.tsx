@@ -355,7 +355,7 @@ export function buildDistanceVsFeeOption(
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         formatter: (val: number) => `${val} km`,
       },
@@ -381,7 +381,7 @@ export function buildDistanceVsFeeOption(
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         formatter: (val: number) => `₹${val}`,
       },

@@ -22,6 +22,7 @@ import {
   buildBaseChartOption,
   resolveChartTheme,
   type ChartTheme,
+  sequentialRamp,
 } from "@/lib/chart-theme";
 import {
   hourToMealSlot,
@@ -257,8 +258,7 @@ export function buildHourWeekdayHeatmapOption(
   const seriesData = normalized.map((c) => [c.hour, c.weekday, c.orders, c.spend]);
 
   const base = buildBaseChartOption(theme, reducedMotion);
-  const themePrimary = theme["chart-1"] || theme.primary || theme.colors[0];
-  const inRangeColors = [themePrimary + "22", themePrimary];
+  const inRangeColors = sequentialRamp(theme, 5);
 
   const option: EChartsCoreOption = {
     ...base,
@@ -320,7 +320,7 @@ export function buildHourWeekdayHeatmapOption(
       axisTick: { alignWithLabel: true },
       axisLabel: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         interval: 1, // display every 2 hours to prevent crowding
       },
     },
@@ -357,7 +357,7 @@ export function buildHourWeekdayHeatmapOption(
       },
       textStyle: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
       },
     },
     series: [

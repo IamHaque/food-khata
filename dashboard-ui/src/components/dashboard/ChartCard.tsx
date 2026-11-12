@@ -35,6 +35,8 @@ export interface ChartCardProps {
   className?: string;
 }
 
+const ICON_BTN = "lg:h-9 lg:w-9 lg:min-h-0 lg:min-w-0";
+
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
 }
@@ -115,6 +117,7 @@ function ChartCard({
   );
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const firstRun = React.useRef(true);
   // Keep chart DOM and external ECharts refs intact when entering the dialog.
   const [cardHost] = React.useState(() =>
     typeof document === "undefined" ? null : document.createElement("div"),
@@ -207,6 +210,11 @@ function ChartCard({
     if (cardHost) {
       cardHost.className = fullscreen ? "w-full h-full flex flex-col" : "w-full";
     }
+    // Charts only need a nudge when the card moves into or out of the fullscreen dialog, not on first mount.
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       window.dispatchEvent(new Event("resize"));
     }, 50);
@@ -259,16 +267,17 @@ function ChartCard({
         <CardHeader className={fullscreen ? "flex flex-row items-start justify-between space-y-0 pb-3 px-0 pt-0 border-b mb-3" : "flex flex-row items-start justify-between space-y-0 pb-2"}>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
-              <CardTitle className="text-base text-foreground">{title}</CardTitle>
+              <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
               {infoPopover}
             </div>
-            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-1">
             {hasTable && (
               <Button
                 variant="ghost"
                 size="icon"
+                className={ICON_BTN}
                 aria-label="Toggle table view"
                 onClick={() => setShowTable(!showTable)}
               >
@@ -278,34 +287,35 @@ function ChartCard({
             <Button
               variant="ghost"
               size="icon"
+              className={ICON_BTN}
               aria-label="Toggle fullscreen"
               onClick={() => setFullscreen(!fullscreen)}
             >
               {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
             {onExportPng || true ? (
-              <Button variant="ghost" size="icon" aria-label="Download PNG" onClick={handleExportPng}>
+              <Button variant="ghost" size="icon" className={ICON_BTN} aria-label="Download PNG" onClick={handleExportPng}>
                 <Download className="h-4 w-4" />
               </Button>
             ) : null}
             {(onExportCsv || hasTable) && (
-              <Button variant="ghost" size="icon" aria-label="Download CSV" onClick={handleExportCsv}>
+              <Button variant="ghost" size="icon" className={ICON_BTN} aria-label="Download CSV" onClick={handleExportCsv}>
                 <FileDown className="h-4 w-4" />
               </Button>
             )}
           </div>
         </CardHeader>
-        {caption && <p className={fullscreen ? "pb-2 text-xs text-muted-foreground" : "px-6 text-xs text-muted-foreground"}>{caption}</p>}
+        {caption && <p className={fullscreen ? "pb-2 text-sm text-foreground" : "px-[var(--space-card)] pb-2 text-sm text-foreground"}>{caption}</p>}
         <CardContent className={fullscreen ? "flex-1 min-h-0 p-0 flex flex-col overflow-auto [&_[role=img]]:!h-[calc(80vh-210px)]" : undefined}>
           {isLoading ? (
-            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-64 w-full" aria-label="Loading chart" />
           ) : error ? (
             <ErrorState
               message={typeof error === "string" ? error : error.message}
               onRetry={onRetry}
             />
           ) : isEmpty ? (
-            <EmptyState title="No data" reason={emptyReason} />
+            <EmptyState compact title="No data to show" reason={emptyReason ?? "Try a wider date range or fewer filters."} />
           ) : showTable && hasTable ? (
             renderTable()
           ) : (

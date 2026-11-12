@@ -8,20 +8,22 @@ export interface EmptyStateProps {
   description?: string;
   reason?: string;
   className?: string;
+  /** Short one-block message for cards: no extra height. */
+  compact?: boolean;
 }
 
-function EmptyState({ icon, title, description, reason, className }: EmptyStateProps) {
+function EmptyState({ icon, title, description, reason, className, compact }: EmptyStateProps) {
   const text = description ?? reason;
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 p-6 text-center",
+        compact ? "flex flex-col items-start gap-0.5 py-2 text-left" : "flex flex-col items-center justify-center gap-2 p-6 text-center",
         className,
       )}
     >
       {icon}
       <p className="text-sm font-medium text-foreground">{title}</p>
-      {text && <p className="text-xs text-muted-foreground">{text}</p>}
+      {text && <p className="text-sm text-muted-foreground">{text}</p>}
     </div>
   );
 }

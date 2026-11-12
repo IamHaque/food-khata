@@ -388,7 +388,7 @@ export function buildOrderValueDistributionOption({
           formatter: `Mean: ${formatRupees(Math.round(stats.mean))}`,
           position: "insideEndTop",
           color: currentTheme.textColor,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 600,
           backgroundColor: currentTheme.tooltipBg,
           borderColor: currentTheme.colors[1] ?? currentTheme.primary,
@@ -413,7 +413,7 @@ export function buildOrderValueDistributionOption({
           formatter: `Median: ${formatRupees(Math.round(stats.median))}`,
           position: "insideEndBottom",
           color: currentTheme.textColor,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 600,
           backgroundColor: currentTheme.tooltipBg,
           borderColor: currentTheme.colors[2] ?? currentTheme.colors[0],
@@ -454,10 +454,11 @@ export function buildOrderValueDistributionOption({
       type: "category",
       data: labels,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
         interval: 0,
-        rotate: labels.length > 6 ? 20 : 0,
+        rotate: 0,
+        hideOverlap: true,
       },
       axisLine: {
         lineStyle: {
@@ -472,12 +473,12 @@ export function buildOrderValueDistributionOption({
       type: "value",
       name: "Orders",
       nameTextStyle: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       minInterval: 1,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       splitLine: {

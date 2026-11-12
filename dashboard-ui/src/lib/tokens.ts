@@ -5,6 +5,12 @@
  * HSL channel triplets are wrapped in `hsl(...)`, literal values are returned as-is.
  * Returns "" when the token is unavailable (SSR).
  */
+/** ECharts/zrender cannot parse the space-separated `hsl(h s% l% / a)` syntax (it paints black), so emit commas. */
+function hslComma(triplet: string, alpha?: number): string {
+  const [h, sat, l] = triplet.split(/[\s,]+/);
+  return alpha === undefined ? `hsl(${h}, ${sat}, ${l})` : `hsla(${h}, ${sat}, ${l}, ${alpha})`;
+}
+
 export function tokenColor(name: string): string {
   if (typeof window === "undefined") return "";
   const value = window
@@ -13,7 +19,7 @@ export function tokenColor(name: string): string {
     .trim();
   if (!value) return "";
   if (/^(#[0-9a-f]|rgb|hsl)/i.test(value)) return value;
-  return `hsl(${value})`;
+  return hslComma(value);
 }
 
 /**
@@ -29,5 +35,5 @@ export function tokenAlpha(name: string, alpha: number): string {
     .trim();
   if (!value) return "";
   if (/^(#[0-9a-f]|rgb|hsl)/i.test(value)) return value;
-  return `hsl(${value} / ${alpha})`;
+  return hslComma(value, alpha);
 }

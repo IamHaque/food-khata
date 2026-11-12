@@ -12,11 +12,7 @@ export interface KpiDeltaProps {
 
 export function KpiDelta({ value, className, showZeroArrow = true }: KpiDeltaProps) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
-    return (
-      <span className={cn("text-xs font-mono text-muted-foreground", className)}>
-        Unknown
-      </span>
-    );
+    return null; // no comparison, nothing to show
   }
 
   if (value > 0) {
@@ -24,7 +20,7 @@ export function KpiDelta({ value, className, showZeroArrow = true }: KpiDeltaPro
       <span
         data-testid="kpi-delta-positive"
         className={cn(
-          "inline-flex items-center gap-0.5 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400",
+          "inline-flex items-center gap-0.5 text-xs tabular-nums font-medium text-success",
           className
         )}
       >
@@ -39,7 +35,7 @@ export function KpiDelta({ value, className, showZeroArrow = true }: KpiDeltaPro
       <span
         data-testid="kpi-delta-negative"
         className={cn(
-          "inline-flex items-center gap-0.5 text-xs font-mono font-medium text-rose-600 dark:text-rose-400",
+          "inline-flex items-center gap-0.5 text-xs tabular-nums font-medium text-destructive",
           className
         )}
       >
@@ -53,7 +49,7 @@ export function KpiDelta({ value, className, showZeroArrow = true }: KpiDeltaPro
     <span
       data-testid="kpi-delta-neutral"
       className={cn(
-        "inline-flex items-center gap-0.5 text-xs font-mono font-medium text-muted-foreground",
+        "inline-flex items-center gap-0.5 text-xs tabular-nums font-medium text-muted-foreground",
         className
       )}
     >

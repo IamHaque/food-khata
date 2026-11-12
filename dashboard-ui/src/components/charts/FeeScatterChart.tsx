@@ -1,4 +1,5 @@
 import { getPatterns } from "../../app/theme";
+import { compactInr } from "../../lib/chart-kit";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import {
@@ -111,8 +112,8 @@ export function computeSymbolSize(
   amount: number,
   minAmount: number,
   maxAmount: number,
-  minSize = 6,
-  maxSize = 22
+  minSize = 5,
+  maxSize = 12
 ): number {
   if (!Number.isFinite(amount) || maxAmount <= minAmount) {
     return Math.round((minSize + maxSize) / 2);
@@ -249,6 +250,25 @@ export function formatFeeScatterTooltip(
   `.trim();
 }
 
+/** A fee percentage cannot be negative: cut the trendline where it reaches zero. */
+export function clampAtZero(points: number[][]): number[][] {
+  const out: number[][] = [];
+  for (let i = 0; i < points.length; i++) {
+    const [x, y] = points[i];
+    if (y >= 0) {
+      if (i > 0 && points[i - 1][1] < 0) {
+        const [px, py] = points[i - 1];
+        out.push([px + ((0 - py) * (x - px)) / (y - py), 0]);
+      }
+      out.push([x, y]);
+    } else if (i > 0 && points[i - 1][1] >= 0) {
+      const [px, py] = points[i - 1];
+      out.push([px + ((0 - py) * (x - px)) / (y - py), 0]);
+    }
+  }
+  return out;
+}
+
 /**
  * Pure option builder (CC-11):
  * Data in, ECharts Core Option out.
@@ -297,9 +317,7 @@ export function buildFeeScatterOption({
     },
     itemStyle: {
       color: primaryColor,
-      opacity: 0.75,
-      borderColor: primaryColor,
-      borderWidth: 1.5,
+      opacity: 0.45,
     },
     emphasis: {
       itemStyle: {
@@ -318,7 +336,7 @@ export function buildFeeScatterOption({
     const trendlineSeries: LineSeriesOption = {
       name: "Trendline",
       type: "line",
-      data: trendline.points,
+      data: clampAtZero(trendline.points as number[][]),
       lineStyle: {
         type: "dashed",
         color: trendlineColor,
@@ -381,9 +399,9 @@ export function buildFeeScatterOption({
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
-        formatter: (val: number) => formatRupees(val),
+        formatter: (val: number) => compactInr(val),
       },
       axisLine: {
         lineStyle: {
@@ -398,7 +416,8 @@ export function buildFeeScatterOption({
     },
     yAxis: {
       type: "value",
-      name: "Fee (%)",
+      min: 0,
+      name: "Fee (% of order)",
       nameLocation: "end",
       nameTextStyle: {
         color: currentTheme.mutedColor,
@@ -407,7 +426,7 @@ export function buildFeeScatterOption({
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         formatter: (val: number) => `${val}%`,
       },
@@ -438,8 +457,8 @@ export function FeeScatterChart({
   error,
   onRetry,
   className,
-  title = "Fee burden vs order value",
-  subtitle = "Observed fee percentage relative to order amount with trendline",
+  title = "Fees against order value",
+  subtitle = "Each dot is an order. Small orders pay a larger share in fees.",
   caption: captionProp,
   onPointClick,
   showTable,

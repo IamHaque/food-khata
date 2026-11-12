@@ -4,6 +4,9 @@ import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
 import { SegmentedControl } from '../components/ui/segmented-control';
 import { Search, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { inr, plural } from '../lib/format';
+import { compactInr } from '../lib/chart-kit';
+import { PageError } from '../components/dashboard';
 
 export interface LeaderRow {
   key: string;
@@ -33,6 +36,20 @@ export type SortDirection = 'asc' | 'desc';
 export interface SortState {
   key: SortKey;
   direction: SortDirection;
+}
+
+/** Merged restaurant keys look like "name|locality". */
+export function localityOf(key: string): string | null {
+  const part = key.split('|')[1];
+  return part ? part.replace(/\b\w/g, c => c.toUpperCase()) : null;
+}
+
+/** Names that appear more than once need their locality to be told apart. */
+export function duplicateNames(rows: { name: string }[]): Set<string> {
+  const seen = new Set<string>();
+  const dup = new Set<string>();
+  for (const r of rows) (seen.has(r.name) ? dup : seen).add(r.name);
+  return dup;
 }
 
 /**
@@ -77,42 +94,20 @@ export function sortLeaderRows<T extends { name: string; quantity: number; amoun
  */
 export function ProportionalBarCell({
   value,
-  maxValue,
-  formatter = (v: number) => `₹${Number(v).toLocaleString('en-IN')}`,
-  label = 'amount',
+  formatter = (v: number) => inr(v),
   testIdPrefix = 'amount',
 }: {
   value: number;
-  maxValue: number;
+  maxValue?: number;
   formatter?: (v: number) => string;
   label?: string;
   testIdPrefix?: string;
 }) {
-  const safeMax = Math.max(maxValue, 1);
-  const pct = Math.min(100, Math.max(0, (value / safeMax) * 100));
-
+  // Ledger figure: right-aligned, tabular, never truncated.
   return (
-    <div className="flex flex-col items-end gap-1 min-w-[90px]" data-testid={`${testIdPrefix}-cell`}>
-      <span className="font-mono text-xs font-semibold text-foreground">
-        {formatter(value)}
-      </span>
-      <div
-        className="h-1.5 w-16 bg-muted/70 rounded-full overflow-hidden"
-        title={`${formatter(value)} (${Math.round(pct)}% of max ${formatter(safeMax)})`}
-        data-testid={`${testIdPrefix}-bar-container`}
-      >
-        <div
-          className="h-full bg-primary/70 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-          role="progressbar"
-          aria-valuenow={value}
-          aria-valuemin={0}
-          aria-valuemax={safeMax}
-          aria-label={`Relative ${label}: ${formatter(value)}`}
-          data-testid={`${testIdPrefix}-bar`}
-        />
-      </div>
-    </div>
+    <span className="block whitespace-nowrap text-right text-sm font-medium tabular-nums text-foreground" data-testid={`${testIdPrefix}-cell`}>
+      {formatter(value)}
+    </span>
   );
 }
 
@@ -141,12 +136,12 @@ export function SortableColumnHeader({
     <th
       scope="col"
       aria-sort={ariaSort}
-      className={`p-2.5 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
+      className={`px-3 py-2 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
     >
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer text-xs font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded px-1 -mx-1 ${
+        className={`inline-flex items-center gap-1.5 hover:text-foreground transition-colors text-sm font-medium rounded px-1 -mx-1 min-h-[36px] ${
           align === 'right' ? 'flex-row-reverse' : ''
         } ${isSorted ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}
         aria-label={`Sort by ${label} ${isSorted ? (currentDirection === 'asc' ? 'descending' : 'ascending') : 'ascending'}`}
@@ -179,7 +174,7 @@ export function LeadersSearchInput({
   onClear: () => void;
 }) {
   return (
-    <div className="relative flex-1 min-w-[240px] max-w-sm">
+    <div className="relative w-full sm:w-auto sm:min-w-[240px] sm:max-w-sm sm:flex-1">
       <label htmlFor="leaders-search-input" className="sr-only">
         Search restaurants and dishes
       </label>
@@ -199,7 +194,7 @@ export function LeadersSearchInput({
         placeholder="Search restaurants and dishes…"
         aria-label="Search restaurants and dishes"
         data-testid="leaders-search-input"
-        className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground"
       />
       {value ? (
         <button
@@ -207,7 +202,7 @@ export function LeadersSearchInput({
           onClick={onClear}
           aria-label="Clear search"
           data-testid="clear-search-button"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full cursor-pointer transition-colors"
+          className="absolute right-0.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground rounded-full"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -225,13 +220,16 @@ export function RestaurantRow({
   isSelected,
   onClick,
   onKeyDown,
+  showLocality = false,
 }: {
   row: LeaderRow;
   maxAmount: number;
   isSelected: boolean;
   onClick: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => void;
+  showLocality?: boolean;
 }) {
+  const locality = showLocality ? localityOf(row.key) : null;
   return (
     <tr
       tabIndex={0}
@@ -241,15 +239,16 @@ export function RestaurantRow({
       data-testid={`restaurant-row-${row.key}`}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={`cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
-        isSelected ? 'bg-primary/10 font-semibold text-primary' : ''
+      className={`cursor-pointer transition-colors hover:bg-accent/50 ${
+        isSelected ? 'bg-accent' : ''
       }`}
     >
-      <td className="p-2.5 font-sans">
-        <span className="font-medium text-foreground truncate block max-w-[180px]">{row.name}</span>
+      <td className="px-3 py-2.5">
+        <span className="block break-words text-sm font-medium text-foreground">{row.name}</span>
+        {locality && <span className="block text-xs text-muted-foreground">{locality}</span>}
       </td>
-      <td className="p-2.5 text-right text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
-      <td className="p-2.5 text-right font-semibold text-foreground">
+      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
+      <td className="px-3 py-2.5 text-right">
         <ProportionalBarCell
           value={row.amount}
           maxValue={maxAmount}
@@ -288,32 +287,29 @@ export function DishRow({
       data-testid={`dish-row-${row.key}`}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={`cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
-        isSelected ? 'bg-muted/40 font-medium' : ''
+      className={`cursor-pointer transition-colors hover:bg-accent/50 ${
+        isSelected ? 'bg-accent' : ''
       }`}
     >
-      <td className="p-2.5 font-sans">
-        <div className="flex items-center justify-between gap-1 max-w-[180px]">
-          <span className="text-primary font-medium truncate block">
-            {row.name}
-          </span>
-          <button
-            type="button"
-            onClick={e => {
-              e.stopPropagation();
-              onFilterSearch(row.name);
-            }}
-            title={`Filter dashboard by "${row.name}"`}
-            aria-label={`Filter dashboard by ${row.name}`}
-            data-testid={`dish-filter-btn-${row.key}`}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/70 cursor-pointer shrink-0"
-          >
-            <Search className="h-3 w-3" />
-          </button>
-        </div>
+      <td className="px-3 py-2.5">
+        <span className="block break-words text-sm font-medium text-foreground">{row.name}</span>
+        {/* Explicit text instead of a bare magnifier icon: says what the button does. */}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onFilterSearch(row.name);
+          }}
+          aria-label={`Filter dashboard by ${row.name}`}
+          data-testid={`dish-filter-btn-${row.key}`}
+          className="mt-0.5 inline-flex min-h-[28px] items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <Search className="h-3 w-3" aria-hidden="true" />
+          Find orders with this dish
+        </button>
       </td>
-      <td className="p-2.5 text-right text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
-      <td className="p-2.5 text-right font-semibold text-foreground">
+      <td className="px-3 py-2.5 text-right text-sm tabular-nums text-muted-foreground">{row.quantity.toLocaleString('en-IN')}</td>
+      <td className="px-3 py-2.5 text-right">
         <ProportionalBarCell
           value={row.amount}
           maxValue={maxAmount}
@@ -388,6 +384,8 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
     return sortLeaderRows(filtered, dishSort.key, dishSort.direction);
   }, [items.data?.rows, searchQuery, dishSort]);
 
+  const restaurantDuplicates = useMemo(() => duplicateNames(processedRestaurants), [processedRestaurants]);
+
   // Max values for proportional bars in the current view
   const maxRestaurantAmount = useMemo(() => {
     return Math.max(1, ...processedRestaurants.map(r => r.amount));
@@ -447,12 +445,12 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
 
   return (
     <>
-      <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-4">
+      <div className="rounded-card border bg-card p-[var(--space-card)] space-y-4">
         <div className="border-b pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Restaurant and dish leaders</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Top vendors and items with sortable tables, inline bars, search, and independent pagination
+            <h2 className="text-base font-semibold text-foreground">Restaurants and dishes</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Your most-ordered restaurants and dishes. Click a restaurant to filter the page, or a dish for its price history.
             </p>
           </div>
 
@@ -474,7 +472,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
 
         {/* Filter inputs and modern SegmentedControl */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+          <label className="flex flex-col gap-1 text-sm text-foreground">
             <span className="text-xs text-muted-foreground">Minimum restaurant orders</span>
             <input
               type="number"
@@ -484,11 +482,11 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                 setMinimum(Math.max(1, Number(e.target.value) || 1));
                 setRestaurantPage(1);
               }}
-              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-mono shadow-xs focus:ring-1 focus:ring-ring"
+              className="h-10 rounded-md border border-input bg-background px-2.5 text-sm tabular-nums"
             />
           </label>
 
-          <div className="flex flex-col gap-1 text-xs font-medium text-foreground">
+          <div className="flex flex-col gap-1 text-sm text-foreground">
             <span className="text-xs text-muted-foreground">Restaurant grouping</span>
             <SegmentedControl
               options={[
@@ -504,7 +502,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
             />
           </div>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+          <label className="flex flex-col gap-1 text-sm text-foreground">
             <span className="text-xs text-muted-foreground">Minimum dish quantity</span>
             <input
               type="number"
@@ -514,20 +512,20 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                 setQuantity(Math.max(1, Number(e.target.value) || 1));
                 setDishPage(1);
               }}
-              className="h-10 rounded-md border border-input bg-background px-2.5 text-xs font-mono shadow-xs focus:ring-1 focus:ring-ring"
+              className="h-10 rounded-md border border-input bg-background px-2.5 text-sm tabular-nums"
             />
           </label>
         </div>
 
         {/* Active restaurant filter badge */}
         {filters.restaurant_ids && filters.restaurant_ids.length > 0 && (
-          <div className="flex items-center gap-2 text-xs bg-muted/50 border rounded-md px-3 py-1.5 w-fit">
+          <div className="flex items-center gap-2 text-sm bg-muted border rounded-md px-3 py-1.5 w-fit">
             <span className="text-muted-foreground">Active restaurant filter:</span>
-            <span className="font-semibold text-foreground font-mono">{filters.restaurant_ids.join(', ')}</span>
+            <span className="font-medium text-foreground">{filters.restaurant_ids.map(id => id.split('|')[0]).join(', ')}</span>
             <button
               type="button"
               onClick={() => update({ restaurant_ids: [] })}
-              className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer rounded p-0.5 hover:bg-muted"
+              className="ml-1 inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground rounded hover:bg-accent"
               aria-label="Clear active restaurant filter"
             >
               <X className="h-3 w-3" />
@@ -536,34 +534,26 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
         )}
 
         {/* Tables */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+        <div className="grid grid-cols-1 gap-6 pt-2 xl:grid-cols-2">
           {/* Restaurants Table */}
           <section aria-busy={restaurants.isFetching} className="space-y-3 flex flex-col justify-between">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Restaurants</h3>
+                <h3 className="text-sm font-semibold text-foreground">Restaurants</h3>
                 {restaurants.data?.total != null && (
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {restaurants.data.total} {restaurants.data.total === 1 ? 'vendor' : 'vendors'}
-                  </span>
+                  <span className="text-sm text-muted-foreground">{plural(restaurants.data.total, 'restaurant')}</span>
                 )}
               </div>
               {restaurants.isError ? (
-                <button
-                  type="button"
-                  onClick={() => void restaurants.refetch()}
-                  className="min-h-[44px] rounded border border-input px-3 py-1 text-xs shadow-xs hover:bg-accent cursor-pointer"
-                >
-                  Retry restaurants
-                </button>
+                <PageError what="Restaurants" onRetry={() => void restaurants.refetch()} />
               ) : restaurants.isPending ? (
-                <p role="status" className="text-xs text-muted-foreground animate-pulse p-4">
+                <p role="status" className="text-sm text-muted-foreground animate-pulse p-4">
                   Loading restaurants…
                 </p>
               ) : (
-                <div className="overview-scroll rounded-lg border overflow-x-auto" tabIndex={0}>
-                  <table className="w-full text-xs" data-testid="restaurants-table">
-                    <thead className="bg-muted/40 border-b">
+                <div className="rounded-lg border">
+                  <table className="w-full text-sm" data-testid="restaurants-table">
+                    <thead className="border-b">
                       <tr>
                         <SortableColumnHeader
                           label="Name"
@@ -591,7 +581,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                         />
                       </tr>
                     </thead>
-                    <tbody className="divide-y font-mono">
+                    <tbody className="divide-y">
                       {processedRestaurants.map(x => (
                         <RestaurantRow
                           key={x.key}
@@ -605,13 +595,14 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                               handleRestaurantRowClick(x);
                             }
                           }}
+                          showLocality={restaurantDuplicates.has(x.name)}
                         />
                       ))}
                     </tbody>
                   </table>
                   {!processedRestaurants.length && (
-                    <p className="p-4 text-center text-xs text-muted-foreground" data-testid="no-restaurants-msg">
-                      No matching restaurants.
+                    <p className="p-4 text-center text-sm text-muted-foreground" data-testid="no-restaurants-msg">
+                      No restaurants match. Try a shorter search or a lower minimum.
                     </p>
                   )}
                 </div>
@@ -624,19 +615,19 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                 type="button"
                 disabled={restaurantPage <= 1}
                 onClick={() => setRestaurantPage(p => Math.max(1, p - 1))}
-                className="min-h-[44px] px-3 py-2 rounded-md border border-input bg-background text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Previous restaurants page"
               >
                 Previous restaurants
               </button>
-              <span className="text-xs text-muted-foreground font-mono">
+              <span className="text-sm text-muted-foreground tabular-nums">
                 Page {restaurantPage} of {totalRestaurantPages}
               </span>
               <button
                 type="button"
                 disabled={restaurantPage >= totalRestaurantPages}
                 onClick={() => setRestaurantPage(p => p + 1)}
-                className="min-h-[44px] px-3 py-2 rounded-md border border-input bg-background text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Next restaurants page"
               >
                 Next restaurants
@@ -648,29 +639,21 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
           <section aria-busy={items.isFetching} className="space-y-3 flex flex-col justify-between">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dishes</h3>
+                <h3 className="text-sm font-semibold text-foreground">Dishes</h3>
                 {items.data?.total != null && (
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {items.data.total} {items.data.total === 1 ? 'item' : 'items'}
-                  </span>
+                  <span className="text-sm text-muted-foreground">{plural(items.data.total, 'dish', 'dishes')}</span>
                 )}
               </div>
               {items.isError ? (
-                <button
-                  type="button"
-                  onClick={() => void items.refetch()}
-                  className="min-h-[44px] rounded border border-input px-3 py-1 text-xs shadow-xs hover:bg-accent cursor-pointer"
-                >
-                  Retry dishes
-                </button>
+                <PageError what="Dishes" onRetry={() => void items.refetch()} />
               ) : items.isPending ? (
-                <p role="status" className="text-xs text-muted-foreground animate-pulse p-4">
+                <p role="status" className="text-sm text-muted-foreground animate-pulse p-4">
                   Loading dishes…
                 </p>
               ) : (
-                <div className="overview-scroll rounded-lg border overflow-x-auto" tabIndex={0}>
-                  <table className="w-full text-xs" data-testid="dishes-table">
-                    <thead className="bg-muted/40 border-b">
+                <div className="rounded-lg border">
+                  <table className="w-full text-sm" data-testid="dishes-table">
+                    <thead className="border-b">
                       <tr>
                         <SortableColumnHeader
                           label="Name"
@@ -698,7 +681,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                         />
                       </tr>
                     </thead>
-                    <tbody className="divide-y font-mono">
+                    <tbody className="divide-y">
                       {processedDishes.map(x => (
                         <DishRow
                           key={x.key}
@@ -718,8 +701,8 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                     </tbody>
                   </table>
                   {!processedDishes.length && (
-                    <p className="p-4 text-center text-xs text-muted-foreground" data-testid="no-dishes-msg">
-                      No matching dishes.
+                    <p className="p-4 text-center text-sm text-muted-foreground" data-testid="no-dishes-msg">
+                      No dishes match. Try a shorter search or a lower minimum.
                     </p>
                   )}
                 </div>
@@ -732,19 +715,19 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                 type="button"
                 disabled={dishPage <= 1}
                 onClick={() => setDishPage(p => Math.max(1, p - 1))}
-                className="min-h-[44px] px-3 py-2 rounded-md border border-input bg-background text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Previous dishes page"
               >
                 Previous dishes
               </button>
-              <span className="text-xs text-muted-foreground font-mono">
+              <span className="text-sm text-muted-foreground tabular-nums">
                 Page {dishPage} of {totalDishPages}
               </span>
               <button
                 type="button"
                 disabled={dishPage >= totalDishPages}
                 onClick={() => setDishPage(p => p + 1)}
-                className="min-h-[44px] px-3 py-2 rounded-md border border-input bg-background text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Next dishes page"
               >
                 Next dishes
@@ -756,7 +739,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
 
       {/* Dish unit price history panel */}
       {currentSelection && (
-        <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3" data-testid="dish-history-panel">
+        <div className="rounded-card border bg-card p-[var(--space-card)] space-y-3" data-testid="dish-history-panel">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-2">
@@ -764,19 +747,19 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
                   Unit price history: {currentSelection.name}
                 </h2>
                 {!dishInCurrentPage && (
-                  <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
                     Retained from prior view
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 Quantity-weighted unit price by month. Gaps indicate months with no recorded orders for this item.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setSelectedDish(null)}
-              className="min-h-[44px] px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+              className="min-h-[44px] px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:underline"
               aria-label="Clear selected dish history"
               data-testid="clear-dish-selection-btn"
             >
@@ -788,18 +771,17 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
             summary={`Quantity-weighted unit price by month for ${currentSelection.name}`}
             headers={['Month', 'Unit price (₹)', 'Quantity']}
             rows={currentSelection.price_trend.map(x => [
-              x.month ?? 'Unknown',
-              x.unit_price != null ? `₹${x.unit_price.toFixed(2)}` : 'Unknown',
+              x.month ?? '–',
+              x.unit_price != null ? inr(x.unit_price, 2) : '–',
               x.quantity,
             ])}
             option={{
               tooltip: {
                 trigger: 'axis',
                 renderMode: 'richText',
-                valueFormatter: (val: unknown) =>
-                  val != null ? `₹${Number(val).toLocaleString('en-IN')}` : 'Unknown',
+                valueFormatter: (val: unknown) => (val != null ? inr(Number(val), 2) : '–'),
               },
-              grid: { left: 75, right: 25, bottom: 50, top: 25 },
+              grid: { left: 56, right: 16, bottom: 32, top: 16 },
               xAxis: {
                 type: 'category',
                 data: currentSelection.price_trend.map(x => x.month ?? 'Unknown'),
@@ -808,9 +790,7 @@ export function FoodLeaders({ onRestaurantClick, onDishClick }: FoodLeadersProps
               yAxis: {
                 type: 'value',
                 name: 'Unit price (₹)',
-                axisLabel: {
-                  formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
-                },
+                axisLabel: { formatter: compactInr },
               },
               series: [
                 {

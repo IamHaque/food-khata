@@ -1,4 +1,5 @@
 import * as React from "react";
+import { thin } from "../../lib/chart-kit";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
 import {
@@ -210,7 +211,7 @@ export function buildCumulativeSpendOption({
       data: labels,
       boundaryGap: false,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
         interval: "auto",
       },
@@ -224,11 +225,11 @@ export function buildCumulativeSpendOption({
       type: "value",
       name: "Cumulative (₹)",
       nameTextStyle: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
         formatter: (val: number) => {
           if (val >= 100000) return `₹${(val / 100000).toFixed(val % 100000 === 0 ? 0 : 1)}L`;
@@ -262,17 +263,13 @@ export function buildCumulativeSpendOption({
           opacity: 0.15,
         },
         markPoint: {
-          symbol: "pin",
-          symbolSize: 44,
-          data: markPoints,
+          symbol: "circle",
+          symbolSize: 7,
+          data: thin(markPoints, 12),
           itemStyle: {
             color: currentTheme.primary,
           },
-          label: {
-            fontSize: 10,
-            fontWeight: "bold",
-            color: currentTheme.text,
-          },
+          label: { show: false },
         },
         animation: !prefersReducedMotion,
         animationDuration: prefersReducedMotion ? 0 : 600,

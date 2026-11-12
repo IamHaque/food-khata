@@ -1,4 +1,5 @@
 import * as React from "react";
+import { plural } from "../../lib/format";
 import * as echarts from "echarts/core";
 import { TreemapChart } from "echarts/charts";
 import {
@@ -23,6 +24,9 @@ import {
 
 // Ensure ECharts modules registered once
 let registered = false;
+/** "Unknown" is the data's name for untagged cuisines; say what it means. */
+const displayName = (n?: string) => (!n || n === "Unknown" ? "Not tagged" : n);
+
 export function registerCuisineTreemapModules() {
   if (registered) return;
   echarts.use([
@@ -186,7 +190,7 @@ export function buildCuisineHierarchy(
           const remainder = Math.round((cuisine.spend - restTotalSpend) * 100) / 100;
           if (remainder > 0) {
             children.push({
-              name: `Other ${cuisine.name}`,
+              name: "Other restaurants",
               value: remainder,
               cuisineName: cuisine.name,
             });
@@ -266,12 +270,12 @@ export function buildCuisineTreemapOption(
         fontFamily: '"Inter Variable", sans-serif',
       },
       formatter: (params: any) => {
-        const name = params?.name ?? "Unknown";
+        const name = displayName(params?.name);
         const val = typeof params?.value === "number" ? params.value : 0;
         const formattedVal = formatRupees(val);
         const orders = params?.data?.orders;
         const ordersText = typeof orders === "number" && orders > 0
-          ? `${orders} ${orders === 1 ? "order" : "orders"}`
+          ? plural(orders, "order")
           : "";
 
         const share = totalSpend > 0 ? ((val / totalSpend) * 100).toFixed(1) + "%" : "";
@@ -304,6 +308,9 @@ export function buildCuisineTreemapOption(
         type: "treemap",
         roam: false,
         nodeClick: "zoomToNode",
+        // Tiny tiles carry no readable label: hide them and let the tooltip and the data table cover them.
+        visibleMin: 500,
+        childrenVisibleMin: 1500,
         breadcrumb: {
           show: true,
           left: "center",
@@ -321,8 +328,9 @@ export function buildCuisineTreemapOption(
         },
         label: {
           show: true,
+          overflow: "truncate",
           formatter: (params: any) => {
-            const name = params?.name ?? "";
+            const name = displayName(params?.name);
             const val = typeof params?.value === "number" ? formatRupees(params.value) : "";
             return val ? `${name}\n${val}` : name;
           },
@@ -446,7 +454,7 @@ export function CuisineTreemapChart({
   restaurants,
   cuisine_unavailable_reason,
   title = "Cuisine breakdown",
-  subtitle = "Treemap of spend by cuisine with restaurant drilldown",
+  subtitle = "Spend by cuisine. Click a cuisine to see its restaurants.",
   caption: captionProp,
   onCuisineClick,
   isLoading,

@@ -250,8 +250,8 @@ export function buildLoyaltyParetoOption({
   if (displayed.length === 0) {
     return {
       ...baseOption,
-      xAxis: { type: "category", data: [] },
-      yAxis: [{ type: "value" }, { type: "value" }],
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: [] },
       series: [],
     };
   }
@@ -288,7 +288,7 @@ export function buildLoyaltyParetoOption({
     cumPercent: cumPercentages[i],
     itemStyle: {
       color: currentTheme.colors[0],
-      borderRadius: [4, 4, 0, 0],
+      borderRadius: [0, 4, 4, 0],
     },
   }));
 
@@ -307,12 +307,12 @@ export function buildLoyaltyParetoOption({
     {
       name: "Orders",
       type: "bar",
-      yAxisIndex: 0,
+      xAxisIndex: 0,
       data: barData,
       barMaxWidth: 32,
       itemStyle: {
         color: currentTheme.colors[0],
-        borderRadius: [4, 4, 0, 0],
+        borderRadius: [0, 4, 4, 0],
       },
       emphasis: {
         focus: "series",
@@ -323,8 +323,8 @@ export function buildLoyaltyParetoOption({
     {
       name: "Cumulative %",
       type: "line",
-      yAxisIndex: 1,
-      smooth: true,
+      xAxisIndex: 1,
+      smooth: false,
       symbol: "circle",
       symbolSize: 6,
       data: lineData,
@@ -341,7 +341,7 @@ export function buildLoyaltyParetoOption({
         data: [
           {
             name: "80% Pareto",
-            yAxis: 80,
+            xAxis: 80,
             lineStyle: {
               type: "dashed",
               color: currentTheme.colors[2] ?? currentTheme.mutedColor,
@@ -350,8 +350,8 @@ export function buildLoyaltyParetoOption({
             label: {
               show: true,
               formatter: "80% Pareto",
-              position: "insideEndTop",
-              fontSize: 10,
+              position: "end",
+              fontSize: 11,
               color: currentTheme.textColor,
             },
           },
@@ -388,7 +388,7 @@ export function buildLoyaltyParetoOption({
     },
     legend: {
       show: true,
-      top: 4,
+      top: 0,
       right: 12,
       textStyle: {
         color: currentTheme.mutedColor,
@@ -396,70 +396,49 @@ export function buildLoyaltyParetoOption({
       },
       data: ["Orders", "Cumulative %"],
     },
+    // Horizontal bars: long restaurant names stay readable and are never rotated.
     grid: {
-      left: 48,
-      right: 48,
-      top: 44,
-      bottom: categories.length > 8 ? 64 : 40,
+      left: 8,
+      right: 24,
+      top: 56,
+      bottom: 8,
       containLabel: true,
     },
-    xAxis: {
+    yAxis: {
       type: "category",
       data: categories,
-      axisLine: {
-        lineStyle: { color: currentTheme.axisLine },
-      },
-      axisTick: {
-        alignWithLabel: true,
-      },
+      inverse: true,
+      axisLine: { lineStyle: { color: currentTheme.axisLine } },
+      axisTick: { show: false },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         interval: 0,
-        rotate: categories.length > 8 ? 30 : 0,
-        formatter: (val: string) => (val.length > 14 ? `${val.slice(0, 13)}…` : val),
+        width: 160,
+        overflow: "truncate",
       },
     },
-    yAxis: [
+    xAxis: [
       {
         type: "value",
         name: "Orders",
+        nameLocation: "end",
         min: 0,
         minInterval: 1,
-        position: "left",
-        axisLine: {
-          show: true,
-          lineStyle: { color: currentTheme.axisLine },
-        },
-        splitLine: {
-          show: true,
-          lineStyle: { color: currentTheme.splitLine, type: "dashed" },
-        },
-        axisLabel: {
-          color: currentTheme.mutedColor,
-          fontSize: 10,
-          formatter: (v: number) => v.toLocaleString("en-IN"),
-        },
+        position: "bottom",
+        splitLine: { show: true, lineStyle: { color: currentTheme.splitLine } },
+        axisLabel: { color: currentTheme.mutedColor, fontSize: 11, formatter: (v: number) => v.toLocaleString("en-IN") },
       },
       {
         type: "value",
-        name: "Cumulative %",
+        name: "Cumulative share of orders",
+        nameLocation: "end",
         min: 0,
         max: 100,
         interval: 20,
-        position: "right",
-        axisLine: {
-          show: true,
-          lineStyle: { color: currentTheme.axisLine },
-        },
-        splitLine: {
-          show: false,
-        },
-        axisLabel: {
-          color: currentTheme.mutedColor,
-          fontSize: 10,
-          formatter: "{value}%",
-        },
+        position: "top",
+        splitLine: { show: false },
+        axisLabel: { color: currentTheme.mutedColor, fontSize: 11, formatter: "{value}%" },
       },
     ],
     series,
@@ -474,8 +453,8 @@ export function LoyaltyParetoChart({
   error = null,
   onRetry,
   className,
-  title = "Restaurant loyalty Pareto",
-  subtitle = "Order distribution across vendors with cumulative 80/20 threshold",
+  title = "Restaurant loyalty",
+  subtitle = "Orders per restaurant, with the share of all orders they add up to.",
   caption: captionProp,
   maxItems,
   onRestaurantClick,
@@ -560,7 +539,7 @@ export function LoyaltyParetoChart({
         align="start"
       >
         <div>
-          <p className="font-semibold text-foreground text-sm">Restaurant Loyalty Pareto</p>
+          <p className="font-semibold text-foreground text-sm">Restaurant loyalty</p>
           <p className="text-muted-foreground mt-0.5 leading-relaxed">
             Pareto analysis (80/20 rule) ranks restaurants by order volume to highlight vendor concentration.
           </p>
@@ -599,6 +578,7 @@ export function LoyaltyParetoChart({
       onFullscreenChange={onFullscreenChange}
       className={className}
       data={data}
+      chartHeight={Math.max(320, displayed.length * 28 + 96)}
       spec={(currentData, theme, { prefersReducedMotion }) =>
         buildLoyaltyParetoOption({
           data: currentData,

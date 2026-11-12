@@ -12,6 +12,8 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
 
 import { ChartCard } from "@/components/dashboard/ChartCard";
+import { inr, plural } from "@/lib/format";
+import { compactInr } from "@/lib/chart-kit";
 import { getCurrentChartTheme, buildBaseChartOption, resolveChartTheme } from "@/lib/chart-theme";
 import { computeTopRestaurantTakeaway } from "@/lib/captions";
 import { useFilters } from "@/app/FilterContext";
@@ -135,21 +137,24 @@ export function buildTopRestaurantsDishesOption(
         const p = Array.isArray(params) ? params[0] : params;
         const idx = (p as any)?.dataIndex ?? 0;
         const row = rows[idx];
-        const amount = row ? `₹${row.value.toLocaleString("en-IN")}` : "";
-        const qty = row ? `${row.quantity} ${row.quantity === 1 ? "order" : "orders"}` : "";
-        return `<div class="font-bold text-xs mb-1">${(p as any)?.name ?? ""}</div><div class="text-xs">${amount} · ${qty}</div>`;
+        const amount = row ? inr(row.value) : "";
+        const qty = row ? plural(row.quantity, "order") : "";
+        return `<div class="font-semibold text-xs mb-1">${(p as any)?.name ?? ""}</div><div class="text-xs">${amount} · ${qty}</div>`;
       },
     },
-    grid: { left: 120, right: 40, top: 16, bottom: 24 },
+    grid: { left: 8, right: 150, top: 8, bottom: 28, containLabel: true },
     xAxis: {
       type: "value",
-      axisLabel: { fontSize: 10 },
+      name: "Spend (₹)",
+      nameLocation: "middle",
+      nameGap: 26,
+      axisLabel: { fontSize: 11, formatter: compactInr },
       splitLine: { show: true },
     },
     yAxis: {
       type: "category",
       data: labels,
-      axisLabel: { fontSize: 11 },
+      axisLabel: { fontSize: 11, width: 150, overflow: "truncate" },
       inverse: true,
     },
     series: [
@@ -163,9 +168,9 @@ export function buildTopRestaurantsDishesOption(
           position: "right",
           formatter: (params: any) => {
             const row = rows[params?.dataIndex];
-            return row ? String(row.quantity) : "";
+            return row ? `${inr(row.value)} · ${plural(row.quantity, "order")}` : "";
           },
-          fontSize: 10,
+          fontSize: 11,
         },
       },
     ],
@@ -338,15 +343,15 @@ export function TopRestaurantsDishesChart({
     >
       <div className="space-y-4">
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1">Restaurants</div>
-          <div ref={restContainerRef} role="img" aria-label="Top restaurants" style={{ height: 200, width: "100%" }} />
+          <div className="text-sm font-medium text-foreground mb-1">Restaurants</div>
+          <div ref={restContainerRef} role="img" aria-label="Top restaurants" style={{ height: 230, width: "100%" }} />
         </div>
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1">Dishes</div>
-          <div ref={dishContainerRef} role="img" aria-label="Top dishes" style={{ height: 200, width: "100%" }} />
+          <div className="text-sm font-medium text-foreground mb-1">Dishes</div>
+          <div ref={dishContainerRef} role="img" aria-label="Top dishes" style={{ height: 230, width: "100%" }} />
         </div>
         <div>
-          <a href={`/food${location.search}`}>View all</a>
+          <a className="text-sm font-medium text-primary underline underline-offset-2" href={`/food${location.search}`}>See all restaurants and dishes</a>
         </div>
       </div>
     </ChartCard>

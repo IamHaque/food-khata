@@ -1,4 +1,5 @@
 import { getPatterns } from "../../app/theme";
+import { compactInr } from "../../lib/chart-kit";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { LineChart, type LineSeriesOption } from "echarts/charts";
@@ -290,20 +291,18 @@ export function buildYearOverYearOption({
         fontFamily: '"Inter Variable", sans-serif',
       },
       data: distinctYears.map(String),
-      selected:
-        selectedYears && selectedYears.length > 0
-          ? distinctYears.reduce<Record<string, boolean>>((acc, y) => {
-              const s = String(y);
-              acc[s] = selectedYears.includes(s);
-              return acc;
-            }, {})
-          : undefined,
+      // Last three years on by default; click a year in the legend to show or hide it.
+      selected: distinctYears.reduce<Record<string, boolean>>((acc, y, i) => {
+        const s = String(y);
+        acc[s] = selectedYears && selectedYears.length > 0 ? selectedYears.includes(s) : i >= distinctYears.length - 3;
+        return acc;
+      }, {}),
     },
     grid: {
       left: 16,
       right: 20,
-      top: 48,
-      bottom: 28,
+      top: 40,
+      bottom: 8,
       containLabel: true,
     },
     xAxis: {
@@ -328,14 +327,14 @@ export function buildYearOverYearOption({
       name: "Spend",
       nameTextStyle: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
-        formatter: (val: number) => formatRupees(val),
+        formatter: (val: number) => compactInr(val),
       },
       splitLine: {
         lineStyle: {
@@ -359,8 +358,8 @@ export function YearOverYearChart({
   error,
   onRetry,
   className,
-  title = "Year-over-year spend comparison",
-  subtitle = "Monthly spend trajectories across calendar years",
+  title = "Year-over-year spend",
+  subtitle = "Monthly spend for the last three years. Click a year in the legend to show or hide it.",
   caption: captionProp,
   showTable,
   onShowTableChange,

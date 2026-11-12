@@ -1,5 +1,6 @@
 import { getPatterns } from "../../app/theme";
 import * as React from "react";
+import { monthLabel } from "../../lib/chart-kit";
 import * as echarts from "echarts/core";
 import { LineChart, type LineSeriesOption } from "echarts/charts";
 import {
@@ -278,7 +279,9 @@ export function buildNewVsRepeatOption({
         fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
         interval: 0,
-        rotate: categories.length > 6 ? 30 : 0,
+        rotate: 0,
+        hideOverlap: true,
+        formatter: monthLabel,
       },
       axisLine: {
         lineStyle: {
@@ -298,7 +301,7 @@ export function buildNewVsRepeatOption({
       },
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: '"Inter Variable", sans-serif',
       },
       splitLine: {

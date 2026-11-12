@@ -346,7 +346,7 @@ export function buildWeekdayBarsOption(
       axisLine: { lineStyle: { color: theme.axisLine } },
       axisLabel: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         formatter: (v: number) => formatRupees(v),
       },
     });
@@ -376,7 +376,7 @@ export function buildWeekdayBarsOption(
       axisLine: { lineStyle: { color: theme.axisLine } },
       axisLabel: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         formatter: (v: number) => formatRupees(v),
       },
     });

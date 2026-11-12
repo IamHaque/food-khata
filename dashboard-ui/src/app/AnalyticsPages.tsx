@@ -2,7 +2,11 @@ import { SpendingDetails } from './SpendingDetails';
 import { FoodLeaders } from './FoodLeaders';
 import { useDashboard } from '../hooks/api';
 import { useFilters } from './FilterContext';
+import { PageHeader } from '../components/ui/page-header';
+import { Button } from '../components/ui/button';
+import { PageLoading, PageError, PageEmpty } from '../components/dashboard';
 import { Chart } from './Chart';
+import { moneyAxis, timeAxis, inrTooltip } from '../lib/chart-kit';
 import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart, StreakTimelineChart, OrdersPerWeekChart } from '../components/charts';
 
 export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
@@ -10,25 +14,19 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
   const query = useDashboard(filters);
   const data = query.data;
 
+  const title = { Spending: 'Spending', Food: 'Food', Habits: 'Habits' }[page];
+  const description =
+    page === 'Food'
+      ? 'Cuisines, dishes, diet and the restaurants you return to.'
+      : page === 'Habits'
+      ? 'When you order, how often, and where it goes.'
+      : 'Where the money goes: daily spend, fees, discounts and year-on-year change.';
+
   if (!data)
     return (
-      <section
-        className="page-panel rounded-xl border bg-card p-8 text-center text-xs text-muted-foreground shadow-xs animate-pulse"
-        role={query.isError ? 'alert' : 'status'}
-      >
-        {query.isError ? (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-destructive">{page} could not load.</p>
-            <button
-              onClick={() => void query.refetch()}
-              className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          'Loading…'
-        )}
+      <section className="space-y-5" aria-busy={query.isPending}>
+        <PageHeader title={title} description={description} />
+        {query.isError ? <PageError what={page} onRetry={() => void query.refetch()} /> : <PageLoading label={`Loading ${page}`} />}
       </section>
     );
 
@@ -38,13 +36,13 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
   const spendingPanels = [
     {
       title: 'Daily spend',
-      subtitle: 'Daily provider-paid expenditure',
+      subtitle: 'What you paid each day, after discounts.',
       labels: spending.daily.map(x => x.date),
       values: spending.daily.map(x => x.spend),
     },
     {
       title: 'Rolling 30-day spend',
-      subtitle: 'Trailing 30-day expenditure sum (not a daily average)',
+      subtitle: 'Total spent over the 30 days up to each date. It is a sum, not a daily average.',
       labels: spending.daily.map(x => x.date),
       values: spending.daily.map(x => x.rolling_30),
     },
@@ -52,41 +50,17 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
 
   return (
     <section aria-busy={query.isFetching} className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{page}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {page === 'Food'
-              ? 'Cuisine breakdown, dish trends, dietary distribution, and restaurant loyalty'
-              : page === 'Habits'
-              ? 'Ordering rhythm, temporal habits, and basket sizes'
-              : 'Cumulative expenditure, moving averages, fee patterns, and yearly comparisons'}
-          </p>
-        </div>
-      </div>
+      <PageHeader title={title} description={description} />
 
       {query.isError && (
-        <p role="alert" className="text-xs font-medium text-destructive flex items-center gap-2">
-          <span>Refresh failed.</span>
-          <button
-            onClick={() => void query.refetch()}
-            className="rounded border border-input px-2 py-0.5 bg-background shadow-2xs hover:bg-accent"
-          >
-            Retry
-          </button>
+        <p role="alert" className="notice notice-danger items-center">
+          <span className="flex-1">Could not refresh this page. The numbers shown may be out of date.</span>
+          <Button variant="outline" size="sm" onClick={() => void query.refetch()}>Try again</Button>
         </p>
       )}
 
       {!data.kpis.orders ? (
-        <div className="page-panel rounded-xl border bg-card p-8 text-center shadow-xs space-y-2">
-          <p className="font-semibold text-foreground text-sm">No orders match these filters.</p>
-          <button
-            onClick={clear}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent"
-          >
-            Clear filters
-          </button>
-        </div>
+        <PageEmpty onClear={clear} />
       ) : page === 'Food' ? (
         <div className="space-y-6">
           {/* Row 1: Cuisine spending and New vs Repeat restaurants */}
@@ -172,41 +146,27 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {spendingPanels.map(panel => (
-              <div className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3" key={panel.title}>
+              <div className="rounded-card border bg-card p-[var(--space-card)] space-y-3" key={panel.title}>
                 <div>
                   <h2 className="text-base font-semibold text-foreground">{panel.title}</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{panel.subtitle}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{panel.subtitle}</p>
                 </div>
                 <Chart
                   summary={panel.title}
                   headers={['Period or group', panel.title]}
                   rows={panel.labels.map((label, i) => [label, panel.values[i]])}
                   option={{
-                    tooltip: {
-                      trigger: 'axis',
-                      renderMode: 'richText',
-                      valueFormatter: (val: unknown) =>
-                        val != null ? `₹${Number(val).toLocaleString('en-IN')}` : 'Unknown',
-                    },
-                    grid: { left: 80, right: 25, bottom: 75, top: 20 },
-                    xAxis: {
-                      type: 'category',
-                      data: panel.labels,
-                      axisLabel: { hideOverlap: true, fontSize: 11 },
-                    },
-                    yAxis: {
-                      type: 'value',
-                      name: 'Spend (₹)',
-                      axisLabel: {
-                        formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
-                      },
-                    },
+                    tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: inrTooltip },
+                    grid: { left: 56, right: 16, bottom: 32, top: 16 },
+                    xAxis: timeAxis(),
+                    yAxis: moneyAxis(),
                     series: [
                       {
                         name: panel.title,
                         type: 'line',
-                        itemStyle: { borderRadius: [4, 4, 0, 0] },
-                        data: panel.values,
+                        showSymbol: false,
+                        lineStyle: { width: 1.75 },
+                        data: panel.labels.map((label, i) => [label, panel.values[i]]),
                       },
                     ],
                   }}
@@ -215,15 +175,15 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
             ))}
           </div>
 
-          <details className="page-panel rounded-xl border bg-card p-5 shadow-xs space-y-3 group">
+          <details className="rounded-card border bg-card p-[var(--space-card)] space-y-3 group">
             <summary className="cursor-pointer text-sm font-semibold text-foreground flex items-center justify-between min-h-[44px]">
               <div className="flex items-center gap-2">
                 <span>Cumulative spend trajectory</span>
-                <span className="text-xs text-muted-foreground font-normal">(Click to expand)</span>
+                <span className="text-sm text-muted-foreground font-normal">Show</span>
               </div>
               <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Accumulation starts at the beginning of the applied scope window (
               {filters.date_from ?? 'earliest recorded order'}). Does not represent total account history when date filters
               are restricted.
@@ -233,30 +193,17 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               headers={['Date', 'Cumulative spend']}
               rows={spending.daily.map(x => [x.date, x.cumulative])}
               option={{
-                tooltip: {
-                  trigger: 'axis',
-                  renderMode: 'richText',
-                  valueFormatter: (val: unknown) =>
-                    val != null ? `₹${Number(val).toLocaleString('en-IN')}` : 'Unknown',
-                },
-                grid: { left: 80, right: 25, bottom: 65, top: 20 },
-                xAxis: {
-                  type: 'category',
-                  data: spending.daily.map(x => x.date),
-                  axisLabel: { hideOverlap: true, fontSize: 11 },
-                },
-                yAxis: {
-                  type: 'value',
-                  name: 'Spend (₹)',
-                  axisLabel: {
-                    formatter: (v: number) => `₹${v.toLocaleString('en-IN')}`,
-                  },
-                },
+                tooltip: { trigger: 'axis', renderMode: 'richText', valueFormatter: inrTooltip },
+                grid: { left: 56, right: 16, bottom: 32, top: 16 },
+                xAxis: timeAxis(),
+                yAxis: moneyAxis(),
                 series: [
                   {
                     name: 'Cumulative spend',
                     type: 'line',
-                    data: spending.daily.map(x => x.cumulative),
+                    showSymbol: false,
+                    lineStyle: { width: 1.75 },
+                    data: spending.daily.map(x => [x.date, x.cumulative]),
                   },
                 ],
               }}

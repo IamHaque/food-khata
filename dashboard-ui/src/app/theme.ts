@@ -23,6 +23,8 @@ export interface ThemeState {
   mode: ThemeMode;
   accent: ThemeAccent;
   isDark: boolean;
+  /** Opt-in hatch fills on charts. */
+  patterns: boolean;
 }
 
 export type ThemeListener = (state: ThemeState) => void;
@@ -135,6 +137,7 @@ function notify(): void {
     mode: activeMode,
     accent: activeAccent,
     isDark: resolveIsDark(activeMode),
+    patterns: getPatterns(),
   };
   for (const listener of listeners) {
     try {
@@ -168,6 +171,7 @@ export function getThemeState(): ThemeState {
     mode: activeMode,
     accent: activeAccent,
     isDark: resolveIsDark(activeMode),
+    patterns: getPatterns(),
   };
 }
 
@@ -252,6 +256,7 @@ export function useTheme(): {
   mode: ThemeMode;
   accent: ThemeAccent;
   isDark: boolean;
+  patterns: boolean;
   setMode: (mode: ThemeMode) => void;
   setAccent: (accent: ThemeAccent) => void;
 } {
@@ -268,6 +273,7 @@ export function useTheme(): {
     mode: state.mode,
     accent: state.accent,
     isDark: state.isDark,
+    patterns: state.patterns,
     setMode,
     setAccent,
   };

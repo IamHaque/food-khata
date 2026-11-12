@@ -1,7 +1,8 @@
 import { useDashboard, useDashboardCompare } from '../hooks/api';
 import { useFilters } from './FilterContext';
 import { ScopeNotice } from './SyncStatusPanel';
-import { InsightStrip, OverviewKpis } from '@/components/dashboard';
+import { InsightStrip, OverviewKpis, PageLoading, PageError, PageEmpty } from '@/components/dashboard';
+import { PageHeader } from '@/components/ui/page-header';
 import { MonthlyTrendChart } from '@/components/charts/MonthlyTrendChart';
 import { PlatformSplitChart } from '@/components/charts/PlatformSplitChart';
 import { CalendarHeatmapChart } from '@/components/charts/CalendarHeatmapChart';
@@ -17,50 +18,16 @@ export function Overview() {
 
   return (
     <section aria-busy={query.isFetching} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Overview</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Financial KPIs, monthly trends, and spending composition for the active scope
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Overview" description="Your total spend, how it trends month by month, and who you order from." />
 
       <ScopeNotice />
 
       {query.isPending ? (
-        <section
-          className="page-panel overview-loading rounded-xl border bg-card p-8 shadow-xs text-center"
-          role="status"
-          aria-label="Loading overview"
-        >
-          <div className="flex flex-col items-center justify-center gap-3">
-            <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            <p className="text-sm font-medium text-muted-foreground">Loading overview analytics…</p>
-          </div>
-        </section>
+        <PageLoading label="Loading overview" />
       ) : query.isError ? (
-        <section className="page-panel rounded-xl border border-destructive/20 bg-destructive/10 p-6" role="alert">
-          <p className="text-sm font-medium text-destructive">Overview could not load.</p>
-          <button
-            onClick={() => void query.refetch()}
-            className="mt-3 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent"
-          >
-            Retry
-          </button>
-        </section>
+        <PageError what="Overview" onRetry={() => void query.refetch()} />
       ) : !data || !data.kpis?.orders ? (
-        <div className="page-panel rounded-xl border bg-card p-8 text-center shadow-xs space-y-3">
-          <p className="text-base font-semibold text-foreground">No orders match these filters.</p>
-          <p className="text-xs text-muted-foreground">Try clearing date restrictions, account filters, or search terms.</p>
-          <button
-            onClick={clear}
-            className="rounded-md border border-input bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-accent transition-colors"
-          >
-            Clear filters
-          </button>
-        </div>
+        <PageEmpty onClear={clear} />
       ) : (
         <>
           <InsightStrip

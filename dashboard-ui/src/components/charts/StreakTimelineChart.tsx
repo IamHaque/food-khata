@@ -273,10 +273,11 @@ export function buildStreakTimelineOption(
       type: "category",
       data: dates,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
         formatter: (val: string) => formatTimelineDate(val),
-        rotate: dates.length > 15 ? 25 : 0,
+        rotate: 0,
+        hideOverlap: true,
       },
       axisLine: {
         lineStyle: {
@@ -291,12 +292,12 @@ export function buildStreakTimelineOption(
       type: "value",
       name: "Orders",
       nameTextStyle: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       minInterval: 1,
       axisLabel: {
-        fontSize: 10,
+        fontSize: 11,
         color: currentTheme.mutedColor,
       },
       splitLine: {

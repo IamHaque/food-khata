@@ -1,9 +1,9 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useCountUp } from "@/hooks/useCountUp";
+import { inr, pct } from "@/lib/format";
 import { emitHighlight, emitClear } from "@/lib/highlight-bus";
 import { Info, ArrowUp, ArrowDown, Minus } from "lucide-react";
 
@@ -31,7 +31,7 @@ export interface KpiCardDefinition {
 
 export const KPI_DEFINITIONS: KpiCardDefinition[] = [
   {
-    label: "Total Spend",
+    label: "Total spend",
     dataKey: "spend",
     format: "money",
     decimals: 2,
@@ -39,7 +39,7 @@ export const KPI_DEFINITIONS: KpiCardDefinition[] = [
     caveats: "Excludes non-reconciling advertised savings.",
   },
   {
-    label: "Total Orders",
+    label: "Total orders",
     dataKey: "orders",
     format: "number",
     decimals: 0,
@@ -47,7 +47,7 @@ export const KPI_DEFINITIONS: KpiCardDefinition[] = [
     caveats: "Excludes cancelled and refunded orders.",
   },
   {
-    label: "Average Order Value",
+    label: "Average order value",
     dataKey: "aov",
     format: "money",
     decimals: 2,
@@ -55,7 +55,7 @@ export const KPI_DEFINITIONS: KpiCardDefinition[] = [
     caveats: "Fluctuates with group orders and discounts.",
   },
   {
-    label: "Orders Per Week",
+    label: "Orders per week",
     dataKey: "orders_per_week",
     format: "number",
     decimals: 1,
@@ -63,14 +63,14 @@ export const KPI_DEFINITIONS: KpiCardDefinition[] = [
     caveats: "Partial start/end weeks are normalized.",
   },
   {
-    label: "Top Cuisine",
+    label: "Top cuisine",
     dataKey: "top_cuisine",
     format: "text",
     formula: "Most frequently ordered cuisine by order count.",
     caveats: "Multi-cuisine restaurants mapped to primary category.",
   },
   {
-    label: "Delivery & Fees",
+    label: "Delivery and fees",
     dataKey: "fees",
     format: "money",
     decimals: 2,
@@ -232,7 +232,7 @@ export function Sparkline({
         <div
           role="tooltip"
           data-testid="sparkline-tooltip"
-          className="absolute z-10 -top-6 left-0 text-[10px] bg-popover text-popover-foreground border rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap pointer-events-none"
+          className="absolute z-10 -top-6 left-0 text-xs bg-popover text-popover-foreground border rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap pointer-events-none"
         >
           {`${hover.month}: ${hover.value}`}
         </div>
@@ -250,31 +250,21 @@ export function KpiValue({
   format: "money" | "number";
   decimals?: number;
 }) {
-  if (value == null || !Number.isFinite(value)) {
-    return <span>Unknown</span>;
-  }
-  const animated = useCountUp(
-    value,
-    format === "money"
-      ? { currency: "INR", decimals: decimals ?? 2 }
-      : { decimals: decimals ?? (Number.isInteger(value) ? 0 : 1) }
-  );
-  return <span className="tabular-nums">{animated}</span>;
+  // No count-up: a ledger figure should simply be there.
+  if (value == null || !Number.isFinite(value)) return <span>–</span>;
+  const text = format === "money"
+    ? inr(value, decimals ?? 2)
+    : value.toLocaleString("en-IN", { maximumFractionDigits: decimals ?? (Number.isInteger(value) ? 0 : 1) });
+  return <span className="tabular-nums">{text}</span>;
 }
 
 export function Delta({ value }: { value: number | null | undefined }) {
-  if (value == null || !Number.isFinite(value)) {
-    return <span className="text-xs text-muted-foreground">Unknown</span>;
-  }
-  const up = value > 0;
-  const down = value < 0;
-  const Icon = up ? ArrowUp : down ? ArrowDown : Minus;
-  const color = up ? "text-emerald-600" : down ? "text-rose-600" : "text-muted-foreground";
-  const formatted = `${value > 0 ? "+" : ""}${value}%`;
+  if (value == null || !Number.isFinite(value)) return null;
+  const Icon = value > 0 ? ArrowUp : value < 0 ? ArrowDown : Minus;
   return (
-    <span className={cn("text-xs font-medium flex items-center gap-0.5", color)}>
+    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground tabular-nums">
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {formatted}
+      {`${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value)}%`}
     </span>
   );
 }
@@ -284,27 +274,11 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
 
   if (props.isLoading) {
     return (
-      <div
-        className={cn(
-          "overview-kpis grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3",
-          props.className
-        )}
-      >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="p-0 animate-pulse">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 w-24 bg-muted/40 rounded" />
-              <div className="h-4 w-4 bg-muted/40 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 w-28 bg-muted/40 rounded mb-2" />
-              <div className="flex items-center justify-between gap-2 mt-2">
-                <div className="h-7 w-20 bg-muted/30 rounded" />
-                <div className="h-4 w-10 bg-muted/30 rounded" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className={cn("overview-kpis", props.className)} aria-busy="true">
+        <Card className="grid gap-6 p-[var(--space-card)] md:grid-cols-[minmax(0,1fr)_minmax(18rem,26rem)] animate-pulse">
+          <div className="space-y-3"><div className="h-4 w-24 rounded bg-muted" /><div className="h-12 w-56 rounded bg-muted" /></div>
+          <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-6 rounded bg-muted" />)}</div>
+        </Card>
       </div>
     );
   }
@@ -325,7 +299,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
     info: string;
   }[] = [
     {
-      label: "Total Spend",
+      label: "Total spend",
       value: moneyVal(k.spend),
       format: "money",
       decimals: 2,
@@ -335,7 +309,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
       info: `${KPI_DEFINITIONS[0].formula} Caveats: ${KPI_DEFINITIONS[0].caveats}`,
     },
     {
-      label: "Total Orders",
+      label: "Total orders",
       value: numVal(k.orders),
       format: "number",
       decimals: 0,
@@ -345,7 +319,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
       info: `${KPI_DEFINITIONS[1].formula} Caveats: ${KPI_DEFINITIONS[1].caveats}`,
     },
     {
-      label: "Average Order Value",
+      label: "Average order value",
       value: moneyVal(k.aov),
       format: "money",
       decimals: 2,
@@ -355,7 +329,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
       info: `${KPI_DEFINITIONS[2].formula} Caveats: ${KPI_DEFINITIONS[2].caveats}`,
     },
     {
-      label: "Orders Per Week",
+      label: "Orders per week",
       value: numVal(ordersPerWeek),
       format: "number",
       decimals: 1,
@@ -365,7 +339,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
       info: `${KPI_DEFINITIONS[3].formula} Caveats: ${KPI_DEFINITIONS[3].caveats}`,
     },
     {
-      label: "Top Cuisine",
+      label: "Top cuisine",
       value: topCuisine,
       format: "text",
       sparkValues: [],
@@ -375,7 +349,7 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
       info: `${KPI_DEFINITIONS[4].formula} Caveats: ${KPI_DEFINITIONS[4].caveats}`,
     },
     {
-      label: "Delivery & Fees",
+      label: "Delivery and fees",
       value: moneyVal(k.fees),
       format: "money",
       decimals: 2,
@@ -386,77 +360,69 @@ export function OverviewKpis(props: OverviewKpisProps = {}) {
     },
   ];
 
-  return (
-    <div
-      className={cn(
-        "overview-kpis grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3",
-        props.className
-      )}
-    >
-      {cards.map((card) => {
-        const isPopoverDefaultOpen =
-          props.defaultOpenPopover === true ||
-          props.defaultOpenPopover === card.label;
+  const [total, ...rest] = cards;
+  const feesShare = Number(k.spend) > 0 && k.fees != null ? (Number(k.fees) / Number(k.spend)) * 100 : null;
+  const hasCompare = comparison != null;
+  const info = (card: (typeof cards)[number]) => (
+    <Popover defaultOpen={props.defaultOpenPopover === true || props.defaultOpenPopover === card.label}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label={`Calculation and caveats for ${card.label}`} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground hover:text-foreground lg:min-h-[28px] lg:min-w-[28px]">
+          <Info className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 text-sm">
+        <p className="font-semibold text-foreground mb-1">{card.label}</p>
+        <p className="text-muted-foreground leading-relaxed">{card.info}</p>
+      </PopoverContent>
+    </Popover>
+  );
+  const valueOf = (card: (typeof cards)[number]) =>
+    card.format === "text" ? (
+      card.value == null || card.value === "" ? <span>–</span> : <span title={String(card.value)}>{card.value}</span>
+    ) : (
+      <KpiValue value={card.value} format={card.format} decimals={card.decimals} />
+    );
 
-        return (
-          <Card key={card.label} className="p-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
-              <Popover defaultOpen={isPopoverDefaultOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`Calculation and caveats for ${card.label}`}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    <Info className="h-4 w-4" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 text-xs">
-                  <p className="font-semibold text-foreground mb-1">{card.label}</p>
-                  <p className="text-muted-foreground leading-relaxed">{card.info}</p>
-                </PopoverContent>
-              </Popover>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tabular-nums text-foreground">
-                {card.format === "text" ? (
-                  card.value == null || card.value === "" ? (
-                    <span>Unknown</span>
-                  ) : (
-                    <span className="truncate block" title={String(card.value)}>
-                      {card.value}
-                    </span>
-                  )
-                ) : (
-                  <KpiValue value={card.value} format={card.format} decimals={card.decimals} />
-                )}
-              </div>
-              <div className="flex items-center justify-between gap-2 mt-2 h-7">
-                {card.omitDeltaAndSpark ? (
-                  <>
-                    <div className="h-7 w-28" />
-                    <span className="text-xs text-muted-foreground">N/A</span>
-                  </>
-                ) : (
-                  <>
-                    {card.sparkValues.length > 0 ? (
-                      <Sparkline
-                        values={card.sparkValues}
-                        months={card.sparkMonths}
-                        label={`${card.label} sparkline`}
-                      />
-                    ) : (
-                      <div className="h-7 w-28" />
-                    )}
-                    <Delta value={card.delta} />
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+  return (
+    <div className={cn("overview-kpis", props.className)}>
+      <Card className="grid gap-x-8 gap-y-4 p-[var(--space-card)] md:grid-cols-[minmax(0,1fr)_minmax(18rem,26rem)]">
+        {/* The one memorable element: the big Total spend figure, then a ledger of what it is made of. */}
+        <div className="flex flex-col justify-between gap-3">
+          <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+            {total.label}
+            {info(total)}
+          </div>
+          <div>
+            <div className="font-semibold tabular-nums text-foreground text-display" data-testid="total-spend">
+              <KpiValue value={total.value} format="money" decimals={0} />
+            </div>
+            {hasCompare && <div className="mt-1"><Delta value={total.delta} /></div>}
+          </div>
+          {total.sparkValues.length > 0 && (
+            <Sparkline values={total.sparkValues} months={total.sparkMonths} label={`${total.label} sparkline`} className="text-primary" />
+          )}
+        </div>
+        <dl className="divide-y self-end border-y text-sm">
+          {rest.map((card) => (
+            <div key={card.label} className="flex items-center justify-between gap-3 py-0.5">
+              <dt className="flex items-center text-muted-foreground">
+                {card.label}
+                {info(card)}
+              </dt>
+              <dd className="flex items-baseline gap-2 text-right font-medium text-foreground tabular-nums">
+                {hasCompare && !card.omitDeltaAndSpark && <Delta value={card.delta} />}
+                {valueOf(card)}
+              </dd>
+            </div>
+          ))}
+          {feesShare != null && (
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="text-muted-foreground">Fees as a share of spend</dt>
+              <dd className="text-right font-medium text-foreground tabular-nums">{pct(Number(feesShare.toFixed(2)), 2)}</dd>
+            </div>
+          )}
+        </dl>
+      </Card>
     </div>
   );
 }

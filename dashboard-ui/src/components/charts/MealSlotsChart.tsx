@@ -1,4 +1,5 @@
 import * as React from "react";
+import { plural } from "../../lib/format";
 import * as echarts from "echarts/core";
 import { BarChart } from "echarts/charts";
 import {
@@ -178,9 +179,7 @@ export function formatMealSlotTooltip(
   markerColor?: string,
 ): string {
   const color = markerColor || theme.colors[0];
-  const orderCountText = `${slot.orders.toLocaleString("en-IN")} ${
-    slot.orders === 1 ? "order" : "orders"
-  }`;
+  const orderCountText = plural(slot.orders, "order");
   return [
     `<div style="font-family: inherit; font-size: 12px; line-height: 1.5; min-width: 170px;">`,
     `  <div style="font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">`,
@@ -257,10 +256,13 @@ export function buildMealSlotsOption(
   const base = buildBaseChartOption(theme, prefersReducedMotion);
   const categoryLabels = normalized.map((s) => s.label);
 
-  const seriesData = normalized.map((slot, idx) => {
+  const maxOrders = Math.max(1, ...normalized.map((s) => s.orders));
+  const seriesData = normalized.map((slot) => {
     const isSelected = activeSelected.includes(slot.key);
-    const opacity = hasActiveSelection ? (isSelected ? 1 : 0.35) : 1;
-    const color = theme.colors[idx % theme.colors.length];
+    // One hue; busier slots are darker. Selection dims the rest.
+    const shade = 0.4 + 0.6 * (slot.orders / maxOrders);
+    const opacity = hasActiveSelection ? (isSelected ? 1 : 0.3) : shade;
+    const color = theme.colors[0];
 
     return {
       value: slot.orders,
@@ -313,7 +315,7 @@ export function buildMealSlotsOption(
       },
       axisLabel: {
         color: theme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         formatter: (v: number) => (v % 1 === 0 ? String(v) : v.toFixed(0)),
       },
       splitLine: {
@@ -329,9 +331,7 @@ export function buildMealSlotsOption(
         const item = params?.data;
         if (!item?.slotData) return "";
         const slot = item.slotData as NormalizedMealSlot;
-        const color =
-          item.itemStyle?.color ||
-          theme.colors[params.dataIndex % theme.colors.length];
+        const color = item.itemStyle?.color || theme.colors[0];
         return formatMealSlotTooltip(slot, theme, color);
       },
     },

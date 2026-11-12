@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,7 +17,9 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { Skeleton } from '../components/ui/skeleton';
-import { Chip } from '../components/ui/chip';
+import { PageHeader } from '../components/ui/page-header';
+import { StatusPill } from '../components/ui/status-pill';
+import { inr, plural, platformLabel } from '../lib/format';
 import { EmptyState } from '../components/dashboard/EmptyState';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { SegmentedControl, type SegmentedControlOption } from '../components/ui/segmented-control';
@@ -49,7 +50,6 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertTriangle,
-  HelpCircle,
   XCircle,
   Eye,
   ArrowUp,
@@ -64,14 +64,7 @@ export type Order = components['schemas']['Order'];
 
 export type OrderVerificationStatus = 'verified' | 'unverified' | 'unbalanced';
 
-export const money = (n: number | null | undefined): string =>
-  n == null
-    ? 'Unknown'
-    : new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 2,
-      }).format(n);
+export const money = (n: number | null | undefined): string => inr(n, 2);
 
 export function formatOrderDate(val: string | null | undefined): string {
   if (!val) return '—';
@@ -117,84 +110,39 @@ export function getOrderVerificationStatus(order: {
 }
 
 export function OrderStatusChip({ status }: { status: OrderVerificationStatus }) {
-  if (status === 'verified') {
-    return (
-      <Chip
-        label="Verified"
-        icon={<CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
-        className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 font-medium"
-        data-status="verified"
-      />
-    );
-  }
-  if (status === 'unbalanced') {
-    return (
-      <Chip
-        label="Unbalanced"
-        icon={<AlertTriangle className="h-3 w-3 text-rose-600 dark:text-rose-400" />}
-        className="bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 font-medium"
-        data-status="unbalanced"
-      />
-    );
-  }
+  const tone = status === 'verified' ? 'success' : status === 'unbalanced' ? 'danger' : 'warning';
+  const label = status === 'verified' ? 'Verified' : status === 'unbalanced' ? 'Unbalanced' : 'Unverified';
   return (
-    <Chip
-      label="Unverified"
-      icon={<HelpCircle className="h-3 w-3 text-amber-600 dark:text-amber-400" />}
-      className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 font-medium"
-      data-status="unverified"
-    />
+    <StatusPill tone={tone} data-status={status}>
+      {label}
+    </StatusPill>
   );
 }
 
+/** Ledger figure: right-aligned, tabular, never truncated. */
 export function OrderAmountCell({
   amount,
-  maxAmount,
 }: {
   amount: number | null | undefined;
-  maxAmount: number;
+  maxAmount?: number;
 }) {
-  const val = amount ?? 0;
-  const safeMax = Math.max(maxAmount, 1);
-  const pct = Math.min(Math.max((val / safeMax) * 100, 0), 100);
-
   return (
-    <div className="flex flex-col items-end gap-1 min-w-[90px]" data-testid="amount-cell">
-      <span className="font-mono text-xs font-semibold text-foreground">
-        {money(amount)}
-      </span>
-      <div
-        className="h-1.5 w-16 bg-muted/70 rounded-full overflow-hidden"
-        title={`${money(amount)} (${Math.round(pct)}% of max ${money(safeMax)})`}
-        data-testid="amount-bar-container"
-      >
-        <div
-          className="h-full bg-primary/70 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-          data-testid="amount-bar"
-          role="progressbar"
-          aria-label="Order amount"
-          aria-valuenow={val}
-          aria-valuemin={0}
-          aria-valuemax={safeMax}
-        />
-      </div>
-    </div>
+    <span className="block whitespace-nowrap text-right text-sm font-medium tabular-nums text-foreground" data-testid="amount-cell">
+      {money(amount)}
+    </span>
   );
 }
 
 export function PlatformBadge({ platform }: { platform: string }) {
-  const isSwiggy = platform.toUpperCase() === 'SWIGGY';
+  const key = platform.toLowerCase();
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase border ${
-        isSwiggy
-          ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20'
-          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-      }`}
-      data-platform={platform}
-    >
-      {platform}
+    <span className="inline-flex items-center gap-1.5 text-sm" data-platform={platform}>
+      <span
+        aria-hidden="true"
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: key === 'zomato' ? 'var(--platform-zomato)' : key === 'swiggy' ? 'var(--platform-swiggy)' : 'hsl(var(--muted-foreground))' }}
+      />
+      {platformLabel(platform)}
     </span>
   );
 }
@@ -222,7 +170,7 @@ export function HighlightText({
         part.toLowerCase() === q.toLowerCase() ? (
           <mark
             key={i}
-            className="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5"
+            className="bg-primary/20 text-inherit rounded-sm px-0.5"
           >
             {part}
           </mark>
@@ -310,7 +258,7 @@ export function OrderSearchInput({
   onClear: () => void;
 }) {
   return (
-    <div className="relative flex-1 min-w-[240px] max-w-sm">
+    <div className="relative w-full flex-1 sm:min-w-[240px] sm:max-w-sm">
       <label htmlFor="orders-search" className="sr-only">
         Search orders
       </label>
@@ -329,14 +277,14 @@ export function OrderSearchInput({
         }}
         placeholder="Search orders, restaurants, items…"
         aria-label="Search orders"
-        className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground"
       />
       {value ? (
         <button
           type="button"
           onClick={onClear}
           aria-label="Clear search"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
+          className="absolute right-0.5 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground rounded-full"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -364,15 +312,10 @@ export function QuickFilterChips({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Quick filters">
-      <span className="text-xs font-medium text-muted-foreground mr-1">Platform</span>
+      <span className="text-sm text-muted-foreground mr-1">Platform</span>
       {platforms.map(platform => {
         const isActive = activePlatforms.includes(platform);
-        const label =
-          platform.toUpperCase() === 'SWIGGY'
-            ? 'Swiggy'
-            : platform.toUpperCase() === 'ZOMATO'
-            ? 'Zomato'
-            : platform;
+        const label = platformLabel(platform);
         return (
           <button
             key={platform}
@@ -381,9 +324,9 @@ export function QuickFilterChips({
             data-active={isActive}
             data-platform={platform}
             onClick={() => onTogglePlatform(platform)}
-            className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+            className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 text-sm font-medium border transition-colors select-none ${
               isActive
-                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                ? 'bg-primary text-primary-foreground border-primary'
                 : 'border-input bg-background hover:bg-accent text-foreground'
             }`}
           >
@@ -397,9 +340,9 @@ export function QuickFilterChips({
         aria-pressed={verifiedOnly}
         data-active={verifiedOnly}
         onClick={onToggleVerified}
-        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 text-sm font-medium border transition-colors select-none ${
           verifiedOnly
-            ? 'bg-emerald-600 text-white border-emerald-700 dark:bg-emerald-700 dark:border-emerald-800 font-semibold'
+            ? 'bg-primary text-primary-foreground border-primary'
             : 'border-input bg-background hover:bg-accent text-foreground'
         }`}
       >
@@ -413,9 +356,9 @@ export function QuickFilterChips({
         data-active={anomaly === 'review'}
         onClick={onToggleAnomaly}
         title="Review unverified or unbalanced bills"
-        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors cursor-pointer select-none ${
+        className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 text-sm font-medium border transition-colors select-none ${
           anomaly === 'review'
-            ? 'bg-amber-600 text-white border-amber-700 dark:bg-amber-700 dark:border-amber-800 font-semibold'
+            ? 'bg-primary text-primary-foreground border-primary'
             : 'border-input bg-background hover:bg-accent text-foreground'
         }`}
       >
@@ -426,6 +369,7 @@ export function QuickFilterChips({
   );
 }
 
+const NUMERIC = ['discount', 'fees', 'amount'];
 export const sortKeys = ['date', 'restaurant', 'platform', 'status', 'discount', 'fees', 'amount'];
 
 export interface ExportStatus {
@@ -446,7 +390,7 @@ export function ExportFeedback({
         role="status"
         aria-live="polite"
         data-testid="export-progress"
-        className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2"
+        className="notice notice-info items-center"
       >
         <div
           className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
@@ -466,12 +410,8 @@ export function ExportFeedback({
       role={exportStatus.type === 'error' ? 'alert' : 'status'}
       aria-live={exportStatus.type === 'error' ? 'assertive' : 'polite'}
       data-testid="export-feedback"
-      className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
-        exportStatus.type === 'success'
-          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-          : exportStatus.type === 'cancelled'
-          ? 'bg-muted border-border text-muted-foreground'
-          : 'bg-destructive/10 border-destructive/20 text-destructive'
+      className={`notice items-center ${
+        exportStatus.type === 'success' ? 'notice-success' : exportStatus.type === 'cancelled' ? '' : 'notice-danger'
       }`}
     >
       {exportStatus.type === 'success' ? (
@@ -521,7 +461,7 @@ export async function executeExport({
     const countDisplay = totalCount != null ? `${totalCount}` : 'matching';
     const status: ExportStatus = {
       type: 'success',
-      message: `CSV exported successfully (${countDisplay} orders).`,
+      message: `Exported ${countDisplay} orders to CSV.`,
     };
     setExportStatus?.(status);
     return { ok: true, status, csv };
@@ -530,7 +470,7 @@ export async function executeExport({
       (error instanceof Error && error.name === 'AbortError') || signal.aborted;
     const status: ExportStatus = isAbort
       ? { type: 'cancelled', message: 'Export was cancelled.' }
-      : { type: 'error', message: 'Could not export orders. Please retry.' };
+      : { type: 'error', message: 'Could not export orders. Check your connection and try again.' };
     setExportStatus?.(status);
     return { ok: false, status };
   } finally {
@@ -694,7 +634,6 @@ export function Orders({
   const [exporting, setExporting] = useState(initialExporting);
   const [exportStatus, setExportStatus] = useState<ExportStatus | null>(initialExportStatus);
   const abort = useRef<AbortController | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scope = JSON.stringify(filters);
   useEffect(() => () => abort.current?.abort(), [scope]);
@@ -803,10 +742,6 @@ export function Orders({
   };
 
   const rows = useMemo(() => query.data?.rows ?? [], [query.data?.rows]);
-  const maxAmount = useMemo(
-    () => Math.max(...rows.map(r => r.final_amount_paid ?? 0), 1),
-    [rows],
-  );
 
   const columns: ColumnDef<Order>[] = useMemo(
     () => [
@@ -815,7 +750,7 @@ export function Orders({
         header: () => sortable('date', 'Date'),
         accessorKey: 'order_timestamp',
         cell: info => (
-          <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
+          <span className="whitespace-nowrap text-sm text-muted-foreground">
             {formatOrderDate(info.row.original.order_timestamp || info.row.original.order_date)}
           </span>
         ),
@@ -832,14 +767,8 @@ export function Orders({
         header: () => sortable('restaurant', 'Restaurant'),
         accessorKey: 'restaurant_name',
         cell: info => (
-          <span
-            className="truncate-cell font-medium text-xs max-w-[200px] truncate block"
-            title={info.row.original.restaurant_name ?? 'Unknown'}
-          >
-            <HighlightText
-              text={info.row.original.restaurant_name ?? 'Unknown'}
-              query={activeSearch}
-            />
+          <span className="block truncate text-sm font-medium" title={info.row.original.restaurant_name ?? 'Unknown restaurant'}>
+            <HighlightText text={info.row.original.restaurant_name ?? 'Unknown restaurant'} query={activeSearch} />
           </span>
         ),
       },
@@ -848,40 +777,17 @@ export function Orders({
         header: 'Items',
         accessorKey: 'items_summary',
         cell: info => (
-          <span
-            className="truncate-cell text-xs text-muted-foreground max-w-[220px] truncate block"
-            title={info.row.original.items_summary ?? 'No items'}
-          >
-            <HighlightText
-              text={info.row.original.items_summary ?? 'No items'}
-              query={activeSearch}
-            />
+          <span className="block truncate text-sm text-muted-foreground" title={info.row.original.items_summary ?? 'No items'}>
+            <HighlightText text={info.row.original.items_summary ?? 'No items'} query={activeSearch} />
           </span>
-        ),
-      },
-      {
-        id: 'amount',
-        header: () => sortable('amount', 'Amount'),
-        cell: info => (
-          <OrderAmountCell
-            amount={info.row.original.final_amount_paid}
-            maxAmount={maxAmount}
-          />
-        ),
-      },
-      {
-        id: 'status',
-        header: () => sortable('status', 'Status'),
-        cell: info => (
-          <OrderStatusChip status={getOrderVerificationStatus(info.row.original)} />
         ),
       },
       {
         id: 'discount',
         header: () => sortable('discount', 'Discount'),
         cell: info => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {money(info.row.original.total_discount)}
+          <span className="whitespace-nowrap text-sm text-muted-foreground">
+            {info.row.original.total_discount ? `−${money(Math.abs(info.row.original.total_discount))}` : money(0)}
           </span>
         ),
       },
@@ -889,10 +795,20 @@ export function Orders({
         id: 'fees',
         header: () => sortable('fees', 'Fees'),
         cell: info => (
-          <span className="font-mono text-xs text-muted-foreground" title="Net delivery, packaging and platform fees">
+          <span className="whitespace-nowrap text-sm text-muted-foreground" title="Net delivery, packaging and platform fees">
             {money(info.row.original.fees)}
           </span>
         ),
+      },
+      {
+        id: 'amount',
+        header: () => sortable('amount', 'Amount'),
+        cell: info => <OrderAmountCell amount={info.row.original.final_amount_paid} />,
+      },
+      {
+        id: 'status',
+        header: () => sortable('status', 'Status'),
+        cell: info => <OrderStatusChip status={getOrderVerificationStatus(info.row.original)} />,
       },
       {
         id: 'actions',
@@ -904,17 +820,31 @@ export function Orders({
               e.stopPropagation();
               open(info.row.original.id);
             }}
-            className="min-h-[44px] px-2.5 py-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+            className="inline-flex min-h-[36px] items-center gap-1 rounded px-2 text-sm font-medium text-primary hover:underline"
             aria-label={`Inspect order ${info.row.original.platform_order_id}`}
           >
-            <Eye className="h-3.5 w-3.5" />
-            <span>Inspect</span>
+            <Eye className="h-4 w-4" aria-hidden="true" />
+            <span>Receipt</span>
           </button>
         ),
       },
     ],
-    [filters.account_ids.length, maxAmount, sort, direction, activeSearch],
+    [filters.account_ids.length, sort, direction, activeSearch],
   );
+
+  // Layout follows the space the page actually gets (sidebar included), not the viewport.
+  const sectionRef = useRef<HTMLElement>(null);
+  const [width, setWidth] = useState(1200);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    setWidth(el.clientWidth);
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const asCards = width < 900;
+  const effectiveVisibility: VisibilityState = width < 1100 ? { ...visibility, items: false, account: false } : visibility;
 
   const table = useReactTable({
     data: rows,
@@ -923,25 +853,9 @@ export function Orders({
     manualPagination: true,
     manualSorting: true,
     rowCount: query.data?.total ?? 0,
-    state: { columnVisibility: visibility, pagination: { pageIndex: page - 1, pageSize } },
+    state: { columnVisibility: effectiveVisibility, pagination: { pageIndex: page - 1, pageSize } },
     onColumnVisibilityChange: handleVisibilityChange,
   });
-
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => (compact ? 36 : 48),
-    overscan: 10,
-    initialRect: { width: 1000, height: 600 },
-  });
-
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start ?? 0 : 0;
-  const paddingBottom =
-    virtualRows.length > 0
-      ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
-      : 0;
 
   async function download() {
     const controller = new AbortController();
@@ -956,20 +870,41 @@ export function Orders({
   }
 
   const total = query.data?.total ?? 0;
+  // The dashboard counts delivered orders only; this list shows every status unless a status filter is set.
+  const statusScope = filters.statuses.length
+    ? `${filters.statuses.map(v => v.charAt(0) + v.slice(1).toLowerCase().replaceAll('_', ' ')).join(', ')} orders only`
+    : 'all statuses, including cancelled and unfinished payments';
   const start = total ? Math.min((page - 1) * pageSize + 1, total) : 0;
   const end = Math.min(page * pageSize, total);
 
   return (
-    <section className="page-panel rounded-xl border bg-card p-4 sm:p-6 shadow-xs space-y-4">
-      {/* Title */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Orders</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Full order history. “Verified” means known bill components balance within ₹1.
-          </p>
-        </div>
-      </div>
+    <section ref={sectionRef} className="space-y-4">
+      <PageHeader
+        title="Orders"
+        description="Every order and its bill. Verified means the bill adds up to within ₹1."
+        actions={
+          <>
+            {exporting && (
+              <button
+                type="button"
+                onClick={() => abort.current?.abort()}
+                className="min-h-[44px] rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-accent"
+              >
+                Cancel export
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={exporting || query.isPending || query.isError}
+              onClick={() => void download()}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 lg:min-h-[36px]"
+            >
+              <Download className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <span>Export CSV</span>
+            </button>
+          </>
+        }
+      />
 
       {/* Pinned controls: Search box and quick filters */}
       <div
@@ -1003,7 +938,7 @@ export function Orders({
       {/* Toolbar */}
       <div className="orders-tools flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          <div className="flex items-center gap-1.5 text-sm text-foreground">
             <span className="text-muted-foreground">Rows per page</span>
             <SegmentedControl
               aria-label="Rows per page"
@@ -1013,7 +948,7 @@ export function Orders({
             />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          <div className="hidden items-center gap-1.5 text-sm text-foreground lg:flex">
             <span className="text-muted-foreground">Density</span>
             <SegmentedControl
               aria-label="Density"
@@ -1029,7 +964,7 @@ export function Orders({
               <button
                 type="button"
                 aria-label="Views"
-                className="cursor-pointer min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
+                className="min-h-[36px] rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
               >
                 <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Views</span>
@@ -1038,7 +973,7 @@ export function Orders({
             <PopoverContent align="start" className="w-80 p-3 space-y-3" data-testid="views-popover-content">
               {/* Save current view section */}
               <div className="space-y-2 border-b pb-3">
-                <span className="text-xs font-semibold text-foreground">Save current view</span>
+                <span className="text-sm font-semibold text-foreground">Save current view</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -1067,7 +1002,7 @@ export function Orders({
 
               {/* List of saved views */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-foreground">Saved views</span>
+                <span className="text-sm font-semibold text-foreground">Saved views</span>
                 {savedViews.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-1">No saved views</p>
                 ) : (
@@ -1160,7 +1095,7 @@ export function Orders({
               <button
                 type="button"
                 aria-label="Columns"
-                className="cursor-pointer min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
+                className="min-h-[36px] rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent text-foreground flex items-center gap-1.5 transition-colors"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Columns</span>
@@ -1178,33 +1113,13 @@ export function Orders({
                     onChange={column.getToggleVisibilityHandler()}
                     className="h-4 w-4 rounded border-input"
                   />
-                  <span className="capitalize">{column.id}</span>
+                  <span className="capitalize">{column.id === 'actions' ? 'Receipt link' : column.id}</span>
                 </label>
               ))}
             </PopoverContent>
           </Popover>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={exporting || query.isPending || query.isError}
-            onClick={() => void download()}
-            className="min-h-[44px] inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 text-foreground transition-colors cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Export CSV</span>
-          </button>
-          {exporting && (
-            <button
-              type="button"
-              onClick={() => abort.current?.abort()}
-              className="min-h-[44px] rounded-md border border-destructive/30 bg-destructive/10 text-destructive px-3 py-2 text-xs font-medium hover:bg-destructive/20 transition-colors"
-            >
-              Cancel export
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Distinct Export Feedback */}
@@ -1212,34 +1127,28 @@ export function Orders({
 
       {/* Refresh error banner when retaining prior rows */}
       {query.isError && query.data && (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between"
-        >
-          <span>Orders could not refresh. Displaying previously loaded data.</span>
+        <div role="alert" className="notice notice-danger items-center justify-between">
+          <span>Orders could not refresh, so the list below may be out of date.</span>
           <button
             type="button"
             onClick={() => void query.refetch()}
             className="min-h-[36px] rounded border border-destructive/30 px-3 py-1 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
           >
-            Retry
+            Try again
           </button>
         </div>
       )}
 
       {/* Initial load failure */}
       {query.isError && !query.data ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-xs text-destructive flex items-center justify-between"
-        >
-          <span>Orders could not load.</span>
+        <div role="alert" className="notice notice-danger items-center justify-between">
+          <span>Orders could not load. Check that the server is running, then try again.</span>
           <button
             type="button"
             onClick={() => void query.refetch()}
             className="min-h-[44px] rounded border px-3 py-2 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
           >
-            Retry
+            Try again
           </button>
         </div>
       ) : query.isPending ? (
@@ -1277,7 +1186,7 @@ export function Orders({
           <EmptyState
             icon={<Receipt className="h-8 w-8 text-muted-foreground/60" />}
             title="No orders match these filters"
-            description="Try clearing the restaurant, search, or date restriction."
+            description="Widen the date range or clear a filter to see more orders."
           />
           <button
             type="button"
@@ -1292,132 +1201,141 @@ export function Orders({
           {query.isFetching && !query.isPending && (
             <div role="status" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span>Refreshing orders data…</span>
+              <span>Refreshing orders…</span>
             </div>
           )}
 
-          <div
-            ref={scrollContainerRef}
-            className={`orders-scroll orders-scroll-container rounded-lg border overflow-auto max-h-[65vh] bg-card relative ${
-              compact ? 'compact' : ''
-            } ${query.isFetching && !query.isPending ? 'opacity-70 transition-opacity' : ''}`}
-            role="region"
-            aria-label="Order history"
-            tabIndex={0}
-            aria-busy={query.isFetching}
-          >
-            <Table className="w-full">
-              <TableHeader className="bg-card sticky top-0 z-10 shadow-xs border-b">
-                {table.getHeaderGroups().map(group => (
-                  <TableRow key={group.id} className="hover:bg-transparent border-b">
-                    {group.headers.map(header => (
-                      <TableHead
-                        key={header.id}
-                        className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-2.5 px-3 bg-card"
-                        aria-sort={
-                          sortKeys.includes(header.id)
-                            ? sort === header.id
-                              ? direction === 'asc'
-                                ? 'ascending'
-                                : 'descending'
-                              : 'none'
-                            : undefined
-                        }
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className="divide-y">
-                {paddingTop > 0 && (
-                  <TableRow aria-hidden="true" style={{ height: `${paddingTop}px` }}>
-                    <TableCell
-                      colSpan={table.getVisibleLeafColumns().length}
-                      className="p-0 border-0"
-                    />
-                  </TableRow>
-                )}
-                {virtualRows.map(virtualRow => {
-                  const row = table.getRowModel().rows[virtualRow.index];
-                  if (!row) return null;
-                  const isActive = row.original.id === params.get('order');
-                  return (
-                    <TableRow
-                      key={row.original.id}
-                      ref={node => rowVirtualizer.measureElement(node)}
-                      data-index={virtualRow.index}
-                      tabIndex={0}
-                      data-order-id={row.original.id}
-                      data-active={isActive ? 'true' : undefined}
-                      aria-selected={isActive}
-                      onClick={() => open(row.original.id)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          open(row.original.id);
-                        }
-                      }}
-                      aria-label={`Open order ${row.original.platform_order_id}`}
-                      className={`hover:bg-accent/50 focus-visible:bg-accent focus-visible:outline-none cursor-pointer transition-colors ${
-                        isActive ? 'bg-primary/10 ring-2 ring-inset ring-primary' : ''
-                      } ${compact ? 'py-1' : 'py-2.5'}`}
+          {asCards ? (
+            <ul className="divide-y rounded-lg border bg-card" aria-label="Order history">
+              {table.getRowModel().rows.map(row => {
+                const o = row.original;
+                const isActive = o.id === params.get('order');
+                return (
+                  <li key={o.id} data-order-id={o.id} data-active={isActive ? 'true' : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => open(o.id)}
+                      aria-label={`Open order ${o.platform_order_id}`}
+                      className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-accent/50 ${isActive ? 'bg-accent' : ''}`}
                     >
-                      {row.getVisibleCells().map(cell => (
-                        <TableCell
-                          key={cell.id}
-                          className={`${
-                            ['discount', 'fees', 'amount'].includes(cell.column.id)
-                              ? 'numeric text-right font-mono'
-                              : ''
-                          } px-3 py-2 text-xs`}
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-sm font-medium">{o.restaurant_name ?? 'Unknown restaurant'}</span>
+                        <span className="whitespace-nowrap text-sm font-semibold tabular-nums">{money(o.final_amount_paid)}</span>
+                      </span>
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                        <span>{formatOrderDate(o.order_timestamp || o.order_date)}</span>
+                        <PlatformBadge platform={o.platform} />
+                        <OrderStatusChip status={getOrderVerificationStatus(o)} />
+                      </span>
+                      {o.items_summary && <span className="line-clamp-2 text-sm text-muted-foreground">{o.items_summary}</span>}
+                      <span className="flex justify-between gap-3 text-xs text-muted-foreground tabular-nums">
+                        <span>Discount {o.total_discount ? `−${money(Math.abs(o.total_discount))}` : money(0)}</span>
+                        <span>Fees {money(o.fees)}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            // One scroll context: the page scrolls, the header sticks below the app header. No inner scrollbars.
+            <div className={`rounded-lg border bg-card ${compact ? 'compact' : ''} ${query.isFetching && !query.isPending ? 'opacity-70 transition-opacity' : ''}`} role="region" aria-label="Order history" aria-busy={query.isFetching}>
+              <Table wrapperClassName="overflow-visible" className="w-full">
+                <TableHeader className="sticky top-[3.75rem] z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                  {table.getHeaderGroups().map(group => (
+                    <TableRow key={group.id} className="hover:bg-transparent border-b">
+                      {group.headers.map(header => (
+                        <TableHead
+                          key={header.id}
+                          className={`bg-card px-3 py-2.5 text-sm font-medium text-muted-foreground ${NUMERIC.includes(header.id) ? 'text-right' : 'text-left'}`}
+                          aria-sort={
+                            sortKeys.includes(header.id)
+                              ? sort === header.id
+                                ? direction === 'asc'
+                                  ? 'ascending'
+                                  : 'descending'
+                                : 'none'
+                              : undefined
+                          }
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
+                          <span className={NUMERIC.includes(header.id) ? 'inline-flex justify-end' : ''}>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </span>
+                        </TableHead>
                       ))}
                     </TableRow>
-                  );
-                })}
-                {paddingBottom > 0 && (
-                  <TableRow aria-hidden="true" style={{ height: `${paddingBottom}px` }}>
-                    <TableCell
-                      colSpan={table.getVisibleLeafColumns().length}
-                      className="p-0 border-0"
-                    />
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableHeader>
+                <TableBody className="divide-y">
+                  {table.getRowModel().rows.map(row => {
+                    const isActive = row.original.id === params.get('order');
+                    return (
+                      <TableRow
+                        key={row.original.id}
+                        tabIndex={0}
+                        data-order-id={row.original.id}
+                        data-active={isActive ? 'true' : undefined}
+                        aria-selected={isActive}
+                        onClick={() => open(row.original.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            open(row.original.id);
+                          }
+                        }}
+                        aria-label={`Open order ${row.original.platform_order_id}`}
+                        className={`cursor-pointer transition-colors hover:bg-accent/50 focus-visible:bg-accent ${isActive ? 'bg-accent' : ''}`}
+                      >
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell
+                            key={cell.id}
+                            className={`${NUMERIC.includes(cell.column.id) ? 'numeric text-right tabular-nums' : ''} ${
+                              cell.column.id === 'restaurant' ? 'max-w-[16rem]' : cell.column.id === 'items' ? 'max-w-[18rem]' : ''
+                            } px-3 ${compact ? 'py-1.5' : 'py-3'} text-sm`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
-          {/* Footer */}
-          <div className="orders-footer flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-            <p className="text-xs text-muted-foreground">
-              Showing <span className="font-semibold text-foreground">{start}–{end}</span> of{' '}
-              <span className="font-semibold text-foreground">{total}</span> · Total for all filtered orders:{' '}
-              <span className="font-bold font-mono text-foreground">{money(query.data?.filtered_total_amount)}</span>
+          {/* Totals row, ledger style */}
+          <div className="orders-footer space-y-3 border-t-2 border-foreground/80 pt-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Total for {plural(total, 'order')}
+                <span className="font-normal text-muted-foreground"> · {statusScope}</span>
+              </p>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{money(query.data?.filtered_total_amount)}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Showing {start}–{end}. Overview and Spending count delivered orders only, so their totals can be lower.
             </p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={page === 1 || query.isFetching}
                 onClick={() => change({ page: String(page - 1) })}
-                className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                className="inline-flex min-h-[44px] items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
                 aria-label="Previous page"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 <span>Previous page</span>
               </button>
               <button
                 type="button"
                 disabled={end >= total || query.isFetching}
                 onClick={() => change({ page: String(page + 1) })}
-                className="min-h-[44px] inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-2 text-xs font-semibold shadow-xs hover:bg-accent disabled:opacity-50 transition-colors"
+                className="inline-flex min-h-[44px] items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
                 aria-label="Next page"
               >
                 <span>Next page</span>
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>

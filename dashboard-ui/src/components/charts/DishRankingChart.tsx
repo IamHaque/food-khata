@@ -355,7 +355,7 @@ export function buildDishRankingOption(
     label: {
       show: true,
       position: "right",
-      fontSize: 10,
+      fontSize: 11,
       color: currentTheme.mutedColor,
       formatter: (p: any) => {
         const idx = p?.dataIndex ?? 0;
@@ -394,7 +394,7 @@ export function buildDishRankingOption(
       type: "value",
       axisLabel: {
         color: currentTheme.mutedColor,
-        fontSize: 10,
+        fontSize: 11,
         formatter: (val: number) => (isAmount ? `₹${val.toLocaleString("en-IN")}` : `${val}`),
       },
       splitLine: {

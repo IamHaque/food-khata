@@ -13,9 +13,9 @@ const DOT: Record<Tone, string> = {
   neutral: "bg-muted-foreground",
 };
 
-export function StatusPill({ tone = "neutral", children, className }: { tone?: Tone; children: React.ReactNode; className?: string }) {
+export function StatusPill({ tone = "neutral", children, className, ...rest }: { tone?: Tone; children: React.ReactNode; className?: string } & React.HTMLAttributes<HTMLSpanElement>) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border bg-muted px-2 py-0.5 text-xs font-medium text-foreground", className)}>
+    <span {...rest} className={cn("inline-flex items-center gap-1.5 rounded-full border bg-muted px-2 py-0.5 text-xs font-medium text-foreground", className)}>
       <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", DOT[tone])} />
       {children}
     </span>
