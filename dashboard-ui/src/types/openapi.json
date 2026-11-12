@@ -2277,6 +2277,26 @@
         }
       }
     },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Ready",
+        "description": "Readiness: app.db opens, migrations are current and the maintenance thread is alive. No counts or names.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -2674,6 +2694,26 @@
                 "schema": {
                   "$ref": "#/components/schemas/RotateJoinCodeResponse"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/owner/audit": {
+      "get": {
+        "tags": [
+          "owner"
+        ],
+        "summary": "Get Audit",
+        "description": "The last 200 audit rows (logins and admin actions); the owner reads them in Settings.",
+        "operationId": "get_audit_api_owner_audit_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -4118,10 +4158,12 @@
         "properties": {
           "current_password": {
             "type": "string",
+            "maxLength": 256,
             "title": "Current Password"
           },
           "new_password": {
             "type": "string",
+            "maxLength": 256,
             "title": "New Password"
           }
         },
@@ -6181,10 +6223,12 @@
         "properties": {
           "username": {
             "type": "string",
+            "maxLength": 50,
             "title": "Username"
           },
           "password": {
             "type": "string",
+            "maxLength": 256,
             "title": "Password"
           }
         },

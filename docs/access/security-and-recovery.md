@@ -19,7 +19,7 @@ Security baseline:
 - **Cookies**: session cookie only, HttpOnly, SameSite=Lax. Marked `Secure` when TLS is active or `--behind-https-proxy` is set.
 - **Proxy**: client IP for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
 - **Headers**: CSP (`default-src 'self'`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
-- **Limits**: 64 KB request body limit. Passwords must be at least 10 characters.
+- **Limits**: 64 KB request body limit (411 for a chunked body without a length); a trusted proxy's address never counts as loopback; backup files are written with mode 600. Passwords must be at least 10 characters.
 - **Sessions**: 8-hour idle timeout and 7-day absolute lifetime. All sessions are deleted on server start (re-login required after restart).
 - **Audit trail**: Append-only log of logins and admin actions in `app.db`, viewable by the owner in Settings (`GET /api/owner/audit`).
 - **Server concurrency**: Exactly one server process per data folder, enforced by `<data>/.server.lock`.
