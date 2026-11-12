@@ -1,14 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { FILTERS, mockApi } from './mock-api';
 
-// On compact widths navigation and Log out live in the menu.
-async function openMenu(page: import('@playwright/test').Page) {
+// On compact widths navigation, Log out and sync status live in the menu.
+type P = import('@playwright/test').Page;
+async function openMenu(page: P) {
   const menu = page.getByRole('button', { name: 'Open menu' });
+  await expect(menu.or(page.getByRole('button', { name: 'Log out' })).first()).toBeVisible();
   if (await menu.isVisible()) await menu.click();
 }
-async function goTo(page: import('@playwright/test').Page, name: string) {
+async function goTo(page: P, name: string) {
+  const link = page.getByRole('navigation').getByRole('link', { name, exact: true }).first();
   await openMenu(page);
-  await page.getByRole('navigation').getByRole('link', { name, exact: true }).first().click();
+  await link.click();
 }
 for (const width of [1440, 390]) {
   test(`access integration ${width}`, async ({ page }) => {
