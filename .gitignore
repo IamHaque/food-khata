@@ -56,3 +56,6 @@ orchestration/state.json
 logs/
 .venv
 node_modules
+
+# Playwright visual baselines (platform-specific, local only)
+dashboard-ui/e2e/visual/visual.spec.ts-snapshots/
