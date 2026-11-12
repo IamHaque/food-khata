@@ -159,20 +159,54 @@ class Zomato:
         return result
 
     def start_login(self, phone: str) -> None:
+        """Validate the number and request the OTP now; the session stays open for verify_otp."""
         if not re.fullmatch(r"[6-9][0-9]{9}", phone):
             raise KhataError("Enter a valid 10-digit Indian mobile number.")
-        self._pending_phone = phone
+        self._discard_pending()
+        auth = self._auth_session()
+        try:
+            flow = self._initiate(auth, phone)
+        except BaseException:
+            auth.close()
+            raise
+        self._pending = (auth, phone, flow)
+
+    def _discard_pending(self) -> None:
+        pending = getattr(self, "_pending", None)
+        self._pending = None
+        if pending:
+            pending[0].close()
 
     def verify_otp(self, code: str) -> str:
-        if not getattr(self, "_pending_phone", None):
+        pending = getattr(self, "_pending", None)
+        if not pending:
             raise KhataError("No login in progress; start login first.")
-        phone = self._pending_phone
-        del self._pending_phone
-        return self.login(phone, lambda: code)
+        otp = (code or "").strip()
+        if not re.fullmatch(r"[0-9]{4,8}", otp):  # a typo keeps the login alive so the OTP can be retyped
+            raise KhataError("Enter the numeric OTP (4–8 digits).")
+        auth, phone, flow = pending
+        self._pending = None
+        try:
+            return self._complete(auth, phone, otp, flow)
+        finally:
+            auth.close()
 
     def login(self, phone: str, get_otp: Callable[[], str]) -> str:
         if not re.fullmatch(r"[6-9][0-9]{9}", phone):
             raise KhataError("Enter a valid 10-digit Indian mobile number.")
+        with self._auth_session() as auth:
+            flow = self._initiate(auth, phone)
+            return self._complete(auth, phone, get_otp(), flow)
+
+    def _auth_session(self) -> Any:
+        return curl_requests.Session(
+            impersonate="chrome99_android",
+            default_headers=False,
+            akamai="1:65536;3:1000;4:6291456|15663105|0|m,a,s,p",
+        )
+
+    def _initiate(self, auth: Any, phone: str) -> tuple[str, str, str]:
+        """Ask Zomato to text an OTP; returns the login challenge, PKCE verifier and state for the verify step."""
         verifier = secrets.token_urlsafe(32)
         challenge = (
             base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
@@ -180,96 +214,95 @@ class Zomato:
             .rstrip("=")
         )
         state = secrets.token_urlsafe(32)
-        with curl_requests.Session(
-            impersonate="chrome99_android",
-            default_headers=False,
-            akamai="1:65536;3:1000;4:6291456|15663105|0|m,a,s,p",
-        ) as auth:
-            auth.headers.update(AUTH_HEADERS)
-            auth.cookies.set("zxcv", verifier, domain=".zomato.com")
-            auth.cookies.set("cid", CLIENT_ID, domain=".zomato.com")
-            auth.cookies.set("rurl", CALLBACK, domain=".zomato.com")
-            params = {
-                "urlAuthorize": ACCOUNTS + "/oauth/auth",
-                "approval_prompt": "auto",
-                "scope": "offline openid",
-                "response_type": "code",
-                "code_challenge_method": "S256",
-                "redirect_uri": CALLBACK,
+        auth.headers.update(AUTH_HEADERS)
+        auth.cookies.set("zxcv", verifier, domain=".zomato.com")
+        auth.cookies.set("cid", CLIENT_ID, domain=".zomato.com")
+        auth.cookies.set("rurl", CALLBACK, domain=".zomato.com")
+        params = {
+            "urlAuthorize": ACCOUNTS + "/oauth/auth",
+            "approval_prompt": "auto",
+            "scope": "offline openid",
+            "response_type": "code",
+            "code_challenge_method": "S256",
+            "redirect_uri": CALLBACK,
+            "state": state,
+            "client_id": CLIENT_ID,
+            "code_challenge": challenge,
+        }
+        response = self._auth_request(
+            auth, "GET", ACCOUNTS + "/oauth2/auth?" + urlencode(params)
+        )
+        lc = parse_qs(urlparse(response.url).query).get("login_challenge", [None])[0]
+        if not lc:
+            raise KhataError("Zomato did not supply a login challenge.")
+        self._auth_json(
+            auth,
+            "/login/phone",
+            {
+                "number": phone,
+                "country_id": "1",
+                "lc": lc,
+                "type": "initiate",
+                "verification_type": "sms",
+                "package_name": "com.application.zomato",
+                "message_uuid": "",
+            },
+        )
+        return lc, verifier, state
+
+    def _complete(self, auth: Any, phone: str, otp: str, flow: tuple[str, str, str]) -> str:
+        lc, verifier, state = flow
+        otp = otp.strip()
+        if not re.fullmatch(r"[0-9]{4,8}", otp):
+            raise KhataError("Enter the numeric OTP (4–8 digits).")
+        verified = self._auth_json(
+            auth,
+            "/login/phone",
+            {
+                "number": phone,
+                "otp": otp,
+                "country_id": "1",
+                "lc": lc,
+                "type": "verify",
+                "trust_this_device": "true",
+                "device_token": "",
+            },
+        )
+        response = self._follow_result(auth, verified)
+        consent = parse_qs(urlparse(response.url).query).get("consent_challenge", [None])[0]
+        if not consent:
+            raise KhataError("Zomato did not supply a consent challenge.")
+        approved = self._auth_json(auth, "/consent", {"cc": consent})
+        response = self._follow_result(auth, approved)
+        query = parse_qs(urlparse(response.url).query)
+        if urlparse(response.url).path != "/zoauth/callback" or query.get("state") != [state]:
+            raise KhataError("Zomato OAuth callback or state did not match this login.")
+        code = query.get("code", [None])[0]
+        if not code:
+            raise KhataError("Zomato authorization code is missing.")
+        result = self._auth_json(
+            auth,
+            "/token",
+            {
+                "grant_type": "authorization_code",
+                "code": code,
                 "state": state,
+                "scope": query.get("scope", ["offline openid"])[0],
+                "code_verifier": verifier,
                 "client_id": CLIENT_ID,
-                "code_challenge": challenge,
-            }
-            response = self._auth_request(
-                auth, "GET", ACCOUNTS + "/oauth2/auth?" + urlencode(params)
-            )
-            lc = parse_qs(urlparse(response.url).query).get("login_challenge", [None])[0]
-            if not lc:
-                raise KhataError("Zomato did not supply a login challenge.")
-            self._auth_json(
-                auth,
-                "/login/phone",
-                {
-                    "number": phone,
-                    "country_id": "1",
-                    "lc": lc,
-                    "type": "initiate",
-                    "verification_type": "sms",
-                    "package_name": "com.application.zomato",
-                    "message_uuid": "",
-                },
-            )
-            otp = get_otp().strip()
-            if not re.fullmatch(r"[0-9]{4,8}", otp):
-                raise KhataError("Enter the numeric OTP (4–8 digits).")
-            verified = self._auth_json(
-                auth,
-                "/login/phone",
-                {
-                    "number": phone,
-                    "otp": otp,
-                    "country_id": "1",
-                    "lc": lc,
-                    "type": "verify",
-                    "trust_this_device": "true",
-                    "device_token": "",
-                },
-            )
-            response = self._follow_result(auth, verified)
-            consent = parse_qs(urlparse(response.url).query).get("consent_challenge", [None])[0]
-            if not consent:
-                raise KhataError("Zomato did not supply a consent challenge.")
-            approved = self._auth_json(auth, "/consent", {"cc": consent})
-            response = self._follow_result(auth, approved)
-            query = parse_qs(urlparse(response.url).query)
-            if urlparse(response.url).path != "/zoauth/callback" or query.get("state") != [state]:
-                raise KhataError("Zomato OAuth callback or state did not match this login.")
-            code = query.get("code", [None])[0]
-            if not code:
-                raise KhataError("Zomato authorization code is missing.")
-            result = self._auth_json(
-                auth,
-                "/token",
-                {
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "state": state,
-                    "scope": query.get("scope", ["offline openid"])[0],
-                    "code_verifier": verifier,
-                    "client_id": CLIENT_ID,
-                    "redirect_uri": CALLBACK,
-                },
-            )
-            tokens = result.get("token")
-            if (
-                not isinstance(tokens, dict)
-                or not isinstance(tokens.get("access_token"), str)
-                or not tokens["access_token"]
-                or not isinstance(tokens.get("refresh_token", ""), str)
-            ):
-                raise KhataError("Zomato token response is incomplete.")
-            self.tokens = {key: tokens.get(key, "") for key in ("access_token", "refresh_token")}
-            self.http.headers["X-Zomato-Access-Token"] = self.tokens["access_token"]
+                "redirect_uri": CALLBACK,
+            },
+        )
+        tokens = result.get("token")
+        if (
+            not isinstance(tokens, dict)
+            or not isinstance(tokens.get("access_token"), str)
+            or not tokens["access_token"]
+            or not isinstance(tokens.get("refresh_token", ""), str)
+        ):
+            raise KhataError("Zomato token response is incomplete.")
+        self.tokens = {key: tokens.get(key, "") for key in ("access_token", "refresh_token")}
+        self.http.headers["X-Zomato-Access-Token"] = self.tokens["access_token"]
         return self.profile()
 
     def _follow_result(self, auth: Any, result: dict[str, Any]) -> Any:
