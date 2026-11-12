@@ -13,6 +13,7 @@ export default mergeConfig(
       minWorkers: 6,
       disableConsoleIntercept: true,
       silent: true,
+      setupFiles: ["./vitest.setup.ts"],
     },
   })
 );

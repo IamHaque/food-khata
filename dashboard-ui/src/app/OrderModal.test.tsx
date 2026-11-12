@@ -312,6 +312,12 @@ describe('S-072: Order side sheet', () => {
       expect(html).toContain('WELCOME50 Coupon');
     });
 
+    it('shows the masked account label but never the account id in the receipt', () => {
+      const html = renderWithRouter('/orders?order=ord-1');
+      expect(html).toContain('••••1234');
+      expect(html).not.toContain('acc-1');
+    });
+
     it('initial render with a different order deep link restores that specific order', () => {
       const html = renderWithRouter('/orders?order=ord-2');
 

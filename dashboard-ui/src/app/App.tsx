@@ -8,6 +8,7 @@ const AnalyticsPage = lazy(() =>
   import('./AnalyticsPages').then((m) => ({ default: m.AnalyticsPage })),
 );
 const Orders = lazy(() => import('./Orders').then((m) => ({ default: m.Orders })));
+const DataHealth = lazy(() => import('./DataHealth'));
 const DesignSystem = lazy(() =>
   import('./DesignSystem').then((m) => ({ default: m.DesignSystem })),
 );
@@ -40,6 +41,7 @@ import {
   CheckCircle2,
   Menu,
   Search,
+  Ellipsis,
 } from 'lucide-react';
 import '../styles/app.css';
 import AccessRoutes from '../features/access/routes';
@@ -144,7 +146,7 @@ function Shell() {
   return (
     <TooltipProvider>
     <InAppShell.Provider value>
-    <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden">
+    <div className="v2 min-h-screen bg-background text-foreground flex flex-col font-sans max-w-full overflow-x-hidden pb-16 lg:pb-0">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md font-semibold text-sm min-h-[44px] inline-flex items-center"
@@ -271,12 +273,21 @@ function Shell() {
             <FilterBar />
           )}
 
-          {dashboard && accounts.data?.length !== 0 && health.data && (!health.data.history_complete || !health.data.details_complete) && (
-            <p className="partial notice notice-warning" role="status">
-              <AlertCircle aria-hidden="true" />
-              <span>Some history or order details are missing for these accounts, so totals may be low.</span>
-            </p>
-          )}
+          {dashboard && accounts.data?.length !== 0 && health.data && location.pathname !== '/data-health' && (() => {
+            const incomplete = !health.data.history_complete || !health.data.details_complete;
+            const anomalies = (health.data.reconciliation_anomalies ?? 0) + (health.data.quarantined_orders ?? 0);
+            if (!incomplete && !anomalies) return null;
+            return (
+              <p className="partial notice notice-warning" role="status">
+                <AlertCircle aria-hidden="true" />
+                <span>
+                  {incomplete ? 'Some history or order details are missing for these accounts, so totals may be low. ' : ''}
+                  {anomalies ? `${anomalies} order${anomalies === 1 ? '' : 's'} need review (totals that do not reconcile or records set aside). ` : ''}
+                  <Link to={{ pathname: '/data-health', search: location.search }} className="underline font-medium">View Data health</Link>
+                </span>
+              </p>
+            );
+          })()}
 
           <main id="main-content" key={`${theme.isDark}-${theme.accent}-${theme.patterns}`} tabIndex={-1} className="flex-1 min-w-0 max-w-full focus:outline-none">
             <Suspense fallback={<PageSkeleton />}>
@@ -293,9 +304,9 @@ function Shell() {
                 <Route path="/sync" element={<SyncPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/behavior" element={<Navigate to={`/habits${location.search}`} replace />} />
-                <Route path="/places" element={<Navigate to={`/habits${location.search}`} replace />} />
+                <Route path="/places" element={<AnalyticsPage page="Places" />} />
                 <Route path="/ledger" element={<Navigate to={`/orders${location.search}`} replace />} />
-                <Route path="/data-health" element={<Navigate to={`/?sync=open`} replace />} />
+                <Route path="/data-health" element={<DataHealth />} />
                 {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystem />} />}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
@@ -308,6 +319,38 @@ function Shell() {
           </footer>
         </div>
       </div>
+
+      <nav
+        aria-label="Mobile tabs"
+        className="lg:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      >
+        {NAV_ITEMS.slice(0, 4).map((p) => { // bottom tab bar; everything else sits behind More
+          const active = location.pathname === p.to;
+          const Icon = p.icon;
+          return (
+            <Link
+              key={p.to}
+              to={{ pathname: p.to, search: location.search }}
+              aria-current={active ? 'page' : undefined}
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium ${
+                active ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              {p.label}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-haspopup="dialog"
+          className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium text-muted-foreground"
+        >
+          <Ellipsis className="h-5 w-5" aria-hidden="true" />
+          More
+        </button>
+      </nav>
     </div>
     </InAppShell.Provider>
     </TooltipProvider>
@@ -321,6 +364,6 @@ export function App() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-  if (["/welcome", "/setup", "/login", "/register"].includes(pathname)) return <AccessRoutes />;
+  if (["/welcome", "/setup", "/login", "/register", "/home", "/accounts", "/accounts/link", "/account/password", "/sync", "/settings"].includes(pathname) || pathname.startsWith("/jobs")) return <AccessRoutes />;
   return <RequireAuth><FilterProvider><Shell /></FilterProvider></RequireAuth>;
 }

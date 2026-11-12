@@ -318,13 +318,11 @@ def create_app(
             message = exc.detail.get("message", message)
         if not code:
             code = codes.get(exc.status_code, "request_error")
+        error = {"code": code, "message": message}
+        if isinstance(exc.detail, dict) and exc.detail.get("job_id"):
+            error["job_id"] = exc.detail["job_id"]  # ACCOUNT_BUSY: the job already running
         return JSONResponse(
-            {
-                "error": {
-                    "code": code,
-                    "message": message,
-                }
-            },
+            {"error": error},
             status_code=exc.status_code,
             headers=dict(exc.headers) if exc.headers else None,
         )

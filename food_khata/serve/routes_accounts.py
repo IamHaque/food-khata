@@ -7,6 +7,7 @@ import re
 import shutil
 import time
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from food_khata.auth import connect_app_db
 from food_khata.contracts import KhataError
 from food_khata.db import delete_account_data
+from food_khata.jobs.db import account_job_summary
 from food_khata.providers.base import provider_names
 from food_khata.services.linking import LinkingService
 from food_khata.storage import Storage, provider_identity, read_json
@@ -134,6 +136,11 @@ def _quota_exceeded(existing: list[dict[str, Any]], phone: str) -> bool:
     )
 
 
+def mask_phone(phone: str | None) -> str | None:
+    """Show only the last four digits (••••8226); the full number never leaves the server."""
+    return "••••" + phone[-4:] if phone else phone
+
+
 def _count_orders(account_path: Path, provider: str) -> int:
     """Count orders from stored provider history archive if present."""
     history_file = account_path / f"{provider}-history.json"
@@ -144,7 +151,7 @@ def _count_orders(account_path: Path, provider: str) -> int:
                 return len(data)
             if isinstance(data, dict):
                 orders = data.get("orders") or data.get("items") or []
-                if isinstance(orders, list):
+                if isinstance(orders, (list, dict)):  # the archive keeps orders as {order_id: record}
                     return len(orders)
         except Exception:
             pass
@@ -176,6 +183,7 @@ def list_accounts(
     if not storage.accounts_dir.exists():
         return []
 
+    jobs = account_job_summary(request.app.state.app_db_path, user_id)
     accounts_out: list[AccountOut] = []
     for acc_path in sorted(storage.accounts_dir.iterdir()):
         if not acc_path.is_dir():
@@ -192,15 +200,21 @@ def list_accounts(
             orders = (acc.get("order_count") if len(providers) <= 1 else None) or _count_orders(
                 acc_path, provider
             )
+            summary = jobs.get((account_id, provider)) or {}
+            last_done = summary.get("last_done")
+            latest_id, latest_status = summary.get("latest") or (None, None)
+            attention = latest_status not in (None, "done", "cancelled")  # active, failed or interrupted
             accounts_out.append(
                 AccountOut(
                     id=account_id,
                     local_id=account_id,
                     provider=provider,
-                    phone=acc.get("phone"),
+                    phone=mask_phone(acc.get("phone")),
                     provider_id=provider_id,
                     status=_cached_status(session),
-                    last_sync=acc.get("last_sync"),
+                    last_sync=datetime.fromtimestamp(last_done, UTC).isoformat() if last_done else acc.get("last_sync"),
+                    active_job_id=latest_id if attention else None,
+                    active_status=latest_status if attention else None,
                     order_count=orders,
                     name=acc.get("name") or acc.get("account_name"),
                     has_session=session is not None,
@@ -426,7 +440,7 @@ def link_verify(
             local_id=account["local_id"],
             provider=entry.provider,
             provider_id=provider_id,
-            phone=entry.phone,
+            phone=mask_phone(entry.phone),
             status="ok",
             name=account.get("name"),
             added_to_existing=any(a.get("phone") == entry.phone for a in existing_accounts),

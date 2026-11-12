@@ -6,7 +6,8 @@ import { ApiError, authApi } from "../api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function Password() {
+/** Change password and log out all sessions; shared by the Settings page and the standalone password page. */
+export function AccountSecurity() {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [current, setCurrent] = React.useState("");
@@ -38,7 +39,7 @@ export function Password() {
   };
 
   return (
-    <AuthShell title="Password" subtitle="Change your password or sign out everywhere." back={{ to: "/home", label: "Accounts" }}>
+    <div className="space-y-4">
       <form onSubmit={submit} className="space-y-4">
         {message && <StatusBanner variant={message.ok ? "success" : "error"}>{message.text}</StatusBanner>}
         <label className="block text-sm font-medium" htmlFor="pw-current">Current password</label>
@@ -50,7 +51,15 @@ export function Password() {
         <Input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         <Button type="submit" disabled={busy || !current || !next} className="w-full">{busy ? "Saving…" : "Change password"}</Button>
       </form>
-      <Button variant="outline" className="w-full" onClick={() => void signOutEverywhere()}>Sign out everywhere</Button>
+      <Button variant="outline" className="w-full" onClick={() => void signOutEverywhere()}>Log out all sessions</Button>
+    </div>
+  );
+}
+
+export function Password() {
+  return (
+    <AuthShell title="Password" subtitle="Change your password or log out all sessions." back={{ to: "/home", label: "Accounts" }}>
+      <AccountSecurity />
     </AuthShell>
   );
 }

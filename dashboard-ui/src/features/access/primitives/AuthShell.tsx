@@ -9,12 +9,13 @@ export interface AuthShellProps {
   /** Link back to the parent page, shown above the title inside the app shell. */
   back?: { to: string; label: string };
   children?: React.ReactNode;
+  wide?: boolean;
 }
 
 /** True when rendered inside the signed-in app shell (header, navigation, theme control). */
 export const InAppShell = React.createContext(false);
 
-export function AuthShell({ title, subtitle, back, children }: AuthShellProps) {
+export function AuthShell({ title, subtitle, back, children, wide }: AuthShellProps) {
   const inShell = React.useContext(InAppShell);
   if (inShell) {
     return (
@@ -27,7 +28,7 @@ export function AuthShell({ title, subtitle, back, children }: AuthShellProps) {
   // Signed-out pages (welcome, setup, login, register): a centred card without app navigation.
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+      <div className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} space-y-4 rounded-xl border bg-card p-6 shadow-sm`}>
         <Link to="/home" className="block text-center text-sm font-semibold">Food Khata</Link>
         {(title || subtitle) && (
           <div className="space-y-1 text-center">

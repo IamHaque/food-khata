@@ -647,7 +647,6 @@ export function DeliveryDestinationsChart({
 
   const empty =
     isEmptyProp ||
-    Boolean(unsupportedMsg) ||
     (!isLoading && !error && displayedItems.length === 0);
 
   const resolvedEmptyReason =
@@ -717,12 +716,17 @@ export function DeliveryDestinationsChart({
       chart.off("mouseout", onChartOut);
       unregister();
       ro.disconnect();
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-        chartInstanceRef.current = null;
-      }
     };
   }, [displayedItems, filters, onDestinationClick]);
+
+  // Dispose only on unmount: disposing in the effect above wiped the drawn chart whenever `filters` changed identity.
+  React.useEffect(
+    () => () => {
+      chartInstanceRef.current?.dispose();
+      chartInstanceRef.current = null;
+    },
+    [],
+  );
 
   // Apply chart options when data, theme, or active filters change
   React.useEffect(() => {

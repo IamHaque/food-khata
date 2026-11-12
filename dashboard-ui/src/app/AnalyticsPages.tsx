@@ -9,17 +9,19 @@ import { Chart } from './Chart';
 import { moneyAxis, timeAxis, inrTooltip } from '../lib/chart-kit';
 import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart, StreakTimelineChart, OrdersPerWeekChart } from '../components/charts';
 
-export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
+export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' | 'Places' }) {
   const { filters, clear } = useFilters();
   const query = useDashboard(filters);
   const data = query.data;
 
-  const title = { Spending: 'Spending', Food: 'Food', Habits: 'Habits' }[page];
+  const title = page;
   const description =
     page === 'Food'
       ? 'Cuisines, dishes, diet and the restaurants you return to.'
       : page === 'Habits'
       ? 'When you order, how often, and where it goes.'
+      : page === 'Places'
+      ? 'Delivery destinations and how distance relates to delivery fees.'
       : 'Where the money goes: daily spend, fees, discounts and year-on-year change.';
 
   if (!data)
@@ -132,6 +134,9 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
             calendar={data.charts.calendar}
             longest_streak={data.charts.behavior.longest_streak}
           />
+        </div>
+      ) : page === 'Places' ? (
+        <div className="space-y-6">
           <DeliveryDestinationsChart
             data={data.charts.places}
             unsupported_reason={data.charts.places.unsupported_reason}

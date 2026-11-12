@@ -5,8 +5,10 @@ export class ApiError extends Error {
   public readonly status: number;
   public readonly code?: string;
   public readonly retryAfter?: number;
-  constructor(status: number, message: string, code?: string, retryAfter?: number) {
+  public readonly jobId?: string; // ACCOUNT_BUSY: the sync already running
+  constructor(status: number, message: string, code?: string, retryAfter?: number, jobId?: string) {
     super(message);
+    this.jobId = jobId;
     this.name = "ApiError";
     this.status = status;
     this.code = code;
@@ -116,6 +118,7 @@ export async function request<T = unknown>(path: string, opts: RequestOptions = 
       typeof message === "string" ? message : JSON.stringify(message),
       code ? String(code) : undefined,
       retryAfter,
+      errObj?.job_id ?? undefined,
     );
   }
 

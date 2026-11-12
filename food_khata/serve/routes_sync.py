@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from food_khata.contracts import KhataError
 from food_khata.jobs.runner import JobControl, JobLimitExceeded, JobNotFoundError
@@ -45,10 +45,12 @@ def list_sync_jobs(
     user_id: Annotated[str, Depends(get_current_user_id)],
     control: Annotated[JobControl, Depends(get_job_control)],
     status: str | None = None,
-    limit: int = 100,
+    account_id: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    """List background sync jobs for the authenticated user."""
-    jobs = control.list_jobs(user_id=user_id, status=status, limit=limit)
+    """List background sync jobs for the authenticated user, newest first, optionally by account and status."""
+    jobs = control.list_jobs(user_id=user_id, status=status, limit=limit, account_id=account_id, offset=offset)
     return [SyncJobResponse(**j) for j in jobs]
 
 
@@ -110,7 +112,7 @@ def create_sync_job(
     except JobLimitExceeded as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": exc.code, "message": str(exc)},
+            detail={"code": exc.code, "message": exc.message, "job_id": getattr(exc, "job_id", None)},
         ) from exc
 
     return SyncJobResponse(**job)

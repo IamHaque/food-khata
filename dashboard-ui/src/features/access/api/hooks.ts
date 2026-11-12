@@ -7,6 +7,7 @@ export function useAccounts() {
     queryFn: () => accountsApi.list(),
     staleTime: 30_000,
     retry: false,
+    refetchInterval: (q) => (q.state.data?.some((a) => a.active_status === "queued" || a.active_status === "running") ? 3000 : false),
   });
 }
 

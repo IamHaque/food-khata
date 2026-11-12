@@ -55,7 +55,7 @@ def test_http_vault_restart_and_throttle(tmp_path):
     login = c.post("/api/auth/login", json={"username": "owner", "password": "synthetic-pass-1"})
     assert login.status_code == 200
     c.headers["X-CSRF-Token"] = login.json()["csrf_token"]
-    assert c.get("/api/accounts").json()[0]["phone"] == "9876543210"
+    assert c.get("/api/accounts").json()[0]["phone"] == "••••3210"
     reset = c.post(f"/api/owner/users/{user_id}/reset-password", json={"owner_password": "synthetic-pass-1", "new_password": "synthetic-pass-1"})
     assert reset.status_code == 200
     assert not c.app.state.unlocked_sessions

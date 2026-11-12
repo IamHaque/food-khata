@@ -243,6 +243,7 @@ export function CommandPalette({ initialOpen = false }: CommandPaletteProps = {}
 
   const commands: Command[] = [
     ...NAV_ITEMS.map(i => ({ group: 'Navigate' as Group, label: i.label, icon: Compass, run: () => go(i.to, i.label) })),
+    { group: 'Navigate', label: 'Sync jobs', icon: Compass, run: () => { navigate({ pathname: '/jobs', search: '' }); setAnnouncement('Navigated to Sync jobs'); } },
     // Filters
     { group: 'Filters', label: 'Period: 7d', icon: Filter, run: () => applyPreset('7d') },
     { group: 'Filters', label: 'Period: 30d', icon: Filter, run: () => applyPreset('30d') },

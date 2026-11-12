@@ -139,5 +139,5 @@ def test_queue_position_and_eta(tmp_path):
     assert [i["queue_position"] for i in info] == [1, 2] and all(i["eta_seconds"] is None for i in info)  # no history yet
     assert _wait(app_db, [first, *queued])
     runner.stop()
-    create_job(app_db, job_id="q", user_id="u0", account_id="other", provider="zomato", status="queued")
+    create_job(app_db, job_id="q", user_id="u0", account_id="other", provider="zomato", mode="all", status="queued")
     assert control.get_job("q")["eta_seconds"] is not None  # history now exists

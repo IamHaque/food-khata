@@ -397,4 +397,15 @@ describe("DeliveryDestinationsChart - Component Rendering", () => {
 
     expect(html).toContain("Delivery places not supported for this account");
   });
+
+  it("still draws the chart when the API sends its constant 'maps are not supported' note with data", () => {
+    const html = renderToString(
+      <MemoryRouter>
+        <DeliveryDestinationsChart data={samplePlaces} unsupported_reason="Maps are not supported." />
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain("Top destination is Home (Bangalore)");
+    expect(html).not.toContain("Maps are not supported");
+  });
 });
