@@ -9,13 +9,15 @@ class AccountOut(BaseModel):
     id: str = Field(description="Account local ID")
     local_id: str = Field(description="Account local ID")
     provider: str = Field(description="Provider name (zomato, swiggy, fake)")
-    phone: str | None = Field(default=None, description="Linked phone number")
+    phone: str | None = Field(default=None, description="Linked phone number, masked to the last four digits")
     provider_id: str | None = Field(default=None, description="External provider account ID")
     status: str = Field(default="ok", description="Session status: ok, expiring, expired")
     last_sync: str | None = Field(default=None, description="Timestamp of last successful sync")
     order_count: int = Field(default=0, description="Total order count")
     name: str | None = Field(default=None, description="Optional friendly account label")
     has_session: bool = Field(default=False, description="Whether active session exists")
+    active_job_id: str | None = Field(default=None, description="Newest job when it is queued, running, paused, needs_code, failed or interrupted")
+    active_status: str | None = Field(default=None, description="Status of active_job_id")
 
 
 class LinkStartRequest(BaseModel):
@@ -39,7 +41,7 @@ class LinkVerifyResponse(BaseModel):
     local_id: str = Field(..., description="Bound account local ID")
     provider: str = Field(..., description="Provider name")
     provider_id: str = Field(..., description="External provider account ID")
-    phone: str | None = Field(default=None, description="Linked phone number")
+    phone: str | None = Field(default=None, description="Linked phone number, masked to the last four digits")
     status: str = Field(default="ok", description="Account session status")
     name: str | None = Field(default=None, description="Account name")
     added_to_existing: bool = Field(default=False, description="True when the phone already had an account (another provider was added)")

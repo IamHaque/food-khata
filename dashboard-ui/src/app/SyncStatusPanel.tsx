@@ -340,7 +340,7 @@ function SyncPanelContainer({
 
   return (
     <>
-    <div className="space-y-2 pb-4"><h3 className="text-sm font-semibold">Linked accounts</h3>{accounts.data?.map(account => <p className="text-xs" key={account.local_id}>{account.provider} · {account.phone ?? account.local_id} · {account.order_count} orders · {account.status}</p>)}</div>
+    <div className="space-y-2 pb-4"><h3 className="text-sm font-semibold">Linked accounts</h3>{accounts.data?.map(account => <p className="text-xs" key={account.local_id}>{account.provider} · {account.phone ?? 'no phone'} · {account.order_count} orders · {account.status}</p>)}</div>
     <SyncStatusPanelBody
       health={health ? { ...health, imports: health.imports?.filter(item => accounts.data?.some(account => account.local_id === item.account_id)) } : health}
       summary={summarize(metadata.data, dashboard.data)}

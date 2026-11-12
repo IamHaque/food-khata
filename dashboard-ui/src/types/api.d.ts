@@ -140,6 +140,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Readiness: app.db opens, migrations are current and the maintenance thread is alive. No counts or names.
+         */
+        get: operations["ready_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -407,6 +427,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Audit
+         * @description The last 200 audit rows (logins and admin actions); the owner reads them in Settings.
+         */
+        get: operations["get_audit_api_owner_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/owner/users": {
         parameters: {
             query?: never;
@@ -655,7 +695,7 @@ export interface paths {
         };
         /**
          * List Sync Jobs
-         * @description List background sync jobs for the authenticated user.
+         * @description List background sync jobs for the authenticated user, newest first, optionally by account and status.
          */
         get: operations["list_sync_jobs_api_sync_jobs_get"];
         put?: never;
@@ -868,7 +908,7 @@ export interface components {
             provider: string;
             /**
              * Phone
-             * @description Linked phone number
+             * @description Linked phone number, masked to the last four digits
              */
             phone?: string | null;
             /**
@@ -904,6 +944,16 @@ export interface components {
              * @default false
              */
             has_session: boolean;
+            /**
+             * Active Job Id
+             * @description Newest job when it is queued, running, paused, needs_code, failed or interrupted
+             */
+            active_job_id?: string | null;
+            /**
+             * Active Status
+             * @description Status of active_job_id
+             */
+            active_status?: string | null;
         };
         /** Behavior */
         Behavior: {
@@ -1697,7 +1747,7 @@ export interface components {
             provider_id: string;
             /**
              * Phone
-             * @description Linked phone number
+             * @description Linked phone number, masked to the last four digits
              */
             phone?: string | null;
             /**
@@ -2803,6 +2853,26 @@ export interface operations {
             };
         };
     };
+    ready_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     health_check_health_get: {
         parameters: {
             query?: never;
@@ -3144,6 +3214,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RotateJoinCodeResponse"];
+                };
+            };
+        };
+    };
+    get_audit_api_owner_audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -3527,7 +3617,9 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string | null;
+                account_id?: string | null;
                 limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;

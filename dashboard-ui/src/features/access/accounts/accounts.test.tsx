@@ -46,6 +46,27 @@ describe("AC-14 Accounts and linking screens", () => {
     });
   });
 
+  describe("Scenario 1b: Home shows real counts, job badge and disabled Sync", () => {
+    it("links the badge to the active job, disables Sync while it runs, and offers Verify again for needs_code", () => {
+      vi.spyOn(accessApi, "useAccounts").mockReturnValue({
+        data: [
+          { id: "a1", local_id: "a1", provider: "swiggy", phone: "••••3210", status: "ok", last_sync: "2026-11-12T10:00:00+00:00", order_count: 1439, has_session: true, active_job_id: "job-1", active_status: "running" },
+          { id: "a2", local_id: "a2", provider: "zomato", phone: "••••8226", status: "ok", last_sync: null, order_count: 0, has_session: true, active_job_id: "job-2", active_status: "needs_code" },
+        ],
+        isLoading: false, isError: false, refetch: vi.fn(),
+      } as any);
+      const html = renderWithProviders(<Home />);
+      expect(html).toContain('href="/jobs/job-1"');
+      expect(html).toContain("1,439");
+      expect(html).toContain("••••3210");
+      expect(html).not.toContain('href="/sync?account='); // both have an active job: Sync is a disabled button, not a link
+      expect(html).toContain("needs verification");
+      expect(html).toContain("Verify again");
+      expect(html).toContain("never synced");
+      for (const to of ["/jobs", "/data-health", "/settings"]) expect(html).toContain(`href="${to}"`);
+    });
+  });
+
   describe("Scenario 2: empty state", () => {
     it("shows empty state linking to Home/link", () => {
       vi.spyOn(accessApi, "useAccounts").mockReturnValue({

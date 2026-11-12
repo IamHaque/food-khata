@@ -5,8 +5,10 @@ import { useAccounts } from "../api";
 import { SessionControls } from "../banners/SessionControls";
 import { accountsApi, ApiError } from "../api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { ACTIVE_STATUSES } from "../sync/api";
+import { StatusBadge } from "../sync/StatusBadge";
+import { VerifyAgain } from "./VerifyAgain";
 
 function statusChip(status: string) {
   const cls =
@@ -22,14 +24,15 @@ function statusChip(status: string) {
   );
 }
 
+const when = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(); };
+const action = "inline-flex min-h-[44px] items-center rounded-md border px-3 text-sm font-medium";
+
 export function Home() {
   const navigate = useNavigate();
   const accounts = useAccounts();
   const disconnectTrigger = React.useRef<HTMLButtonElement | null>(null);
   const [disconnecting, setDisconnecting] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
-  const [verifyHandle, setVerifyHandle] = React.useState<string | null>(null);
-  const [verifyCode, setVerifyCode] = React.useState("");
 
   // `disconnecting` holds "accountId|provider": one card per provider (R-01).
   const handleDisconnect = async (target: string, wipe: boolean) => {
@@ -45,49 +48,19 @@ export function Home() {
     }
   };
 
-  const startVerifyAgain = async (id: string, provider: string) => {
-    try {
-      const res = await accountsApi.verifyAgain(id, provider);
-      setVerifyHandle(res.handle);
-    } catch (err) {
-      if (err instanceof ApiError) setMessage(err.message);
-    }
-  };
-
-  const submitVerifyAgain = async () => {
-    if (!verifyHandle) return;
-    try {
-      await accountsApi.linkVerify(verifyHandle, verifyCode);
-      setMessage("Verified successfully.");
-      setVerifyHandle(null);
-      setVerifyCode("");
-      accounts.refetch();
-    } catch (err) {
-      if (err instanceof ApiError) setMessage(err.message);
-      else setMessage("Verification failed.");
-    }
-  };
-
   return (
-    <AuthShell title="Home" subtitle="Linked accounts">
+    <AuthShell title="Home" subtitle="Linked accounts" wide>
       <div className="space-y-4">
-        <div className="flex gap-4 text-sm">
-          <Link className="underline" to="/">Open dashboard</Link>
-          <Link className="underline" to="/sync">Sync now</Link>
-          <Link className="underline" to="/account/password">Password</Link>
-        </div>
+        <nav aria-label="Home" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {[["/", "Open dashboard"], ["/sync", "Sync now"], ["/jobs", "Jobs"], ["/data-health", "Data health"], ["/settings", "Settings"]].map(([to, label]) =>
+            <Link key={to} className="inline-flex min-h-[44px] items-center underline" to={to}>{label}</Link>)}
+        </nav>
         <SessionControls />
         {message && <StatusBanner variant="info">{message}</StatusBanner>}
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Linked accounts</h2>
-          <button
-            type="button"
-            onClick={() => navigate("/accounts/link")}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-          >
-            Link account
-          </button>
+          <Button type="button" onClick={() => navigate("/accounts/link")}>Link account</Button>
         </div>
 
         {accounts.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -102,72 +75,55 @@ export function Home() {
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {(accounts.data ?? []).map((acc) => (
+          {(accounts.data ?? []).map((acc) => {
+            const busy = ACTIVE_STATUSES.includes(acc.active_status ?? "");
+            const needsCode = acc.status === "expired" || acc.active_status === "needs_code";
+            return (
             <div key={`${acc.id}:${acc.provider}`} className="rounded-lg border bg-card p-4 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <strong className="capitalize">{acc.provider}</strong>
-                {statusChip(acc.status)}
+                <span className="flex items-center gap-2">
+                  {acc.active_status && acc.active_job_id && (
+                    <Link to={`/jobs/${encodeURIComponent(acc.active_job_id)}`} aria-label={`Open ${acc.provider} job: ${acc.active_status.replaceAll("_", " ")}`}><StatusBadge status={acc.active_status} /></Link>
+                  )}
+                  {statusChip(acc.status)}
+                </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                {acc.phone ?? "no phone"} • {acc.order_count} orders
-                {acc.last_sync ? ` • last sync ${acc.last_sync}` : ""}
+                {acc.phone ?? "no phone"} • {acc.order_count.toLocaleString()} orders
+                {acc.last_sync ? ` • last sync ${when(acc.last_sync)}` : " • never synced"}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                <Link className="rounded-md border px-2 py-1 text-xs font-medium" to={`/sync?account=${encodeURIComponent(acc.local_id)}&provider=${encodeURIComponent(acc.provider)}`}>Sync</Link>
-                {acc.status === "expired" && (
-                  <button
-                    type="button"
-                    onClick={() => startVerifyAgain(acc.id, acc.provider)}
-                    className="rounded-md border px-2 py-1 text-xs font-medium"
-                  >
-                    Verify again
-                  </button>
+                {busy ? (
+                  <button type="button" disabled title="A sync is already active for this account" className={`${action} opacity-50`}>Sync</button>
+                ) : (
+                  <Link className={action} to={`/sync?account=${encodeURIComponent(acc.local_id)}&provider=${encodeURIComponent(acc.provider)}`}>Sync</Link>
                 )}
+                {needsCode && <VerifyAgain accountId={acc.id} provider={acc.provider} />}
                 <button
                   type="button"
                   onClick={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(`${acc.id}|${acc.provider}`); }}
-                  className="rounded-md border px-2 py-1 text-xs font-medium"
+                  className={action}
                 >
                   Disconnect
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <Dialog open={disconnecting !== null} onOpenChange={(open) => { if (!open) setDisconnecting(null); }}>
           <DialogContent className="w-[calc(100%-2rem)] rounded-lg" onCloseAutoFocus={(event) => { event.preventDefault(); disconnectTrigger.current?.focus(); }}>
             <DialogTitle>Disconnect account?</DialogTitle>
-            <DialogDescription>Keep or wipe this account's data?</DialogDescription>
+            <DialogDescription>Disconnecting signs this account out of Food Khata. You choose whether the orders already saved on this computer stay or are deleted.</DialogDescription>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => disconnecting && handleDisconnect(disconnecting, false)}>Keep data</Button>
-              <Button variant="destructive" onClick={() => disconnecting && handleDisconnect(disconnecting, true)}>Wipe data</Button>
+              <Button variant="outline" onClick={() => disconnecting && handleDisconnect(disconnecting, false)}>Disconnect, keep local data</Button>
+              <Button variant="destructive" onClick={() => disconnecting && handleDisconnect(disconnecting, true)}>Disconnect and wipe local data</Button>
               <Button variant="outline" onClick={() => setDisconnecting(null)}>Cancel</Button>
             </div>
           </DialogContent>
         </Dialog>
-
-        {verifyHandle && (
-          <div className="rounded-md border bg-muted p-3 space-y-2">
-            <p className="text-sm font-medium">Verify again</p>
-            <Input
-              aria-label="SMS code"
-              type="text"
-              value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value)}
-              placeholder="SMS code"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            />
-            <div className="flex gap-2">
-              <button type="button" onClick={submitVerifyAgain} className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground">
-                Verify
-              </button>
-              <button type="button" onClick={() => { setVerifyHandle(null); setVerifyCode(""); }} className="rounded-md border px-3 py-1 text-xs">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </AuthShell>
   );

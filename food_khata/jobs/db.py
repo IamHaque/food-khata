@@ -95,15 +95,31 @@ def fair_order(queued: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [job for _, _, job in sorted(keyed, key=lambda k: (k[0], k[1]))]
 
 
-def avg_job_seconds(conn_or_path, provider: str) -> float | None:
-    """Mean run time of the provider's last 20 finished jobs, or None with no history (for the queue ETA)."""
+def avg_job_seconds(conn_or_path, provider: str, mode: str | None = None) -> float | None:
+    """Mean run time of the provider's last 20 finished jobs (of one mode if given), or None with no history."""
     with get_db_conn(conn_or_path) as conn:
         row = conn.execute(
             "SELECT AVG(finished_at - started_at) FROM (SELECT started_at, finished_at FROM jobs WHERE provider = ? "
-            "AND status = 'done' AND started_at IS NOT NULL AND finished_at IS NOT NULL ORDER BY finished_at DESC LIMIT 20)",
-            (provider,),
+            "AND (? IS NULL OR mode = ?) AND status = 'done' AND started_at IS NOT NULL AND finished_at IS NOT NULL "
+            "ORDER BY finished_at DESC LIMIT 20)",
+            (provider, mode, mode),
         ).fetchone()
     return row[0]
+
+
+def account_job_summary(conn_or_path, user_id: str) -> dict[tuple[str, str], dict[str, Any]]:
+    """Per (account, provider): last_done (finished_at of the last done job) and latest (id, status of the newest job)."""
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    with get_db_conn(conn_or_path) as conn:
+        for acc, prov, jid, st, fin in conn.execute(
+            "SELECT account_id, provider, id, status, finished_at FROM jobs WHERE user_id = ? ORDER BY created_at ASC",
+            (user_id,),
+        ):
+            e = out.setdefault((acc, prov), {"last_done": None, "latest": None})
+            e["latest"] = (jid, st)
+            if st == "done" and fin:
+                e["last_done"] = fin
+    return out
 
 
 def migrate_job_identifiers(conn: sqlite3.Connection) -> None:
@@ -320,6 +336,8 @@ def list_jobs(
     user_id: str | None = None,
     status: str | None = None,
     limit: int = 100,
+    account_id: str | None = None,
+    offset: int = 0,
 ) -> list[dict[str, Any]]:
     query = "SELECT * FROM jobs"
     clauses = []
@@ -327,13 +345,16 @@ def list_jobs(
     if user_id is not None:
         clauses.append("user_id = ?")
         params.append(user_id)
+    if account_id is not None:
+        clauses.append("account_id = ?")
+        params.append(account_id)
     if status is not None:
         clauses.append("status = ?")
         params.append(status)
     if clauses:
         query += " WHERE " + " AND ".join(clauses)
-    query += " ORDER BY created_at DESC LIMIT ?"
-    params.append(limit)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params += [limit, offset]
 
     with get_db_conn(conn_or_path) as conn:
         cursor = conn.execute(query, params)

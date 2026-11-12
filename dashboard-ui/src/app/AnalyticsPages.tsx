@@ -5,7 +5,7 @@ import { useFilters } from './FilterContext';
 import { Chart } from './Chart';
 import { CuisineTreemapChart, NewVsRepeatChart, LoyaltyParetoChart, DietSplitTrendChart, DishRankingChart, HourWeekdayHeatmapChart, MealSlotsChart, WeekdayBarsChart, OrderGapsHistogramChart, DeliveryDestinationsChart, DistanceVsFeeChart, StreakTimelineChart, OrdersPerWeekChart } from '../components/charts';
 
-export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }) {
+export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' | 'Places' }) {
   const { filters, clear } = useFilters();
   const query = useDashboard(filters);
   const data = query.data;
@@ -60,6 +60,8 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
               ? 'Cuisine breakdown, dish trends, dietary distribution, and restaurant loyalty'
               : page === 'Habits'
               ? 'Ordering rhythm, temporal habits, and basket sizes'
+              : page === 'Places'
+              ? 'Delivery destinations and how distance relates to delivery fees'
               : 'Cumulative expenditure, moving averages, fee patterns, and yearly comparisons'}
           </p>
         </div>
@@ -158,6 +160,9 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
             calendar={data.charts.calendar}
             longest_streak={data.charts.behavior.longest_streak}
           />
+        </div>
+      ) : page === 'Places' ? (
+        <div className="space-y-6">
           <DeliveryDestinationsChart
             data={data.charts.places}
             unsupported_reason={data.charts.places.unsupported_reason}

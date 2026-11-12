@@ -73,9 +73,10 @@ class JobLimitExceeded(HTTPException, KhataError):
 class AccountBusy(JobLimitExceeded):
     """Another job is already queued or running for this account and provider (PR-07)."""
 
-    def __init__(self) -> None:
-        super().__init__("A sync is already queued or running for this account and provider.")
+    def __init__(self, job_id: str | None = None) -> None:
+        super().__init__("A sync is already running or waiting for this account. Open it to follow its progress.")
         self.code = "ACCOUNT_BUSY"
+        self.job_id = job_id
 
 
 class JobNotFoundError(HTTPException, KhataError):
@@ -647,11 +648,11 @@ class JobControl:
         # If user already has 1 running and 2 queued, or 2 queued jobs, cannot queue more
         if queued_cnt >= MAX_QUEUED_PER_USER:
             raise JobLimitExceeded(
-                f"User job limit exceeded: at most {MAX_QUEUED_PER_USER} queued jobs allowed."
+                f"You already have {MAX_QUEUED_PER_USER} syncs waiting. Let one finish, then try again."
             )
         if running_cnt >= MAX_RUNNING_PER_USER and queued_cnt >= MAX_QUEUED_PER_USER:
             raise JobLimitExceeded(
-                f"User job limit exceeded: {MAX_RUNNING_PER_USER} running, {MAX_QUEUED_PER_USER} queued allowed."
+                f"You already have {MAX_QUEUED_PER_USER} syncs waiting. Let one finish, then try again."
             )
 
         job_id = str(uuid.uuid4())
@@ -675,7 +676,9 @@ class JobControl:
         try:
             job = self._create_job(job_id, user_id, account_id, provider, provider_id, mode)
         except sqlite3.IntegrityError as exc:  # partial unique index: one active job per account and provider
-            raise AccountBusy() from exc
+            active = [j for j in list_jobs(self.app_db_path, user_id=user_id, account_id=account_id)
+                      if j["provider"] == provider and j["status"] in ACTIVE_STATES]
+            raise AccountBusy(active[0]["id"] if active else None) from exc
 
         self.runner.register_job(payload)
         self.runner.process_queue()
@@ -695,17 +698,37 @@ class JobControl:
         )
 
     def _with_queue_info(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Add queue_position (1 = next) and eta_seconds (None without history) to queued jobs."""
-        if not any(j["status"] == QUEUED for j in jobs):
-            return jobs
-        order = {j["id"]: n for n, j in enumerate(fair_order(list_jobs(self.app_db_path, status=QUEUED, limit=500)), 1)}
+        """Add queue_position and eta_seconds to queued jobs, progress and eta_seconds to running or paused ones.
+
+        shortcut: the ETA is the mean duration of earlier done jobs of the same provider and mode minus the time
+        already spent, so it ignores account size; use orders per second once jobs record it.
+        """
+        order: dict[str, int] = {}
+        if any(j["status"] == QUEUED for j in jobs):
+            order = {j["id"]: n for n, j in enumerate(fair_order(list_jobs(self.app_db_path, status=QUEUED, limit=500)), 1)}
         for job in jobs:
             if job["status"] == QUEUED and job["id"] in order:
                 job["queue_position"] = order[job["id"]]
-                avg = avg_job_seconds(self.app_db_path, job["provider"])
+                avg = avg_job_seconds(self.app_db_path, job["provider"], job["mode"])
                 slots = self.runner.provider_concurrency.get(job["provider"], 1)
                 job["eta_seconds"] = round(order[job["id"]] * avg / slots) if avg else None
+            elif job["status"] in (RUNNING, PAUSED):
+                job["progress"] = self._progress(job)
+                avg = avg_job_seconds(self.app_db_path, job["provider"], job["mode"])
+                if avg and job["status"] == RUNNING and job.get("started_at"):
+                    job["eta_seconds"] = max(0, round(avg - (time.time() - job["started_at"])))
         return jobs
+
+    @staticmethod
+    def _progress(job: dict[str, Any]) -> dict[str, Any]:
+        """Phase, pages and detail counts; percent only when the total is known (details, import)."""
+        counts = job.get("counts") if isinstance(job.get("counts"), dict) else {}
+        orders, details = counts.get("orders") or 0, counts.get("details") or 0
+        percent = None
+        if job.get("phase") in ("details", "importing") and orders:
+            percent = 100 if job["phase"] == "importing" else min(99, round(100 * details / orders))
+        return {"phase": job.get("phase"), "page": job.get("page"), "orders": orders, "details": details,
+                "details_downloaded": counts.get("details_downloaded") or 0, "percent": percent}
 
     def get_job(self, job_id: str, user_id: str | None = None) -> dict[str, Any]:
         job = get_job(self.app_db_path, job_id, user_id=user_id)
@@ -718,8 +741,12 @@ class JobControl:
         user_id: str | None = None,
         status: str | None = None,
         limit: int = 100,
+        account_id: str | None = None,
+        offset: int = 0,
     ) -> list[dict[str, Any]]:
-        return self._with_queue_info(list_jobs(self.app_db_path, user_id=user_id, status=status, limit=limit))
+        return self._with_queue_info(
+            list_jobs(self.app_db_path, user_id=user_id, status=status, limit=limit, account_id=account_id, offset=offset)
+        )
 
     def get_events(
         self,

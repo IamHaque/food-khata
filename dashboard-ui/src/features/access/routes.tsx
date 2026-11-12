@@ -15,7 +15,8 @@ const Register = lazy(() => import("./welcome/Register"));
 const Home = lazy(() => import("./accounts/Home"));
 const LinkAccount = lazy(() => import("./accounts/LinkAccount"));
 const Sync = lazy(() => import("./sync/Sync"));
-const Settings = lazy(() => import("./owner"));
+const Jobs = lazy(() => import("./sync/Jobs"));
+const Settings = lazy(() => import("./account/Settings"));
 const Password = lazy(() => import("./account/Password"));
 
 export function AccessRoutes() {
@@ -31,6 +32,8 @@ export function AccessRoutes() {
         <Route path="/accounts/link" element={<RequireAuth><LinkAccount /></RequireAuth>} />
         <Route path="/account/password" element={<RequireAuth><Password /></RequireAuth>} />
         <Route path="/sync" element={<RequireAuth><Sync /></RequireAuth>} />
+        <Route path="/jobs" element={<RequireAuth><Jobs /></RequireAuth>} />
+        <Route path="/jobs/:jobId" element={<RequireAuth><Jobs /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
       </Routes>
     </Suspense>
