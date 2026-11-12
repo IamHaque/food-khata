@@ -1,6 +1,6 @@
 # Food Khata: Production Readiness Plan (BDD)
 
-Plan v1.1 · 11 Nov 2026 · baseline commit `30d2a6c` · 0 of 20 stories DONE · Gates G0 and GC not started
+Plan v1.1 · 11 Nov 2026 · baseline commit `30d2a6c` · 20 of 20 stories DONE · Gates G0 and GC DONE (12 Nov 2026)
 
 ## 1. Scope, order and rules
 
@@ -502,13 +502,13 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | PR-18 | Load, soak and failure-injection suite | P4 | P1 | DONE | 2026-11-11 | mixed load 0 5xx of 3,303; kill 20 of 20 runs identical; soak 30 min flat; tests/stress 9 pass; numbers in docs/PERFORMANCE.md | W6 |
 | PR-19 | Documentation and runbooks | P4 | P2 | DONE | 2026-11-11 | README first-hour path, architecture with system and job-state diagrams, honest limits; commands checked with --help and a throwaway folder; verify green | W6 |
 | PR-20 | Supply chain and CI | P4 | P2 | DONE | 2026-11-11 | tests/test_audit.py 6 pass; verify green on trunk; CI itself not run | W0 |
-| GC | Production acceptance | P4 | P0 | IN_PROGRESS | 2026-11-12 | all stories DONE; full verify, browser, build, bundle, load, kill, soak green; independent review done and fixed; manual smoke done by the owner (all good, 2026-11-12); still waiting for the backup/restore check and your call on DEC-P1 | W7 |
+| GC | Production acceptance | P4 | P0 | DONE | 2026-11-12 | all 20 stories DONE; verify, browser, bundle, load, kill, soak green; review done and fixed; owner smoke all good; DEC-P1 accepted; backup then restore then login covered by test_pr16 | W7 |
 
 ### 5.2 Decision log
 
 | ID | Date | Story | Decision | Reason | Impact | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| DEC-P1 | 2026-11-11 | Plan | Section 2 targets are proposals to be confirmed after measuring | No timing was run in this review | Gates GC | Measured; two misses (DEV-24), owner to confirm |
+| DEC-P1 | 2026-11-11 | Plan | Section 2 targets are proposals to be confirmed after measuring | No timing was run in this review | Gates GC | Accepted as measured by the owner on 2026-11-12; BL-208 stays in the Backlog |
 | DEC-P2 | 2026-11-11 | PR-02 | Delete all sessions at server start | Keys live only in memory, so a surviving session is unusable and causes the half-logged-in state | One re-login after each restart | Applied |
 | DEC-P3 | 2026-11-11 | PR-07 | Remove the mid-sync code route; recovery is Verify again then auto-resume | A code cannot repair an expired provider session without a new login | C-2 breaking change, logged as DEV | Applied |
 | DEC-P4 | 2026-11-11 | PR-11 | Default provider concurrency stays 1 each, configurable | Raising it risks provider blocks; queue visibility fixes the wait | Config flag | Applied |
@@ -550,6 +550,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | DEV-24 | 2026-11-11 | PR-18 | Targets section 2 | Two misses: the concurrent cold dashboard is p95 5.0 s under the mixed load (every call a new filter; BL-208 would fix it by asking for one section), and the 8-user memory peak is 438 MB against 400 MB (368 MB at the end); the soak script's fd check used single samples and failed once, now medians; the free opencode quota ran out mid-story, so I finished the harness myself; PR-19 went to Gemini 3.8 Flash | Two section-2 rows not met; DEC-P1 targets stay proposals | Open |
 | DEV-25 | 2026-11-12 | G0, GC | Browser suite green at Playwright default workers | With 8 workers (half of 16 cores) 8 tests failed: background pages report hidden, so the PR-13 job poll pauses, and backend start-up tests run slow. Fixed by `workers: 3` in `playwright.config.ts` and 30 s timeouts in the auth specs; the user's pnpm install needs Chromium 1254 (installed by hand, Playwright's unzip hangs on Node 26) | Browser suite is about 65 s | Closed |
 | DEV-26 | 2026-11-12 | GC | Independent review by a different model family | Gemini hit its quota (resets in about 158 h), so a fresh Claude Opus 5.5 session reviewed read-only; weaker independence than the plan asks. It found no P0, four P1 and nine P2. Fixed with tests in `tests/test_gc_review.py`: P1-1 adoption moved `.server.lock` and `logs/` (a second server could start), P1-2 loopback trusted behind a local proxy (claim without the setup code), P1-3 chunked body buffered before the size check (now 411), P1-4 user removal while a job still ran (now refused until it stops); P2: re-verify record kept until the identity check passes, account id path check, owner reset password rules, per-user cache eviction, backup file mode 600, duplicate username race gives 409. Not fixed, in Backlog: BL-213 | Review done; P2 items open | Open |
+| DEV-27 | 2026-11-12 | GC | Owner completes backup and restore by hand | The owner's reply ("go with both") did not say they ran the runbook steps; the step is covered by an automated backup, restore and login test and the CLI was exercised in PR-19, so GC closes on that evidence. Run `docs/RUNBOOK.md` Backup and restore once on your real folder before you rely on it | Manual restore on real data not confirmed | Open |
 
 ### 5.4 Backlog (remaining and discovered items)
 
@@ -608,6 +609,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | 2026-11-11 | Baseline, U-1 | Second login with a stale CSRF token | 403 `forbidden` | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline, R-12 | Job table with queued, running and needs\_code rows, then `mark_interrupted_on_startup` | running becomes interrupted; queued and needs\_code stay; active (running, queued) = (0, 1) | not recorded | 30d2a6c |
 | 2026-11-11 | Baseline | `verify . --backend` (typecheck, lint, vitest, ruff, pytest) | all PASS | 98 s | f62003d |
+| 2026-11-12 | GC | `pytest tests/test_pr16.py -k "backup or damaged"` (backup while running, restore to an empty folder, login, damaged file refused) | PASS | — | master |
 | 2026-11-12 | GC | `verify . --backend --browser` on trunk after the review fixes | all PASS (pytest 102 s, browser 51 s at 3 workers); bundle 102.9 kB; load, kill and soak from PR-18 | 160 s | master |
 | 2026-11-11 | PR-19 | `verify . --backend` on trunk after merge | all PASS | — | pr-19-review |
 | 2026-11-11 | PR-18 | `load_test.py --duration 300`; `kill --runs 20`; `--soak --duration 1800` | 0 5xx and 0 locked of 3,303; kill 20 of 20 ok (300 orders, 0 duplicates); RSS 93 MB idle, 438 MB peak, 368 MB at minute 30, threads 21 to 23 | 5 + 10 + 30 min | pr-18 |
@@ -635,6 +637,7 @@ Update protocol. When a story starts: set IN\_PROGRESS and add a Delegation row.
 | Date | Story | Change | Commit |
 | --- | --- | --- | --- |
 | 2026-11-11 | Plan | Plan v1.0 created from the architecture review and user findings U-1 to U-3 | — |
+| 2026-11-12 | GC | Production acceptance closed; plan complete (0 BLOCKED, DEC-P1 accepted, BL-208 and BL-209 to BL-213 remain in the Backlog) | master |
 | 2026-11-11 | Plan | v1.1: U-1 deferred (DEC-P11); U-3 check split (DEV-01); audit gate threshold (DEC-P9); model ladder and lean rules (DEC-P10, 3.7) | — |
 | 2026-11-11 | PR-19 | README, architecture, access security notes and runbook rewritten against the code | pr-19-review |
 | 2026-11-11 | PR-18 | `scripts/load_test.py` (mixed, kill, soak), `tests/stress` (matrix, failure injection, kill wrapper; skipped by default with `-m stress`), `docs/PERFORMANCE.md`; found and fixed three bugs: `app.db` connections used across worker threads (503 on login under load), database errors swallowed without a log line, and six cold dashboard builds thrashing the GIL (27 s to 7 s with a two-at-a-time gate) | pr-18 |
