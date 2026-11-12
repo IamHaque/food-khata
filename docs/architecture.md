@@ -212,9 +212,9 @@ All endpoints are registered under `food_khata.serve`:
 
 - **Session Authentication**: Browser session cookie (`session_id`) only; no bearer headers accepted. Cookie flags: `HttpOnly`, `SameSite=Lax`. `Secure` attribute is set when served over TLS or when `--behind-https-proxy` is passed.
 - **CSRF Protection**: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require an `x-csrf-token` header matching the `food_khata_csrf` cookie.
-- **Reverse Proxy Support**: Client IP extraction for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
+- **Reverse Proxy Support**: A connection from the trusted proxy never counts as loopback, so a remote caller behind a local proxy still needs the setup code. Client IP extraction for throttling uses `--trusted-proxy ADDR` to read `X-Forwarded-For`; untrusted client headers are ignored.
 - **Security Headers**: All HTTP responses include `Content-Security-Policy` (`default-src 'self' ...`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
-- **Payload Limits**: Request bodies are capped at 64 KB (`MAX_BODY_BYTES`); larger payloads return HTTP 413.
+- **Payload Limits**: Request bodies are capped at 64 KB (`MAX_BODY_BYTES`); larger payloads return HTTP 413, and a chunked body with no `Content-Length` returns 411 (it is never buffered).
 - **Session Lifetimes**: 8-hour idle timeout and 7-day absolute lifetime. All sessions are cleared from `app.db` at server startup (re-authentication required after restart).
 - **Passwords**: Enforces a minimum length of 10 characters. Hashes use scrypt with per-user salts.
 - **Audit Logging**: Sensitive operations (logins, failed attempts, owner actions, account deletions) append to `audit_log` in `app.db` without logging passwords, tokens, or codes.

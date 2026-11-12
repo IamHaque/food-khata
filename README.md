@@ -145,10 +145,22 @@ Background sync jobs are queued and managed by `JobRunner` and `JobControl`:
 
 ---
 
+## Development and Checks
+
+```bash
+node scripts/verify.mjs . --backend --browser   # typecheck, lint, vitest, ruff, pytest, Playwright (about 3 minutes)
+.venv/bin/python -m pytest tests -m stress -q    # concurrency matrix, failure injection, kill test (skipped by default)
+.venv/bin/python scripts/load_test.py --duration 300   # mixed load; also `kill --runs 20` and `--soak --duration 1800`
+```
+
+Notes: the browser suite needs `npm --prefix dashboard-ui run build` first and runs at 3 workers (more parallel pages make background tabs report hidden, which pauses the job poll). Install the matching Chromium with `npx playwright install chromium`. Measured numbers are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md); the API contract changes are in [docs/contracts/C-2.md](docs/contracts/C-2.md); the production plan and its decision log are in [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md).
+
 ## Documentation Links
 
 - [Architecture & Storage](docs/architecture.md): System diagram, job lifecycle diagram, complete route listings, and schema reference.
 - [Runbook](docs/RUNBOOK.md): Systemd service configuration, Windows service setup, backups, updates, and troubleshooting.
 - [Performance Benchmarks](docs/PERFORMANCE.md): Mixed load latencies, soak tests, and database concurrency targets.
 - [Access Security & Recovery](docs/access/security-and-recovery.md): Threat model, LAN security, password reset, and personal data inventory.
+- [Production Plan](docs/PRODUCTION_PLAN.md): The 20 stories, decisions, deviations, backlog and verification log.
+- [API Contract C-2](docs/contracts/C-2.md): What changed in the API since the frozen C-1 contract.
 - [Metrics Definitions](docs/METRICS.md): Financial calculation formulas and data reconciliation definitions.
