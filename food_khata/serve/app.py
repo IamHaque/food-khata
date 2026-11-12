@@ -85,7 +85,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app):
         app.state.job_runner.start()
-        maintenance = app.state.maintenance = Maintenance(app.state.app_db_path)
+        maintenance = app.state.maintenance = Maintenance(app.state.app_db_path, on_run=app.state.prune_unlocked_sessions)
         maintenance.start()
         try:
             yield
@@ -133,6 +133,19 @@ def create_app(
     app.state.is_https = is_https or behind_https_proxy
     app.state.trusted_proxy = trusted_proxy
     app.state.unlocked_sessions = {}
+
+    def prune_unlocked_sessions() -> None:
+        """Drop in-memory keys whose session row is gone (expired, logged out, removed)."""
+        conn = connect_app_db(app.state.app_db_path)
+        try:
+            live = {row[0] for row in conn.execute("SELECT id FROM sessions")}
+        finally:
+            conn.close()
+        for session_id in list(app.state.unlocked_sessions):
+            if session_id not in live:
+                app.state.unlocked_sessions.pop(session_id, None)
+
+    app.state.prune_unlocked_sessions = prune_unlocked_sessions
     init_app_db(resolved_app_db)
     run_migrations(resolved_app_db, resolved_data_root)
     from food_khata.users.context import reconcile_trash

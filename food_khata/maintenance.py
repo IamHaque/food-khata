@@ -4,6 +4,7 @@ import logging
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from .auth import connect_app_db
@@ -78,8 +79,8 @@ def run_once(app_db_path: Path | str) -> dict[str, int]:
 
 
 class Maintenance:
-    def __init__(self, app_db_path: Path | str, interval: float = 3600.0) -> None:
-        self.app_db_path, self.interval = app_db_path, interval
+    def __init__(self, app_db_path: Path | str, interval: float = 3600.0, on_run: Callable[[], None] | None = None) -> None:
+        self.app_db_path, self.interval, self.on_run = app_db_path, interval, on_run
         self._stop = threading.Event()
         self.thread: threading.Thread | None = None
 
@@ -91,6 +92,11 @@ class Maintenance:
     def _loop(self) -> None:
         while not self._stop.wait(self.interval):
             run_once(self.app_db_path)
+            if self.on_run:
+                try:
+                    self.on_run()
+                except Exception:
+                    log.exception("maintenance on_run failed")
 
     def stop(self) -> None:
         self._stop.set()

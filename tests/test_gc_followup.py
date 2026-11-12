@@ -244,3 +244,22 @@ def test_restore_rolls_back_on_failed_move_and_caps_size(tmp_path, monkeypatch):
     monkeypatch.setattr(bk, "RESTORE_MAX_BYTES", 3)
     with pytest.raises(ValueError, match="limit"):
         bk.restore(work / "b.tar.gz", work / "data2")
+
+
+# --- item 5 -----------------------------------------------------------------
+def test_maintenance_prunes_unlocked_keys_of_dead_sessions(tmp_path):
+    from food_khata.maintenance import Maintenance
+    from food_khata.serve.app import authenticate_client
+
+    app = _app(tmp_path)
+    c = TestClient(app, base_url="http://127.0.0.1:8765")
+    live, _ = authenticate_client(c, username="alice", is_owner=True)
+    c2 = TestClient(app, base_url="http://127.0.0.1:8765")
+    dead, _ = authenticate_client(c2, username="bob", is_owner=False)
+    conn = connect_app_db(tmp_path / "app.db")
+    conn.execute("DELETE FROM sessions WHERE id = ?", (dead,))
+    conn.commit()
+    app.state.unlocked_sessions["orphan"] = ("x", None)
+    assert Maintenance(tmp_path / "app.db", on_run=app.state.prune_unlocked_sessions).on_run is app.state.prune_unlocked_sessions
+    app.state.prune_unlocked_sessions()
+    assert set(app.state.unlocked_sessions) == {live}
