@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
@@ -138,7 +139,7 @@ describe("FeeComponentsChart - Option Builder (CC-11, S-043)", () => {
     expect(new Set(symbols).size).toBe(4);
     expect(option.aria).toEqual({
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     });
   });
 

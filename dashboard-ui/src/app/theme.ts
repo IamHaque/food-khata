@@ -145,6 +145,24 @@ function notify(): void {
   }
 }
 
+// Opt-in "Accessible patterns": hatch fills on chart marks, off by default.
+export const PATTERNS_STORAGE_KEY = 'food-khata-patterns';
+export function getPatterns(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(PATTERNS_STORAGE_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+export function setPatterns(on: boolean): void {
+  try {
+    localStorage.setItem(PATTERNS_STORAGE_KEY, on ? 'on' : 'off');
+  } catch {
+    /* storage access error */
+  }
+  notify();
+}
+
 export function getThemeState(): ThemeState {
   return {
     mode: activeMode,

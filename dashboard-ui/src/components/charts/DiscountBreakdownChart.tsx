@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { BarChart, type BarSeriesOption } from "echarts/charts";
@@ -211,7 +212,7 @@ export function buildDiscountBreakdownOption({
     ...baseOption,
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     tooltip: {
       trigger: "axis",

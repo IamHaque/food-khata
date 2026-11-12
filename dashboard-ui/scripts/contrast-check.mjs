@@ -200,6 +200,19 @@ function runContrastCheck() {
         );
       }
 
+      // Every text level and semantic colour on every surface it can sit on (4.5:1); UI parts 3:1
+      const surfaces = { '--background': bg, '--surface': surface, '--surface-2': tokens['--surface-2'], '--accent': tokens['--accent'] };
+      const check = (name, fgTok, bgTok, bgVal, min) => {
+        const c = contrastRatio(tokens[fgTok], bgVal);
+        if (c < min) failures.push('[' + mode + ' / ' + accent + '] ' + fgTok + ' on ' + bgTok + ': ' + c.toFixed(2) + ':1 (minimum ' + min + ':1)');
+      };
+      for (const [n, v] of Object.entries(surfaces)) {
+        for (const t of ['--foreground', '--muted-foreground', '--primary', '--success', '--warning', '--danger', '--info']) check(t, t, n, v, 4.5);
+        check('--focus', '--focus', n, v, 3);
+      }
+      check('pf', '--primary-foreground', '--primary', tokens['--primary'], 4.5);
+      for (const p of ['--platform-zomato', '--platform-swiggy']) check(p, p, '--surface', surface, 4.5);
+
       // Chart marks vs surface and background >= 3:1
       for (let i = 1; i <= 8; i++) {
         const mark = tokens['--chart-' + i];

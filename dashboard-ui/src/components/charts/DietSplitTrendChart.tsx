@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { PieChart, BarChart } from "echarts/charts";
@@ -267,7 +268,7 @@ export function buildDietDonutOption({
     ...baseOption,
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     tooltip: {
       trigger: "item",
@@ -368,7 +369,7 @@ export function buildDietTrendOption({
     ...baseOption,
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     tooltip: {
       trigger: "axis",

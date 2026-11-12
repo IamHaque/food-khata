@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { PieChart } from "echarts/charts";
@@ -167,7 +168,7 @@ export function buildPlatformSplitOption({
     ...baseOption,
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     tooltip: {
       trigger: "item",

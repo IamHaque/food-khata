@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
@@ -179,7 +180,7 @@ describe("FeeScatterChart - Option Builder (CC-11, Scenario: Scatter)", () => {
     // Aria decals
     expect(option.aria).toEqual({
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     });
   });
 

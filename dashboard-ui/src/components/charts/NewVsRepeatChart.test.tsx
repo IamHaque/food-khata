@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
@@ -108,7 +109,7 @@ describe("NewVsRepeatChart - Option Builder (CC-11, S-051)", () => {
     expect(series[0].itemStyle.color).not.toBe(series[1].itemStyle.color);
     expect(option.aria).toEqual({
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     });
   });
 

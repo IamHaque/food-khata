@@ -1,4 +1,5 @@
-import type { EChartsCoreOption } from "echarts/core";
+import { color as zcolor, type EChartsCoreOption } from "echarts/core";
+import { getPatterns } from "../app/theme";
 
 export type ThemeMode = "light" | "dark";
 export type ThemeAccent = "emerald" | "indigo" | "amber" | "rose" | "slate";
@@ -52,6 +53,19 @@ export interface ChartTheme {
   // semantic tokens
   success: string;
   primary: string;
+  /** Fixed per-platform colours, used by every chart, pill and table. */
+  zomato: string;
+  swiggy: string;
+  /** Low and high end of the single-hue sequential ramp (surface tint to accent). */
+  rampLow: string;
+  rampHigh: string;
+  surface: string;
+}
+
+/** n colours from rampLow to rampHigh. */
+export function sequentialRamp(theme: ChartTheme, n = 5): string[] {
+  const stops = [theme.rampLow, theme.rampHigh];
+  return Array.from({ length: n }, (_, i) => zcolor.lerp(n === 1 ? 1 : i / (n - 1), stops));
 }
 
 const toHex = (c: string): string => String.fromCharCode(35) + c;
@@ -175,8 +189,18 @@ export function resolveChartTheme(
     tooltipText: tooltip.text,
     success: successColor,
     primary: primaryColor,
+    zomato: resolvedMode === "dark" ? toHex("f08797") : toHex("b3263a"),
+    swiggy: resolvedMode === "dark" ? toHex("f0a25a") : toHex("b45309"),
+    rampLow: resolvedMode === "dark" ? toHex("243029") : toHex("e6efe9"),
+    rampHigh: series[0],
+    surface: base.surface,
   };
 }
+
+const cssVar = (name: string): string => {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return raw ? toCssColor(raw) : "";
+};
 
 export function getCurrentChartTheme(): ChartTheme {
   if (typeof document === "undefined") {
@@ -185,7 +209,30 @@ export function getCurrentChartTheme(): ChartTheme {
   const root = document.documentElement;
   const isDark = root.classList.contains("dark");
   const accent = (root.getAttribute("data-accent") as ThemeAccent) || "emerald";
-  return resolveChartTheme(isDark ? "dark" : "light", accent);
+  const fallback = resolveChartTheme(isDark ? "dark" : "light", accent);
+  // Tokens in style.css are the source of truth; the table above is only the fallback when styles are absent (tests, SSR).
+  const v = (name: string, fb: string) => cssVar(name) || fb;
+  const series = fallback.series.map((c, i) => v(`--chart-${i + 1}`, c));
+  const text = v("--foreground", fallback.text);
+  const muted = v("--muted-foreground", fallback.mutedText);
+  const border = v("--border", fallback.border);
+  const surface = v("--surface", fallback.surface);
+  const surface2 = v("--surface-2", fallback.rampLow);
+  const t: ChartTheme = {
+    ...fallback,
+    colors: series,
+    series,
+    "chart-1": series[0], "chart-2": series[1], "chart-3": series[2], "chart-4": series[3],
+    "chart-5": series[4], "chart-6": series[5], "chart-7": series[6], "chart-8": series[7],
+    text, textColor: text, mutedText: muted, mutedColor: muted,
+    border, borderColor: border, axis: border, axisLine: border, axisLineColor: border,
+    splitLine: border, splitLineColor: border,
+    tooltip: { background: surface, border, text }, tooltipBg: surface, tooltipBorder: border, tooltipText: text,
+    success: v("--success", fallback.success), primary: series[0],
+    zomato: v("--platform-zomato", fallback.zomato), swiggy: v("--platform-swiggy", fallback.swiggy),
+    rampLow: surface2, rampHigh: series[0], surface,
+  };
+  return t;
 }
 
 export function buildBaseChartOption(
@@ -221,7 +268,7 @@ export function buildBaseChartOption(
     },
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     animation: !prefersReducedMotion,
     animationDuration: prefersReducedMotion ? 0 : 400,

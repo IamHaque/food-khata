@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sun, Moon, Laptop, Check } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { SegmentedControl } from '../components/ui/segmented-control';
-import { useTheme } from './theme';
+import { useTheme, getPatterns, setPatterns } from './theme';
 import type { ThemeMode, ThemeAccent } from './theme';
 
 const MODE_OPTIONS = [
@@ -11,18 +11,19 @@ const MODE_OPTIONS = [
   { value: 'system', label: 'System', icon: <Laptop className="h-3.5 w-3.5" /> },
 ];
 
-const ACCENTS: { value: ThemeAccent; label: string; color: string }[] = [
-  { value: 'emerald', label: 'Emerald', color: '#05623d' },
-  { value: 'indigo', label: 'Indigo', color: '#3730a3' },
-  { value: 'amber', label: 'Amber', color: '#92400e' },
-  { value: 'rose', label: 'Rose', color: '#9f1239' },
-  { value: 'slate', label: 'Slate', color: '#334155' },
+const ACCENTS: { value: ThemeAccent; label: string }[] = [
+  { value: 'emerald', label: 'Emerald' },
+  { value: 'indigo', label: 'Indigo' },
+  { value: 'amber', label: 'Amber' },
+  { value: 'rose', label: 'Rose' },
+  { value: 'slate', label: 'Slate' },
 ];
 
 export function ThemeControl() {
   const { mode, accent, setMode, setAccent } = useTheme();
   const committedAccentRef = useRef<ThemeAccent>(accent);
   const [open, setOpen] = useState(false);
+  const [patterns, setPatternsState] = useState(getPatterns);
 
   useEffect(() => {
     committedAccentRef.current = accent;
@@ -97,10 +98,7 @@ export function ThemeControl() {
                     active ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-muted'
                   }`}
                 >
-                  <span
-                    className="inline-block h-4 w-4 rounded-full ring-1 ring-border"
-                    style={{ backgroundColor: a.color }}
-                  />
+                  <span data-accent={a.value} className="inline-block h-4 w-4 rounded-full bg-primary ring-1 ring-border" />
                   <span className="flex-1 text-left">{a.label}</span>
                   {active && <Check className="h-3.5 w-3.5" />}
                 </button>
@@ -108,6 +106,22 @@ export function ThemeControl() {
             })}
           </div>
         </section>
+
+        <label className="mt-4 flex items-start gap-2.5 text-xs text-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={patterns}
+            onChange={(e) => {
+              setPatternsState(e.target.checked);
+              setPatterns(e.target.checked);
+            }}
+            className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
+          />
+          <span>
+            <span className="font-medium block">Accessible patterns</span>
+            <span className="text-muted-foreground">Add hatch fills to chart shapes so they do not rely on colour alone.</span>
+          </span>
+        </label>
       </PopoverContent>
     </Popover>
   );

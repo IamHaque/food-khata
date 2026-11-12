@@ -4,10 +4,21 @@ export default {
   theme: {
     extend: {
       fontFamily: { sans: ["Inter Variable", "sans-serif"] },
+      fontSize: {
+        xs: ["var(--fs-caption)", { lineHeight: "1.25" }],
+        sm: ["var(--fs-body)", { lineHeight: "1.45" }],
+        base: ["var(--fs-lead)", { lineHeight: "1.5" }],
+        lg: ["var(--fs-lead)", { lineHeight: "1.4", fontWeight: "600" }],
+        xl: ["var(--fs-title)", { lineHeight: "1.3" }],
+        "2xl": ["var(--fs-heading)", { lineHeight: "1.25" }],
+        display: ["var(--fs-display)", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--border))",
-        ring: "hsl(var(--primary))",
+        ring: "hsl(var(--focus))",
+        info: { DEFAULT: "hsl(var(--info))", foreground: "hsl(var(--primary-foreground))" },
+        platform: { zomato: "var(--platform-zomato)", swiggy: "var(--platform-swiggy)" },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {

@@ -1,3 +1,4 @@
+import { getPatterns } from "../../app/theme";
 import * as React from "react";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart, type BarSeriesOption, type LineSeriesOption } from "echarts/charts";
@@ -368,7 +369,7 @@ export function buildLoyaltyParetoOption({
     ...baseOption,
     aria: {
       enabled: true,
-      decal: { show: true },
+      decal: { show: getPatterns() },
     },
     animation: !prefersReducedMotion,
     animationDuration: prefersReducedMotion ? 0 : 600,
