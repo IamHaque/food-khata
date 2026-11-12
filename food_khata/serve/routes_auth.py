@@ -16,6 +16,7 @@ from food_khata.auth import (
     THROTTLE_ERROR_MESSAGE,
     can_register,
     check_registration_throttle,
+    check_ip_throttle,
     check_throttle,
     clear_session_cookies,
     create_session,
@@ -63,8 +64,8 @@ class UserResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=50)
+    password: str = Field(max_length=256)
 
 
 class LoginResponse(BaseModel):
@@ -193,6 +194,8 @@ def login(
 
     # 1. Check login throttle (5 failed attempts within 10 min window)
     is_throttled, retry_after = check_throttle(conn, username, ip)
+    if not is_throttled:
+        is_throttled, retry_after = check_ip_throttle(conn, ip)
     if is_throttled:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -210,7 +213,7 @@ def login(
     if user is None:
         dummy_verify()
         record_failed_login(conn, username, ip)
-        audit.record(conn, None, "login_failed", username, ip)
+        audit.record(conn, None, "login_failed", username[:50], ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=INVALID_CREDENTIALS_MESSAGE,
@@ -219,7 +222,7 @@ def login(
     # 3. Verify password
     if not verify_password(data.password, user["password_hash"]) or user["disabled"]:
         record_failed_login(conn, username, ip)
-        audit.record(conn, None, "login_failed", username, ip)
+        audit.record(conn, None, "login_failed", username[:50], ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=INVALID_CREDENTIALS_MESSAGE,
@@ -256,8 +259,8 @@ def login(
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(max_length=256)
+    new_password: str = Field(max_length=256)
 
 
 @router.post("/password", response_model=LoginResponse)

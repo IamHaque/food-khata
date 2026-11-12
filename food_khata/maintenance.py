@@ -14,6 +14,7 @@ CHUNK = 500  # keeps each write transaction well under 50 ms
 EVENT_RETENTION = 7 * 86400
 JOB_RETENTION = 90 * 86400
 ATTEMPT_RETENTION = 86400
+AUDIT_RETENTION = 90 * 86400
 
 
 def _delete_chunks(conn: sqlite3.Connection, table: str, where: str, args: tuple) -> int:
@@ -49,12 +50,16 @@ def prune_old_jobs(conn: sqlite3.Connection) -> int:
     )
 
 
+def prune_audit(conn: sqlite3.Connection) -> int:
+    return _delete_chunks(conn, "audit_log", "at < ?", (time.time() - AUDIT_RETENTION,))
+
+
 def checkpoint_wal(conn: sqlite3.Connection) -> int:
     conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
     return 0
 
 
-TASKS = (delete_expired_sessions, prune_attempts, prune_job_events, prune_old_jobs, checkpoint_wal)
+TASKS = (delete_expired_sessions, prune_attempts, prune_job_events, prune_old_jobs, prune_audit, checkpoint_wal)
 
 
 def run_once(app_db_path: Path | str) -> dict[str, int]:
