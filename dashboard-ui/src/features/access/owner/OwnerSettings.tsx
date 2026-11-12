@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { components } from "@/types/api";
@@ -58,8 +59,7 @@ function OwnerControls() {
   const seconds = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
   const windowText = !status.data?.window.is_open || seconds === 0 ? "Closed" : status.data.window.until_closed ? "Open until closed" : seconds === null ? "Open" : `Time left: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-  return <main className="mx-auto max-w-4xl p-4 sm:p-6"><Card className="space-y-6 p-5 sm:p-6">
-    <h1 className="text-2xl font-semibold">Owner settings</h1>
+  return <div className="max-w-4xl space-y-5"><PageHeader title="Owner settings" description="Who can register, household join codes, users and the audit trail." /><Card className="space-y-6 p-5 sm:p-6">
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {notice && <p role="status">{notice}</p>}
     {(status.isLoading || users.isLoading) && <p>Loading settings…</p>}
@@ -99,7 +99,7 @@ function OwnerControls() {
         <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={() => { setTarget(null); setPassword(""); }}>Cancel</Button><Button type="submit" variant="destructive" disabled={busy || !password}>Confirm reset</Button></DialogFooter>
       </form>
     </DialogContent></Dialog>
-  </Card></main>;
+  </Card></div>;
 }
 
 export default OwnerSettings;

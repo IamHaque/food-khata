@@ -92,8 +92,8 @@ test.describe('performance', () => {
   test('cross-filter click responds under 300ms', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    // find a clickable filter-ish element
-    const btn = page.getByRole('button').first();
+    // the filters toggle is the filter-ish control every page has
+    const btn = page.getByRole('button', { name: /^Filters/ });
     const start = Date.now();
     await btn.click();
     await page.waitForLoadState('networkidle');

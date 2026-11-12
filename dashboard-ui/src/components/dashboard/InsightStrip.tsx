@@ -1,4 +1,5 @@
 import * as React from "react";
+import { platformLabel } from "../../lib/format";
 
 import { useFilters } from "../../app/FilterContext";
 import { useDashboard } from "../../hooks/api";
@@ -28,7 +29,12 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 function InsightButton({ insight, onApply }: { insight: Insight; onApply: (patch: any) => void }) {
   const Icon = iconMap[insight.key] ?? Sparkles;
-  const value = insight.key === "fee_percentage" && !String(insight.value).includes("%") ? `${insight.value}%` : insight.value;
+  const value =
+    insight.key === "fee_percentage" && !String(insight.value).includes("%")
+      ? `${insight.value}%`
+      : insight.key === "most_frequent_platform"
+      ? platformLabel(String(insight.value))
+      : insight.value;
   return (
     <button
       type="button"

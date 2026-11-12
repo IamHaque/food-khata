@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { FILTERS, mockApi } from './mock-api';
+
+// On compact widths navigation and Log out live in the menu.
+async function openMenu(page: import('@playwright/test').Page) {
+  const menu = page.getByRole('button', { name: 'Open menu' });
+  if (await menu.isVisible()) await menu.click();
+}
+async function goTo(page: import('@playwright/test').Page, name: string) {
+  await openMenu(page);
+  await page.getByRole('navigation').getByRole('link', { name, exact: true }).first().click();
+}
 for (const width of [1440, 390]) {
   test(`access integration ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -22,11 +32,12 @@ for (const width of [1440, 390]) {
     });
     await page.goto('/');
     await expect(page.getByText('Fetching your first orders.', { exact: false })).toBeVisible();
-    await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toBeVisible();
+    await expect(page.getByText('Fake ••••nt A', { exact: false })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
     hold = true;
     await page.evaluate(() => { void (window as any).__queryClient.invalidateQueries({ queryKey: ['accounts'] }); });
     await waiting;
+    await openMenu(page);
     await page.getByRole('button', { name: 'Log out' }).click();
     await expect(page.getByText('Your sync continues after logout.', { exact: false })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Log out' }).click();
@@ -35,22 +46,25 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Password').fill('password');
     await page.getByRole('button', { name: /log in/i }).click();
     await expect(page).toHaveURL(/home/);
-    await page.getByRole('link', { name: 'Open dashboard' }).click();
-    await expect(page.getByText('Account: Fake ••••nt B', { exact: false })).toBeVisible();
+    await goTo(page, 'Overview');
+    await expect(page.getByText('Fake ••••nt B', { exact: false })).toBeVisible();
     release();
-    await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Fake ••••nt A', { exact: false })).toHaveCount(0);
     orders = 1;
     await page.reload();
-    await expect(page.getByText('Syncing orders in the background.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Syncing Fake orders in the background.', { exact: false })).toBeVisible();
     await expect(page.getByText('\u20b9100.00').first()).toBeVisible();
+    await openMenu(page);
     await expect(page.getByRole('button', { name: /Sync status: Synced/ })).toBeVisible();
+    await page.keyboard.press('Escape');
     await page.screenshot({ path: `test-results/access-${width}.png` });
     status = 'done';
     await page.reload();
-    await expect(page.getByText('Sync complete.', { exact: false })).toBeVisible();
-    await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-    await expect(page.getByRole('link', { name: 'Sync', exact: true })).toHaveAttribute('href', '/sync?account=B&provider=fake');
-    await page.getByRole('link', { name: 'Sync', exact: true }).click();
+    await expect(page.getByText('Fake sync finished.', { exact: false })).toBeVisible();
+    await goTo(page, 'Accounts');
+    const syncLink = page.locator('a[href^="/sync?account="]');
+    await expect(syncLink).toHaveAttribute('href', '/sync?account=B&provider=fake');
+    await syncLink.click();
     await expect(page.getByText('Choose a sync')).toBeVisible();
   });
 }
@@ -112,7 +126,7 @@ test('cross-tab login clears filters and delayed data', async ({ context, page }
   };
   await setup(page);
   await page.goto('/?restaurant_ids=A-private&account_ids=A');
-  await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toBeVisible();
+  await expect(page.getByText('Fake ••••nt A', { exact: false })).toBeVisible();
   hold = true;
   await page.evaluate(() => { void (window as any).__queryClient.invalidateQueries({ queryKey: ['accounts'] }); });
   await waiting;
@@ -126,9 +140,9 @@ test('cross-tab login clears filters and delayed data', async ({ context, page }
   await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4173\/(?:\?|$)/);
   expect(other.url()).not.toContain('A-private');
   expect(page.url()).not.toContain('A-private');
-  await expect(page.getByText('Account: Fake ••••nt B', { exact: false })).toBeVisible();
+  await expect(page.getByText('Fake ••••nt B', { exact: false })).toBeVisible();
   release();
-  await expect(page.getByText('Account: Fake ••••nt A', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Fake ••••nt A', { exact: false })).toHaveCount(0);
   expect(requests.join('\n')).not.toContain('A-private');
   expect(requests.join('\n')).not.toContain('account_ids=A');
 });
@@ -145,31 +159,31 @@ test('sync banners show status, progress and per-user acknowledgement', async ({
   });
   for (const data of [0, 1]) {
     count = data;
-    for (const [state, message] of [['queued', 'Sync queued'], ['running', data ? 'Syncing orders' : 'Fetching your first orders'], ['paused', 'Sync paused'], ['needs_code', 'Sync needs your verification code']]) {
+    for (const [state, message] of [['queued', 'Fake sync is waiting to start'], ['running', data ? 'Syncing Fake orders' : 'Fetching your first orders'], ['paused', 'Fake sync is paused'], ['needs_code', 'Fake sync needs your verification code']]) {
       status = state;
       await page.goto('/');
       await expect(page.getByText(message, { exact: false })).toBeVisible();
-      await expect(page.getByText('orders found: 2', { exact: false })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'View sync' })).toHaveAttribute('href', '/sync?job=job%201');
+      // Plain language only: raw counters are not shown.
+      await expect(page.getByText('orders found', { exact: false })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'View details' })).toHaveAttribute('href', '/sync?job=job%201');
     }
   }
   withCounts = false;
   await page.goto('/');
-  await expect(page.getByText('Sync needs your verification code', { exact: false })).toBeVisible();
-  await expect(page.getByText('orders found: 2', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Fake sync needs your verification code', { exact: false })).toBeVisible();
   status = 'done'; finished = Date.now() / 1000 - 3600;
   await page.goto('/');
-  await expect(page.getByText('Sync complete.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Fake sync finished.', { exact: false })).toHaveCount(0);
   finished = Date.now() / 1000;
   await page.reload();
-  await expect(page.getByText('Sync complete.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Fake sync finished.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Dismiss' }).click();
   await page.reload();
-  await expect(page.getByText('Sync complete.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Fake sync finished.', { exact: false })).toHaveCount(0);
   user = 'B';
   await page.reload();
-  await expect(page.getByText('Sync complete.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Fake sync finished.', { exact: false })).toBeVisible();
   newerFailure = true;
   await page.reload();
-  await expect(page.getByText('Sync complete.', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Fake sync finished.', { exact: false })).toHaveCount(0);
 });

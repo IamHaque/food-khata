@@ -167,7 +167,7 @@ export function SyncStatusPanelBody({
           )}
 
           <section className="space-y-2" aria-labelledby="sync-timestamps-heading">
-            <h3 id="sync-timestamps-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 id="sync-timestamps-heading" className="text-sm font-semibold text-foreground">
               Sync timestamps
             </h3>
             <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
@@ -191,7 +191,7 @@ export function SyncStatusPanelBody({
           </section>
 
           <section className="space-y-2" aria-labelledby="sync-orders-heading">
-            <h3 id="sync-orders-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 id="sync-orders-heading" className="text-sm font-semibold text-foreground">
               Order statistics
             </h3>
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -226,7 +226,7 @@ export function SyncStatusPanelBody({
           </section>
 
           <section className="space-y-2" aria-labelledby="sync-hygiene-heading">
-            <h3 id="sync-hygiene-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 id="sync-hygiene-heading" className="text-sm font-semibold text-foreground">
               Data hygiene
             </h3>
             <dl className="grid grid-cols-2 gap-2 text-xs">
@@ -271,7 +271,7 @@ export function SyncStatusPanelBody({
 
           {Boolean(health?.imports?.length) && (
             <section className="space-y-2" aria-labelledby="sync-imports-heading">
-              <h3 id="sync-imports-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 id="sync-imports-heading" className="text-sm font-semibold text-foreground">
                 Import coverage
               </h3>
               <div className="overflow-x-auto rounded-lg border">

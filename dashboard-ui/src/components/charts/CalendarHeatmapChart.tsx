@@ -239,6 +239,7 @@ export function buildCalendarHeatmapOption(
       cellSize: ["auto", 16],
       range: year,
       itemStyle: {
+        color: theme.surface, // days without orders: the card colour, not ECharts' default white
         borderWidth: 1,
         borderColor: theme.border,
       },

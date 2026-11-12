@@ -171,6 +171,8 @@ export function buildTopRestaurantsDishesOption(
             return row ? `${inr(row.value)} · ${plural(row.quantity, "order")}` : "";
           },
           fontSize: 11,
+          color: theme.textColor,
+          textBorderWidth: 0,
         },
       },
     ],

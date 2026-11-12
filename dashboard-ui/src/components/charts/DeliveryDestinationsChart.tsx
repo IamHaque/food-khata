@@ -616,7 +616,12 @@ export function DeliveryDestinationsChart({
   const activeMetric = controlledMetric ?? internalMetric;
 
   const rawData = dataProp ?? labelsProp ?? itemsProp;
-  const unsupportedMsg = unsupportedReasonProp ?? unsupported_reason ?? null;
+  // The API sends a terse reason; say it in plain words. (Other reasons pass through unchanged.)
+  const rawUnsupported = unsupportedReasonProp ?? unsupported_reason ?? null;
+  const unsupportedMsg =
+    rawUnsupported === "Maps are not supported."
+      ? "A map of your delivery places is not available in this version."
+      : rawUnsupported;
 
   const filters = useOptionalFilters();
   const activeFilters = React.useMemo<ActiveFiltersParam>(() => {

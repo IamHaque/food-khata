@@ -205,7 +205,7 @@ export function Chart({
         style={{ height: 320, width: "100%" }}
       />
       <details className="group border-t pt-1">
-        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground select-none inline-flex items-center gap-1.5 py-2 px-1 min-h-[44px]">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground select-none inline-flex items-center gap-1.5 py-2 px-1 min-h-[44px]">
           <span>View data table: {summary}</span>
         </summary>
         <div
@@ -221,28 +221,28 @@ export function Chart({
                   <TableHead
                     key={h}
                     scope="col"
-                    className="text-xs font-semibold uppercase tracking-wider py-2 px-3"
+                    className="text-sm font-medium py-2 px-3"
                   >
                     {h}
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y font-mono">
+            <TableBody className="divide-y tabular-nums">
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={headers.length}
-                    className="text-xs text-center py-4 text-muted-foreground"
+                    className="text-sm text-center py-4 text-muted-foreground"
                   >
-                    No data available for this range
+                    No data for this range. Try a wider date range.
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row, i) => (
                   <TableRow key={i} className="hover:bg-muted/30">
                     {row.map((cell, j) => (
-                      <TableCell key={j} className="text-xs py-2 px-3">
+                      <TableCell key={j} className="text-sm py-2 px-3">
                         {cell === null || cell === undefined ? "-" : String(cell)}
                       </TableCell>
                     ))}
