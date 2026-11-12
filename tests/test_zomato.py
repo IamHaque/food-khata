@@ -220,6 +220,32 @@ class ZomatoTests(unittest.TestCase):
         self.assertEqual(post.call_args_list[-1].args[2]["state"], "expected")
         self.assertEqual(self.provider.dump_session()["access_token"], "new-token")
 
+    def test_two_step_login_sends_sms_at_start_and_keeps_session_for_verify(self):
+        responses = [
+            SimpleNamespace(url=ACCOUNTS + "/login?login_challenge=lc"),
+            SimpleNamespace(url=ACCOUNTS + "/consent?consent_challenge=cc"),
+            SimpleNamespace(url=ACCOUNTS + "/zoauth/callback?code=c&state=expected"),
+        ]
+        with (
+            patch("food_khata.providers.zomato.curl_requests.Session"),
+            patch("food_khata.providers.zomato.secrets.token_urlsafe", side_effect=["verifier", "expected"]),
+            patch.object(self.provider, "_auth_request", side_effect=responses),
+            patch.object(self.provider, "profile", return_value="123"),
+            patch.object(
+                self.provider,
+                "_auth_json",
+                side_effect=[{}, {"redirect_to": ACCOUNTS}, {"redirect_to": ACCOUNTS}, {"token": {"access_token": "t"}}],
+            ) as post,
+        ):
+            self.provider.start_login("9876543210")
+            self.assertEqual([c.args[2]["type"] for c in post.call_args_list], ["initiate"])  # the SMS goes out here
+            with self.assertRaisesRegex(KhataError, "numeric OTP"):
+                self.provider.verify_otp("")  # a typo does not end the login
+            self.assertEqual(self.provider.verify_otp("123456"), "123")
+            self.assertEqual(post.call_args_list[1].args[2]["type"], "verify")
+            with self.assertRaisesRegex(KhataError, "No login in progress"):
+                self.provider.verify_otp("123456")
+
     def test_auth_posts_preserve_original_form_and_token_accept_headers(self):
         auth = Mock()
         auth.request.return_value = Mock(status_code=200)

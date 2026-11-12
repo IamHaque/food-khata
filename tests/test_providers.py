@@ -22,6 +22,20 @@ class SwiggyTests(unittest.TestCase):
         ):
             provider.profile()
 
+    def test_two_step_login_requests_otp_at_start(self):
+        provider = Swiggy()
+        self.addCleanup(provider.close)
+        with (
+            patch.object(provider.client, "request_otp") as request,
+            patch.object(provider.client, "verify_otp") as verify,
+            patch.object(provider, "profile", return_value="123"),
+        ):
+            provider.start_login("9876543210")
+            request.assert_called_once_with("9876543210")  # the SMS goes out at start
+            self.assertEqual(provider.verify_otp("123456"), "123")
+            verify.assert_called_once_with("123456")
+            request.assert_called_once()
+
     def test_phone_otp_login_sequence(self):
         provider = Swiggy()
         self.addCleanup(provider.close)
