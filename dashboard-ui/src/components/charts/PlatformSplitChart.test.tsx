@@ -45,7 +45,7 @@ const sampleData: PlatformSplitItem[] = [
 ];
 
 describe("PlatformSplitChart - Pure Option Builder (CC-11, Scenario: Donut)", () => {
-  it("builds donut pie chart with radius ['50%', '75%']", () => {
+  it("builds donut pie chart with radius ['62%', '80%']", () => {
     const theme = resolveChartTheme("light", "emerald");
     const option = buildPlatformSplitOption({
       data: sampleData,
@@ -56,7 +56,7 @@ describe("PlatformSplitChart - Pure Option Builder (CC-11, Scenario: Donut)", ()
     const series = Array.isArray(option.series) ? option.series[0] : option.series;
     expect(series).toBeDefined();
     expect((series as { type: string }).type).toBe("pie");
-    expect((series as { radius: [string, string] }).radius).toEqual(["50%", "75%"]);
+    expect((series as { radius: [string, string] }).radius).toEqual(["62%", "80%"]);
   });
 
   it("displays formatted total spend at the center", () => {
@@ -75,7 +75,7 @@ describe("PlatformSplitChart - Pure Option Builder (CC-11, Scenario: Donut)", ()
     };
     expect(title).toBeDefined();
     expect(title.text).toBe(formatRupees(total));
-    expect(title.subtext).toBe("Total Spend");
+    expect(title.subtext).toBe("Total spend");
     expect(title.left).toBe("center");
     expect(title.top).toBe("center");
   });
@@ -124,7 +124,7 @@ describe("PlatformSplitChart - Pure Option Builder (CC-11, Scenario: Donut)", ()
     );
 
     expect(tooltipHtml).toContain("Swiggy");
-    expect(tooltipHtml).toContain("Spend Share:");
+    expect(tooltipHtml).toContain("Share of spend:");
     expect(tooltipHtml).toContain("60.0%");
     expect(tooltipHtml).toContain("Spend:");
     expect(tooltipHtml).toContain(formatRupees(18000));
@@ -224,12 +224,12 @@ describe("PlatformSplitChart - React Component (ChartCard Wrap CC-2, CC-7, CC-8,
     const html = renderToString(
       <PlatformSplitChart
         data={sampleData}
-        title="Platform Split"
+        title="Platform split"
         subtitle="Distribution of spend"
       />
     );
 
-    expect(html).toContain("Platform Split");
+    expect(html).toContain("Platform split");
     expect(html).toContain("Distribution of spend");
     expect(html).toContain("Swiggy represents 60% of total food spend");
     expect(html).toContain('role="img"');
@@ -282,7 +282,7 @@ describe("PlatformSplitChart - React Component (ChartCard Wrap CC-2, CC-7, CC-8,
         </MemoryRouter>
       </Providers>
     );
-    expect(html).toContain("Platform Split");
+    expect(html).toContain("Platform split");
     expect(html).toContain("Swiggy");
   });
 });

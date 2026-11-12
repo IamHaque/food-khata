@@ -256,12 +256,10 @@ export function buildMealSlotsOption(
   const base = buildBaseChartOption(theme, prefersReducedMotion);
   const categoryLabels = normalized.map((s) => s.label);
 
-  const maxOrders = Math.max(1, ...normalized.map((s) => s.orders));
   const seriesData = normalized.map((slot) => {
     const isSelected = activeSelected.includes(slot.key);
-    // One hue; busier slots are darker. Selection dims the rest.
-    const shade = 0.4 + 0.6 * (slot.orders / maxOrders);
-    const opacity = hasActiveSelection ? (isSelected ? 1 : 0.3) : shade;
+    // One hue for every slot; selection dims the rest.
+    const opacity = hasActiveSelection ? (isSelected ? 1 : 0.35) : 1;
     const color = theme.colors[0];
 
     return {

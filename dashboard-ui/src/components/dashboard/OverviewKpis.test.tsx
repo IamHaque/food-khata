@@ -38,29 +38,25 @@ describe("OverviewKpis (S-031)", () => {
   });
 
   describe("Scenario: Layout", () => {
-    it("renders six cards fitting one row at 1440px desktop, 3x2 on tablet, 2x3 on mobile", () => {
+    it("renders the Total spend figure and a ledger of the other five measures", () => {
       const html = renderToString(<OverviewKpis data={mockData} />);
 
-      // Grid classes check: 2 cols on mobile, 3 on tablet (md), 6 on desktop (xl >= 1280/1440)
-      expect(html).toContain("grid-cols-2");
-      expect(html).toContain("md:grid-cols-3");
-      expect(html).toContain("xl:grid-cols-6");
-      expect(html).toContain("gap-3");
+      expect(html).toContain('data-testid="total-spend"');
+      expect(html).toContain("<dl");
 
-      // Verify all six KPI cards exist
-      expect(html).toContain("Total Spend");
-      expect(html).toContain("Total Orders");
-      expect(html).toContain("Average Order Value");
-      expect(html).toContain("Orders Per Week");
-      expect(html).toContain("Top Cuisine");
-      expect(html).toMatch(/Delivery (&amp;|&) Fees/);
+      // All six measures are present
+      expect(html).toContain("Total spend");
+      expect(html).toContain("Total orders");
+      expect(html).toContain("Average order value");
+      expect(html).toContain("Orders per week");
+      expect(html).toContain("Top cuisine");
+      expect(html).toContain("Delivery and fees");
     });
 
     it("renders loading skeletons when isLoading is true", () => {
       const html = renderToString(<OverviewKpis isLoading />);
       expect(html).toContain("animate-pulse");
-      expect(html).toContain("grid-cols-2");
-      expect(html).toContain("xl:grid-cols-6");
+      expect(html).toContain('aria-busy="true"');
     });
   });
 
@@ -71,7 +67,9 @@ describe("OverviewKpis (S-031)", () => {
       // Large values and tabular-nums styling
       expect(html).toContain("tabular-nums");
       // Total Spend INR formatted
-      expect(html).toContain("₹1,000.00");
+      expect(html).toContain("₹1,000");
+      // Average order value keeps paise
+      expect(html).toContain("₹100.00");
       // Total Orders integer
       expect(html).toContain("10");
       // Orders Per Week float (1 decimal)
@@ -81,13 +79,19 @@ describe("OverviewKpis (S-031)", () => {
 
       // Comparison deltas with percentage and direction
       expect(html).toContain("+5%");
-      expect(html).toContain("-2%");
-
-      // Top Cuisine delta is omitted or N/A
-      expect(html).toContain("N/A");
+      expect(html).toContain("−2%");
+      // No placeholder sublabels
+      expect(html).not.toContain("N/A");
+      expect(html).not.toContain("Unknown");
     });
 
-    it("renders 'Unknown' for missing values and comparison deltas", () => {
+    it("shows no change when Compare is off", () => {
+      const html = renderToString(<OverviewKpis data={{ ...mockData, comparison: null }} />);
+      expect(html).not.toContain("+5%");
+      expect(html).not.toContain("−2%");
+    });
+
+    it("shows a dash for missing values and nothing for missing deltas", () => {
       const emptyData = {
         kpis: { spend: null, orders: null, aov: null, fees: null },
         comparison: { percent_change: { spend: null, orders: null, aov: null, fees: null } },
@@ -99,8 +103,8 @@ describe("OverviewKpis (S-031)", () => {
       };
 
       const html = renderToString(<OverviewKpis data={emptyData} />);
-      // Values and deltas should display Unknown when missing
-      expect(html).toContain("Unknown");
+      expect(html).toContain("–");
+      expect(html).not.toContain("Unknown");
     });
 
     it("handles standalone props normalization", () => {
@@ -118,33 +122,33 @@ describe("OverviewKpis (S-031)", () => {
   describe("Scenario: Formula and Popover", () => {
     it("renders info icon button with accessible aria-label", () => {
       const html = renderToString(<OverviewKpis data={mockData} />);
-      expect(html).toContain('aria-label="Calculation and caveats for Total Spend"');
-      expect(html).toContain('aria-label="Calculation and caveats for Total Orders"');
-      expect(html).toContain('aria-label="Calculation and caveats for Average Order Value"');
-      expect(html).toContain('aria-label="Calculation and caveats for Orders Per Week"');
-      expect(html).toContain('aria-label="Calculation and caveats for Top Cuisine"');
-      expect(html).toMatch(/aria-label="Calculation and caveats for Delivery (&amp;|&) Fees"/);
+      expect(html).toContain('aria-label="Calculation and caveats for Total spend"');
+      expect(html).toContain('aria-label="Calculation and caveats for Total orders"');
+      expect(html).toContain('aria-label="Calculation and caveats for Average order value"');
+      expect(html).toContain('aria-label="Calculation and caveats for Orders per week"');
+      expect(html).toContain('aria-label="Calculation and caveats for Top cuisine"');
+      expect(html).toContain('aria-label="Calculation and caveats for Delivery and fees"');
     });
 
     it("embeds formula explanation and caveats for all KPI definitions", () => {
-      const spendDef = KPI_DEFINITIONS.find((d) => d.label === "Total Spend");
+      const spendDef = KPI_DEFINITIONS.find((d) => d.label === "Total spend");
       expect(spendDef?.formula).toContain("Total provider-paid amount across all matching orders");
       expect(spendDef?.caveats).toContain("Excludes non-reconciling advertised savings");
 
-      const ordersDef = KPI_DEFINITIONS.find((d) => d.label === "Total Orders");
+      const ordersDef = KPI_DEFINITIONS.find((d) => d.label === "Total orders");
       expect(ordersDef?.formula).toContain("Count of successfully delivered orders");
       expect(ordersDef?.caveats).toContain("Excludes cancelled and refunded orders");
 
-      const aovDef = KPI_DEFINITIONS.find((d) => d.label === "Average Order Value");
+      const aovDef = KPI_DEFINITIONS.find((d) => d.label === "Average order value");
       expect(aovDef?.formula).toContain("Total spend divided by valid delivered orders");
 
-      const opwDef = KPI_DEFINITIONS.find((d) => d.label === "Orders Per Week");
+      const opwDef = KPI_DEFINITIONS.find((d) => d.label === "Orders per week");
       expect(opwDef?.formula).toContain("Average orders per week within the selected period");
 
-      const cuisineDef = KPI_DEFINITIONS.find((d) => d.label === "Top Cuisine");
+      const cuisineDef = KPI_DEFINITIONS.find((d) => d.label === "Top cuisine");
       expect(cuisineDef?.formula).toContain("Most frequently ordered cuisine by order count");
 
-      const feesDef = KPI_DEFINITIONS.find((d) => d.label === "Delivery & Fees");
+      const feesDef = KPI_DEFINITIONS.find((d) => d.label === "Delivery and fees");
       expect(feesDef?.formula).toContain("Total delivery, packaging, and platform fees");
     });
 
@@ -202,13 +206,11 @@ describe("OverviewKpis (S-031)", () => {
     it("Delta formats positive change with ArrowUp and plus sign", () => {
       const html = renderToString(<Delta value={12.5} />);
       expect(html).toContain("+12.5%");
-      expect(html).toContain("text-emerald-600");
     });
 
     it("Delta formats negative change with ArrowDown", () => {
       const html = renderToString(<Delta value={-8} />);
-      expect(html).toContain("-8%");
-      expect(html).toContain("text-rose-600");
+      expect(html).toContain("−8%");
     });
 
     it("Delta formats zero change with Minus icon", () => {
@@ -216,10 +218,10 @@ describe("OverviewKpis (S-031)", () => {
       expect(html).toContain("0%");
     });
 
-    it("Delta formats missing or invalid values as Unknown", () => {
-      expect(renderToString(<Delta value={null} />)).toContain("Unknown");
-      expect(renderToString(<Delta value={undefined} />)).toContain("Unknown");
-      expect(renderToString(<Delta value={NaN} />)).toContain("Unknown");
+    it("Delta renders nothing for missing or invalid values", () => {
+      expect(renderToString(<Delta value={null} />)).toBe("");
+      expect(renderToString(<Delta value={undefined} />)).toBe("");
+      expect(renderToString(<Delta value={NaN} />)).toBe("");
     });
 
     it("KpiValue formats money, integer, and decimal with tabular-nums", () => {
@@ -234,9 +236,9 @@ describe("OverviewKpis (S-031)", () => {
       expect(decHtml).toContain("3.8");
     });
 
-    it("KpiValue renders Unknown when value is null or NaN", () => {
-      expect(renderToString(<KpiValue value={null} format="money" />)).toContain("Unknown");
-      expect(renderToString(<KpiValue value={NaN} format="number" />)).toContain("Unknown");
+    it("KpiValue renders a dash when value is null or NaN", () => {
+      expect(renderToString(<KpiValue value={null} format="money" />)).toContain("–");
+      expect(renderToString(<KpiValue value={NaN} format="number" />)).toContain("–");
     });
   });
 });

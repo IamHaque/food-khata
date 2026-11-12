@@ -189,7 +189,7 @@ export function FilterBar() {
   const [amountError, setAmountError] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
   // Open on wide screens, closed on compact ones, so content is visible without scrolling past filters.
-  const [open, setOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px)').matches === true);
+  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.matchMedia?.('(min-width: 1024px)').matches !== false);
 
   function clearMessages() {
     if (saved) setSaved('');

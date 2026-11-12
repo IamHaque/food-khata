@@ -29,9 +29,9 @@ describe('TopRestaurantsDishesChart option builder', () => {
     expect(option.series[0].label.show).toBe(true);
   });
 
-  it('renders component inside ChartCard with View all link', () => {
+  it('renders component inside ChartCard with See all restaurants and dishes link', () => {
     const html = renderToString(<TopRestaurantsDishesChart data={data} />);
     expect(html).toContain('Top restaurants and dishes');
-    expect(html).toContain('View all');
+    expect(html).toContain('See all restaurants and dishes');
   });
 });

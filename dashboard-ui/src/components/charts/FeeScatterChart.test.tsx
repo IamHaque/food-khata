@@ -7,6 +7,7 @@ import {
   FeeScatterChart,
   buildFeeScatterOption,
   computeSymbolSize,
+  clampAtZero,
   computeTrendline,
   formatFeeScatterTooltip,
   type FeeScatterDatum,
@@ -154,8 +155,8 @@ describe("FeeScatterChart - Option Builder (CC-11, Scenario: Scatter)", () => {
     expect(scatter.data![0]).toEqual([150, 30.0, 45]);
     expect(typeof scatter.symbolSize).toBe("function");
     // Verify symbolSize scaling callback
-    expect(scatter.symbolSize!([150, 30.0, 45])).toBe(6);
-    expect(scatter.symbolSize!([1200, 8.0, 96])).toBe(22);
+    expect(scatter.symbolSize!([150, 30.0, 45])).toBe(5);
+    expect(scatter.symbolSize!([1200, 8.0, 96])).toBe(12);
 
     // 2. Trendline Series
     const trendline = series[1];
@@ -170,10 +171,10 @@ describe("FeeScatterChart - Option Builder (CC-11, Scenario: Scatter)", () => {
     expect((option.xAxis as any).type).toBe("value");
     expect((option.xAxis as any).name).toBe("Order amount");
     expect(typeof (option.xAxis as any).axisLabel?.formatter).toBe("function");
-    expect((option.xAxis as any).axisLabel.formatter(500)).toBe(formatRupees(500));
+    expect((option.xAxis as any).axisLabel.formatter(500)).toBe("₹500");
 
     expect((option.yAxis as any).type).toBe("value");
-    expect((option.yAxis as any).name).toBe("Fee (%)");
+    expect((option.yAxis as any).name).toBe("Fee (% of order)");
     expect(typeof (option.yAxis as any).axisLabel?.formatter).toBe("function");
     expect((option.yAxis as any).axisLabel.formatter(15)).toBe("15%");
 
@@ -207,7 +208,7 @@ describe("FeeScatterChart - Option Builder (CC-11, Scenario: Scatter)", () => {
         });
 
         const series = option.series as any[];
-        expect(series[0].itemStyle.borderColor).toBe(theme.colors[0]);
+        expect(series[0].itemStyle.color).toBe(theme.colors[0]);
         if (series[1]) {
           expect(series[1].lineStyle.color).toBe(theme.colors[1] ?? theme.mutedColor);
         }
@@ -236,8 +237,8 @@ describe("FeeScatterChart - React Component (ChartCard, Popover, Table, Accessib
       </MemoryRouter>
     );
 
-    expect(html).toContain("Fee burden vs order value");
-    expect(html).toContain("Observed fee percentage relative to order amount with trendline");
+    expect(html).toContain("Fees against order value");
+    expect(html).toContain("Each dot is an order. Small orders pay a larger share in fees.");
     expect(html).toContain(expectedCaption!);
   });
 
@@ -325,7 +326,7 @@ describe("FeeScatterChart - React Component (ChartCard, Popover, Table, Accessib
     );
 
     expect(html).toContain('role="img"');
-    expect(html).toContain('aria-label="Fee burden vs order value"');
+    expect(html).toContain('aria-label="Fees against order value"');
     expect(html).toContain('aria-description="Scatter plot displaying 5 orders');
   });
 });
@@ -378,5 +379,18 @@ describe("FeeScatterChart - Click Interaction & DEC-044", () => {
 
     expect(params.get("platforms")).toBe("Zomato");
     expect(params.get("order")).toBe("order_12345");
+  });
+});
+
+describe("clampAtZero", () => {
+  it("cuts the trendline where it reaches zero and never goes below", () => {
+    expect(clampAtZero([[0, 10], [10, -10]])).toEqual([[0, 10], [5, 0]]);
+    expect(clampAtZero([[0, -10], [10, 10]])).toEqual([[5, 0], [10, 10]]);
+    expect(clampAtZero([[0, 4], [10, 2]])).toEqual([[0, 4], [10, 2]]);
+  });
+  it("sets the y-axis minimum to zero", () => {
+    const option = buildFeeScatterOption({ data: sampleScatterData }) as any;
+    expect(option.yAxis.min).toBe(0);
+    for (const [, y] of (option.series[1]?.data ?? [])) expect(y).toBeGreaterThanOrEqual(0);
   });
 });

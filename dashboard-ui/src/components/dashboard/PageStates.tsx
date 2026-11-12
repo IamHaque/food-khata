@@ -24,7 +24,7 @@ export function PageError({ what, onRetry }: { what: string; onRetry?: () => voi
         {what} could not load.
       </p>
       <p className="text-sm text-muted-foreground">Check that the server is running, then try again.</p>
-      {onRetry && <Button variant="outline" onClick={onRetry}>Try again</Button>}
+      {onRetry && <Button variant="outline" onClick={onRetry}>Retry</Button>}
     </Card>
   );
 }

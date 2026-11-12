@@ -227,15 +227,12 @@ describe('Orders table (S-070)', () => {
       expect(formatOrderDate(null)).toBe('—');
     });
 
-    it('renders OrderAmountCell with proportional inline bar and ₹ formatting', () => {
-      const html = renderToString(<OrderAmountCell amount={500} maxAmount={1000} />);
-      expect(html).toContain('₹');
-      expect(html).toContain('500');
-      expect(html).toContain('data-testid="amount-bar"');
-      expect(html).toContain('style="width:50%"');
-      expect(html).toContain('role="progressbar"');
-      expect(html).toContain('aria-valuenow="500"');
-      expect(html).toContain('aria-valuemax="1000"');
+    it('renders OrderAmountCell as a right-aligned tabular ₹ figure that never wraps', () => {
+      const html = renderToString(<OrderAmountCell amount={1234567.5} />);
+      expect(html).toContain('₹12,34,567.50');
+      expect(html).toContain('tabular-nums');
+      expect(html).toContain('text-right');
+      expect(html).toContain('whitespace-nowrap');
     });
 
     it('renders PlatformBadge with platform branding', () => {
@@ -250,7 +247,7 @@ describe('Orders table (S-070)', () => {
   });
 
   describe('Scenario: Columns and data rendering', () => {
-    it('renders date, platform, restaurant, items summary, proportional amount bar, and status chip in rows', () => {
+    it('renders date, platform, restaurant, items summary, amount, and status chip in rows', () => {
       const ordersData: Order[] = [
         {
           ...mockOrderBase,
@@ -321,17 +318,14 @@ describe('Orders table (S-070)', () => {
       expect(html).toContain('Unbalanced');
       expect(html).toContain('Unverified');
 
-      // Proportional inline amount bars
-      expect(html).toContain('data-testid="amount-bar"');
-      // Max amount is 600; 300 is 50%, 600 is 100%, 450 is 75%
-      expect(html).toContain('style="width:50%"');
-      expect(html).toContain('style="width:100%"');
-      expect(html).toContain('style="width:75%"');
+      // Amounts are ledger figures
+      expect(html).toContain('data-testid="amount-cell"');
+      expect(html).toContain('₹600.00');
     });
   });
 
   describe('Scenario: Sticky header', () => {
-    it('applies sticky top-0 z-10 bg-card on header row so headers stay visible during scroll', () => {
+    it('sticks the header row below the app header so there is one scroll context', () => {
       vi.mocked(apiHooks.useOrders).mockReturnValue({
         data: {
           rows: [mockOrderBase],
@@ -350,8 +344,9 @@ describe('Orders table (S-070)', () => {
       } as unknown as ReturnType<typeof apiHooks.useOrders>);
 
       const html = renderOrders();
-      expect(html).toContain('sticky top-0 z-10');
-      expect(html).toContain('orders-scroll');
+      expect(html).toContain('sticky top-[3.75rem] z-10');
+      expect(html).not.toContain('overflow-auto');
+      expect(html).not.toContain('max-h-[65vh]');
     });
   });
 
@@ -431,8 +426,8 @@ describe('Orders table (S-070)', () => {
     });
   });
 
-  describe('Scenario: Large data and virtualization', () => {
-    it('mounts virtualized table without error for large order counts', () => {
+  describe('Scenario: Large data', () => {
+    it('renders a full page of rows without error', () => {
       const largeRows: Order[] = Array.from({ length: 100 }, (_, i) => ({
         ...mockOrderBase,
         id: `large-order-${i}`,
@@ -461,9 +456,10 @@ describe('Orders table (S-070)', () => {
       } as unknown as ReturnType<typeof apiHooks.useOrders>);
 
       const html = renderOrders('/orders?page=1&page_size=100');
-      expect(html).toContain('orders-scroll-container');
+      expect(html).toContain('Order history');
       expect(html).toContain('Showing');
-      expect(html).toContain('5000');
+      expect(html).toContain('5,000 orders');
+      expect(html).toMatch(/Total for (<!-- -->)?5,000 orders/);
     });
   });
 });
@@ -498,7 +494,7 @@ describe('Orders search and quick filters (S-071)', () => {
       // Pinned controls container exists and sits above the table scroll container
       expect(html).toContain('data-testid="orders-pinned-controls"');
       const controlsPos = html.indexOf('data-testid="orders-pinned-controls"');
-      const tablePos = html.indexOf('orders-scroll');
+      const tablePos = html.indexOf('aria-label="Order history"');
       expect(controlsPos).toBeGreaterThan(-1);
       expect(tablePos).toBeGreaterThan(-1);
       expect(controlsPos).toBeLessThan(tablePos);
@@ -714,7 +710,7 @@ describe('Orders search and quick filters (S-071)', () => {
         <HighlightText text="Biryani Express" query="biryani" />,
       );
       expect(html).toContain(
-        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark> Express',
+        '<mark class="bg-primary/20 text-inherit rounded-sm px-0.5">Biryani</mark> Express',
       );
     });
 
@@ -723,7 +719,7 @@ describe('Orders search and quick filters (S-071)', () => {
         <HighlightText text="2x Chicken Biryani, 1x Raita" query="CHICKEN" />,
       );
       expect(html).toContain(
-        '2x <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Chicken</mark> Biryani, 1x Raita',
+        '2x <mark class="bg-primary/20 text-inherit rounded-sm px-0.5">Chicken</mark> Biryani, 1x Raita',
       );
     });
 
@@ -732,7 +728,7 @@ describe('Orders search and quick filters (S-071)', () => {
         <HighlightText text="Meal (Special + Extra)" query="(special +" />,
       );
       expect(html).toContain(
-        'Meal <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">(Special +</mark> Extra)',
+        'Meal <mark class="bg-primary/20 text-inherit rounded-sm px-0.5">(Special +</mark> Extra)',
       );
     });
 
@@ -779,17 +775,17 @@ describe('Orders search and quick filters (S-071)', () => {
 
       // Expect <mark> with the exact accessible styling to appear in matching rows
       expect(html).toContain(
-        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark>',
+        '<mark class="bg-primary/20 text-inherit rounded-sm px-0.5">Biryani</mark>',
       );
 
       // Verify it appears in restaurant column
       expect(html).toContain(
-        '<mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark> Express',
+        '<mark class="bg-primary/20 text-inherit rounded-sm px-0.5">Biryani</mark> Express',
       );
 
       // Verify it appears in items column
       expect(html).toContain(
-        '2x Chicken <mark class="bg-amber-200/60 dark:bg-amber-900/50 text-inherit rounded-xs px-0.5">Biryani</mark>, 1x Raita',
+        '2x Chicken <mark class="bg-primary/20 text-inherit rounded-sm px-0.5">Biryani</mark>, 1x Raita',
       );
     });
   });

@@ -23,7 +23,7 @@ function ErrorState({ icon, message, onRetry, className }: ErrorStateProps) {
       <p className="text-sm text-muted-foreground">Check your connection, then try again.</p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Try again
+          Retry
         </Button>
       )}
     </div>

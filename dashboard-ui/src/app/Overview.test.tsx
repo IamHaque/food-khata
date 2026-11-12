@@ -147,12 +147,12 @@ describe('Overview page assembly (Phase P3a Gate)', () => {
 
     const html = renderOverview();
     expect(html).toContain('Overview');
-    expect(html).toContain('Loading overview analytics');
+    expect(html).toContain('aria-label="Loading overview"');
     expect(html).toContain('role="status"');
     expect(html).toContain('Scope Notice Mock');
     // Ensure charts are not rendered during loading
     expect(html).not.toContain('Monthly spend and orders');
-    expect(html).not.toContain('Platform Split');
+    expect(html).not.toContain('Platform split');
   });
 
   it('renders error state with retry button when query.isError is true', () => {
@@ -166,7 +166,7 @@ describe('Overview page assembly (Phase P3a Gate)', () => {
     };
 
     const html = renderOverview();
-    expect(html).toContain('Overview could not load.');
+    expect(html).toContain('could not load.');
     expect(html).toContain('Retry');
     expect(html).toContain('role="alert"');
   });
@@ -185,7 +185,7 @@ describe('Overview page assembly (Phase P3a Gate)', () => {
     };
 
     const html = renderOverview();
-    expect(html).toContain('No orders match these filters.');
+    expect(html).toContain('No orders match these filters');
     expect(html).toContain('Clear filters');
     expect(html).not.toContain('Monthly spend and orders');
   });
@@ -220,19 +220,19 @@ describe('Overview page assembly (Phase P3a Gate)', () => {
     expect(html).toContain('Biryani Blues');
 
     // 3. Component 2: OverviewKpis
-    expect(html).toContain('Total Spend');
-    expect(html).toContain('Total Orders');
-    expect(html).toContain('Average Order Value');
-    expect(html).toContain('Orders Per Week');
-    expect(html).toContain('Top Cuisine');
-    expect(html).toMatch(/Delivery (&amp;|&) Fees/);
+    expect(html).toContain('Total spend');
+    expect(html).toContain('Total orders');
+    expect(html).toContain('Average order value');
+    expect(html).toContain('Orders per week');
+    expect(html).toContain('Top cuisine');
+    expect(html).toContain('Delivery and fees');
 
     // 4. Component 3: MonthlyTrendChart (in Row 1 Col 1: lg:col-span-8)
     expect(html).toContain('Monthly spend and orders');
     expect(html).toContain('lg:col-span-8');
 
     // 5. Component 4: PlatformSplitChart (in Row 1 Col 2: lg:col-span-4)
-    expect(html).toContain('Platform Split');
+    expect(html).toContain('Platform split');
     expect(html).toContain('lg:col-span-4');
 
     // 6. Component 5: CalendarHeatmapChart (in Row 2)
@@ -264,7 +264,7 @@ describe('Overview page assembly (Phase P3a Gate)', () => {
 
     const html = renderOverview();
     expect(html).not.toContain('Top platform');
-    expect(html).toContain('Total Spend');
+    expect(html).toContain('Total spend');
     expect(html).toContain('Monthly spend and orders');
   });
 });

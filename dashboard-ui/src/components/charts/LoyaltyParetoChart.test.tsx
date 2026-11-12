@@ -66,7 +66,7 @@ describe("LoyaltyParetoChart - Data Normalization", () => {
 });
 
 describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
-  it("configures dual Y-axes for orders count and cumulative percentage (Scenario: Pareto)", () => {
+  it("draws horizontal bars with orders and cumulative percentage on two x-axes (Scenario: Pareto)", () => {
     const theme = resolveChartTheme("light", "emerald");
     const option = buildLoyaltyParetoOption({
       data: sampleLoyaltyData,
@@ -74,8 +74,10 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
       prefersReducedMotion: false,
     });
 
-    // X Axis: Ranked restaurant names
-    expect((option.xAxis as any).data).toEqual([
+    // Category axis (vertical): ranked restaurant names, never rotated
+    expect((option.yAxis as any).type).toBe("category");
+    expect((option.yAxis as any).inverse).toBe(true);
+    expect((option.yAxis as any).data).toEqual([
       "Faasos",
       "Behrouz Biryani",
       "Oven Story Pizza",
@@ -84,23 +86,16 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
       "Sweet Truth",
     ]);
 
-    // Dual Y-Axes
-    const yAxes = option.yAxis as any[];
-    expect(yAxes).toHaveLength(2);
-
-    // Primary Y-Axis (left): Orders
-    expect(yAxes[0].name).toBe("Orders");
-    expect(yAxes[0].type).toBe("value");
-    expect(yAxes[0].min).toBe(0);
-    expect(yAxes[0].position).toBe("left");
-
-    // Secondary Y-Axis (right): Cumulative %
-    expect(yAxes[1].name).toBe("Cumulative %");
-    expect(yAxes[1].type).toBe("value");
-    expect(yAxes[1].min).toBe(0);
-    expect(yAxes[1].max).toBe(100);
-    expect(yAxes[1].position).toBe("right");
-    expect(yAxes[1].axisLabel?.formatter).toBe("{value}%");
+    // Two value axes: orders (bottom), cumulative share (top)
+    const xAxes = option.xAxis as any[];
+    expect(xAxes).toHaveLength(2);
+    expect(xAxes[0].name).toBe("Orders");
+    expect(xAxes[0].min).toBe(0);
+    expect(xAxes[0].position).toBe("bottom");
+    expect(xAxes[1].min).toBe(0);
+    expect(xAxes[1].max).toBe(100);
+    expect(xAxes[1].position).toBe("top");
+    expect(xAxes[1].axisLabel?.formatter).toBe("{value}%");
   });
 
   it("builds bar series using theme.colors[0] and line series using theme.colors[1]", () => {
@@ -118,7 +113,7 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
     const barSeries = series[0];
     expect(barSeries.type).toBe("bar");
     expect(barSeries.name).toBe("Orders");
-    expect(barSeries.yAxisIndex).toBe(0);
+    expect(barSeries.xAxisIndex).toBe(0);
     expect(barSeries.itemStyle?.color).toBe(theme.colors[0]);
 
     const barValues = barSeries.data.map((d: any) => d.value);
@@ -128,8 +123,7 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
     const lineSeries = series[1];
     expect(lineSeries.type).toBe("line");
     expect(lineSeries.name).toBe("Cumulative %");
-    expect(lineSeries.yAxisIndex).toBe(1);
-    expect(lineSeries.smooth).toBe(true);
+    expect(lineSeries.xAxisIndex).toBe(1);
     expect(lineSeries.itemStyle?.color).toBe(theme.colors[1]);
     expect(lineSeries.lineStyle?.color).toBe(theme.colors[1]);
 
@@ -153,7 +147,7 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
     const markData = lineSeries.markLine.data;
     expect(markData).toHaveLength(1);
     expect(markData[0].name).toBe("80% Pareto");
-    expect(markData[0].yAxis).toBe(80);
+    expect(markData[0].xAxis).toBe(80);
     expect(markData[0].lineStyle?.type).toBe("dashed");
     expect(markData[0].label?.formatter).toBe("80% Pareto");
   });
@@ -206,8 +200,8 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
       maxItems: 3,
     });
 
-    expect((option.xAxis as any).data).toHaveLength(3);
-    expect((option.xAxis as any).data).toEqual(["Faasos", "Behrouz Biryani", "Oven Story Pizza"]);
+    expect((option.yAxis as any).data).toHaveLength(3);
+    expect((option.yAxis as any).data).toEqual(["Faasos", "Behrouz Biryani", "Oven Story Pizza"]);
   });
 
   it("handles empty data gracefully without throwing", () => {
@@ -217,7 +211,7 @@ describe("LoyaltyParetoChart - Option Builder (CC-11, S-052)", () => {
       theme,
     });
 
-    expect((option.xAxis as any).data).toEqual([]);
+    expect((option.yAxis as any).data).toEqual([]);
     expect(option.series).toEqual([]);
   });
 });
@@ -319,12 +313,12 @@ describe("LoyaltyParetoChart - React Component (ChartCard, Popover, Table, CC-1 
       </MemoryRouter>,
     );
 
-    expect(html).toContain("Restaurant loyalty Pareto");
-    expect(html).toContain("Order distribution across vendors with cumulative 80/20 threshold");
+    expect(html).toContain("Restaurant loyalty");
+    expect(html).toContain("Orders per restaurant, with the share of all orders they add up to.");
     expect(html).toContain(expectedCaption!);
     expect(html).toContain('aria-label="Loyalty Pareto information"');
     expect(html).toContain('role="img"');
-    expect(html).toContain('aria-description="Restaurant loyalty Pareto chart ranking 6 restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: 100."');
+    expect(html).toContain('aria-description="Restaurant loyalty chart ranking 6 restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: 100."');
   });
 
   it("supports custom caption override", () => {
@@ -369,7 +363,7 @@ describe("LoyaltyParetoChart - React Component (ChartCard, Popover, Table, CC-1 
       </MemoryRouter>,
     );
 
-    expect(html).toContain("Restaurant loyalty Pareto");
+    expect(html).toContain("Restaurant loyalty");
     expect(html).toContain("animate-pulse");
   });
 

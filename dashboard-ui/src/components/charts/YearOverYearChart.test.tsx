@@ -228,7 +228,7 @@ describe("YearOverYearChart - React Component (ChartCard, Popover, Table, Access
     );
 
     expect(html).toContain("Year-over-year spend comparison");
-    expect(html).toContain("Monthly spend trajectories across calendar years");
+    expect(html).toContain("Monthly spend for the last three years. Click a year in the legend to show or hide it.");
     expect(html).toContain("2025 spend exceeded 2024 by ₹9,000 across comparable months");
   });
 

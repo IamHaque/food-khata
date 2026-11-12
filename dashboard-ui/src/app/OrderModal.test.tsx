@@ -284,13 +284,13 @@ describe('S-072: Order side sheet', () => {
       expect(html).toContain('Packaging');
       expect(html).toContain('Platform fee');
       expect(html).toContain('Taxes');
-      expect(html).toContain('Net paid');
+      expect(html).toContain('Paid');
       expect(html).toContain('₹600.00');
 
       // Itemized discounts
       expect(html).toContain('Itemized discounts');
       expect(html).toContain('WELCOME50 Coupon');
-      expect(html).toContain('-₹50.00');
+      expect(html).toContain('−₹50.00');
     });
 
     it('exports OrderSheet alias matching OrderModal', () => {
@@ -340,7 +340,7 @@ describe('S-072: Order side sheet', () => {
       expect(html).toContain('data-order-id="ord-1"');
       expect(html).toContain('data-active="true"');
       expect(html).toContain('aria-selected="true"');
-      expect(html).toContain('bg-primary/10');
+      expect(html).toContain('bg-accent');
       expect(html).toContain('ring-2 ring-inset ring-primary');
 
       // Row for ord-2 should not be active

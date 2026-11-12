@@ -263,7 +263,7 @@ export function OrderModal({
                 onClick={() => void bill.refetch()}
                 className="mt-2 min-h-[44px] rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent"
               >
-                Try again
+                Retry
               </button>
             </div>
           ) : !data ? (
@@ -379,7 +379,7 @@ export function OrderModal({
               {/* Itemized discounts */}
               {(data.discount_items.length > 0 || (o?.total_discount != null && o.total_discount > 0)) && (
                 <section className="space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">Discounts applied</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Itemized discounts</h3>
                   <dl className="bill-ladder text-sm">
                     {data.discount_items.length > 0 ? (
                       data.discount_items.map((discount, index) => (

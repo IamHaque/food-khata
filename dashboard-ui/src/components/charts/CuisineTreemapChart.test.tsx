@@ -222,7 +222,7 @@ describe("CuisineTreemapChart React component (Scenario: Unavailable, ChartCard 
     );
 
     expect(html).toContain("Cuisine breakdown");
-    expect(html).toContain("Treemap of spend by cuisine with restaurant drilldown");
+    expect(html).toContain("Spend by cuisine. Click a cuisine to see its restaurants.");
     expect(html).toContain('role="img"');
     expect(html).toContain('aria-label="Cuisine breakdown information"');
   });

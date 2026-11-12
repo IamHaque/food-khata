@@ -262,7 +262,7 @@ function Shell() {
             <div role="alert" className="notice notice-danger items-center justify-between">
               <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />Filter options could not load. Check your connection, then try again.</span>
               <button className="rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent min-h-[36px]" onClick={() => void metadata.refetch()}>
-                Try again
+                Retry
               </button>
             </div>
           ) : metadata.isPending ? (

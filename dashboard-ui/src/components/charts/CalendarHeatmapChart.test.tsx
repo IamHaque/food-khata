@@ -1,3 +1,4 @@
+import { color as zcolor } from "echarts/core";
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
@@ -104,7 +105,8 @@ describe("CalendarHeatmapChart option builder", () => {
     }) as any;
 
     expect(option.calendar.itemStyle.borderColor).toBe(darkTheme.border);
-    expect(option.visualMap.inRange.color[3]).toBe(darkTheme["chart-1"]);
+    // single-hue ramp: the last stop is the accent
+    expect(zcolor.parse(option.visualMap.inRange.color.at(-1))).toEqual(zcolor.parse(darkTheme["chart-1"]));
   });
 });
 

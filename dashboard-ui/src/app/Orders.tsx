@@ -461,7 +461,7 @@ export async function executeExport({
     const countDisplay = totalCount != null ? `${totalCount}` : 'matching';
     const status: ExportStatus = {
       type: 'success',
-      message: `Exported ${countDisplay} orders to CSV.`,
+      message: `CSV exported successfully (${countDisplay} orders).`,
     };
     setExportStatus?.(status);
     return { ok: true, status, csv };
@@ -470,7 +470,7 @@ export async function executeExport({
       (error instanceof Error && error.name === 'AbortError') || signal.aborted;
     const status: ExportStatus = isAbort
       ? { type: 'cancelled', message: 'Export was cancelled.' }
-      : { type: 'error', message: 'Could not export orders. Check your connection and try again.' };
+      : { type: 'error', message: 'Could not export orders. Please retry.' };
     setExportStatus?.(status);
     return { ok: false, status };
   } finally {
@@ -1134,7 +1134,7 @@ export function Orders({
             onClick={() => void query.refetch()}
             className="min-h-[36px] rounded border border-destructive/30 px-3 py-1 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
           >
-            Try again
+            Retry
           </button>
         </div>
       )}
@@ -1148,7 +1148,7 @@ export function Orders({
             onClick={() => void query.refetch()}
             className="min-h-[44px] rounded border px-3 py-2 bg-background text-foreground shadow-xs hover:bg-accent font-medium"
           >
-            Try again
+            Retry
           </button>
         </div>
       ) : query.isPending ? (
@@ -1284,7 +1284,7 @@ export function Orders({
                           }
                         }}
                         aria-label={`Open order ${row.original.platform_order_id}`}
-                        className={`cursor-pointer transition-colors hover:bg-accent/50 focus-visible:bg-accent ${isActive ? 'bg-accent' : ''}`}
+                        className={`cursor-pointer transition-colors hover:bg-accent/50 focus-visible:bg-accent ${isActive ? 'bg-accent ring-2 ring-inset ring-primary' : ''}`}
                       >
                         {row.getVisibleCells().map(cell => (
                           <TableCell

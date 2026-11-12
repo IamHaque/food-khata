@@ -190,7 +190,7 @@ export function buildCuisineHierarchy(
           const remainder = Math.round((cuisine.spend - restTotalSpend) * 100) / 100;
           if (remainder > 0) {
             children.push({
-              name: "Other restaurants",
+              name: cuisine.name === "Unknown" ? "Other restaurants" : `Other ${cuisine.name}`,
               value: remainder,
               cuisineName: cuisine.name,
             });

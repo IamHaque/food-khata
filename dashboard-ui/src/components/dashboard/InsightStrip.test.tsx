@@ -45,7 +45,7 @@ describe('InsightStrip', () => {
     const button = Array.isArray(element.props.children)
       ? element.props.children[0]
       : element.props.children;
-    (button.props as { onClick: () => void }).onClick();
+    (button.props as { insight: { filter_patch: unknown }; onApply: (p: unknown) => void }).onApply(button.props.insight.filter_patch);
     expect(update).toHaveBeenCalledWith(insight.filter_patch);
   });
 

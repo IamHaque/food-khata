@@ -1,3 +1,4 @@
+import { color as zcolor } from "echarts/core";
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
@@ -66,7 +67,7 @@ describe("HourWeekdayHeatmapChart pure option builder (CC-4, CC-10)", () => {
     expect(option.visualMap.max).toBe(15);
     expect(option.visualMap.orient).toBe("horizontal");
     expect(option.visualMap.inRange?.color).toBeInstanceOf(Array);
-    expect(option.visualMap.inRange.color).toHaveLength(2);
+    expect(option.visualMap.inRange.color).toHaveLength(5);
   });
 
   it("formats rich tooltip with full day name, hour range, order count, and rupees spend", () => {
@@ -98,10 +99,10 @@ describe("HourWeekdayHeatmapChart pure option builder (CC-4, CC-10)", () => {
     const lightOption = buildHourWeekdayHeatmapOption(sampleData, lightTheme) as any;
     const darkOption = buildHourWeekdayHeatmapOption(sampleData, darkTheme) as any;
 
-    expect(lightOption.visualMap.inRange.color[1]).toBe(lightTheme["chart-1"]);
-    expect(darkOption.visualMap.inRange.color[1]).toBe(darkTheme["chart-1"]);
-    expect(lightOption.visualMap.inRange.color[0]).toBe(lightTheme["chart-1"] + "22");
-    expect(darkOption.visualMap.inRange.color[0]).toBe(darkTheme["chart-1"] + "22");
+    // single-hue ramp from a surface tint up to the accent
+    expect(zcolor.parse(lightOption.visualMap.inRange.color.at(-1))).toEqual(zcolor.parse(lightTheme["chart-1"]));
+    expect(zcolor.parse(darkOption.visualMap.inRange.color.at(-1))).toEqual(zcolor.parse(darkTheme["chart-1"]));
+    expect(zcolor.parse(lightOption.visualMap.inRange.color[0])).toEqual(zcolor.parse(lightTheme.rampLow));
   });
 
   it("honors reducedMotion option to disable animations", () => {

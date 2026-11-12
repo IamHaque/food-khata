@@ -55,7 +55,7 @@ describe("AC-14 Accounts and linking screens", () => {
         refetch: vi.fn(),
       } as any);
       const html = renderWithProviders(<Home />);
-      expect(html).toContain("No linked accounts yet");
+      expect(html).toContain("No accounts linked yet");
       expect(html).toContain("/accounts/link");
     });
   });

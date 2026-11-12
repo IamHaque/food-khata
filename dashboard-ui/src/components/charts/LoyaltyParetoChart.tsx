@@ -498,10 +498,10 @@ export function LoyaltyParetoChart({
 
   const ariaDescription = React.useMemo(() => {
     if (!displayed.length || totalOrders === 0) {
-      return "Restaurant loyalty Pareto chart with no data";
+      return "Restaurant loyalty chart with no data";
     }
     const topCount = displayed.length;
-    return `Restaurant loyalty Pareto chart ranking ${topCount} restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: ${totalOrders}.`;
+    return `Restaurant loyalty chart ranking ${topCount} restaurants by order volume with cumulative order percentage and 80% reference threshold. Total orders: ${totalOrders}.`;
   }, [displayed, totalOrders]);
 
   const highlightMatcher = React.useMemo(

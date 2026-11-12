@@ -55,7 +55,7 @@ export function AnalyticsPage({ page }: { page: 'Food' | 'Spending' | 'Habits' }
       {query.isError && (
         <p role="alert" className="notice notice-danger items-center">
           <span className="flex-1">Could not refresh this page. The numbers shown may be out of date.</span>
-          <Button variant="outline" size="sm" onClick={() => void query.refetch()}>Try again</Button>
+          <Button variant="outline" size="sm" onClick={() => void query.refetch()}>Retry</Button>
         </p>
       )}
 

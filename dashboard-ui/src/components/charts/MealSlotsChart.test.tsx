@@ -60,16 +60,10 @@ describe("MealSlotsChart pure option builder (CC-3, CC-9)", () => {
     expect(seriesValues).toEqual([10, 25, 5, 45, 15]);
   });
 
-  it("assigns distinct theme colors to each meal slot", () => {
+  it("uses one hue for every meal slot", () => {
     const theme = resolveChartTheme("light", "emerald");
     const option = buildMealSlotsOption(sampleData, theme) as any;
-    const seriesData = option.series[0].data;
-
-    expect(seriesData[0].itemStyle.color).toBe(theme.colors[0]);
-    expect(seriesData[1].itemStyle.color).toBe(theme.colors[1]);
-    expect(seriesData[2].itemStyle.color).toBe(theme.colors[2]);
-    expect(seriesData[3].itemStyle.color).toBe(theme.colors[3]);
-    expect(seriesData[4].itemStyle.color).toBe(theme.colors[4]);
+    for (const d of option.series[0].data) expect(d.itemStyle.color).toBe(theme.colors[0]);
   });
 
   it("dims unselected slots to opacity 0.35 when a meal slot filter is active", () => {

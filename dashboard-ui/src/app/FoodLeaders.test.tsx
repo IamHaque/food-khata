@@ -3,6 +3,8 @@ import * as React from 'react';
 import { renderToString } from 'react-dom/server';
 import {
   FoodLeaders,
+  duplicateNames,
+  localityOf,
   filterLeaderRows,
   sortLeaderRows,
   ProportionalBarCell,
@@ -268,32 +270,18 @@ describe('FoodLeaders (S-055)', () => {
   });
 
   describe('4. Subcomponent: ProportionalBarCell', () => {
-    it('renders formatted rupee amount and accessible progressbar', () => {
+    it('renders a right-aligned tabular rupee figure', () => {
       const html = renderToString(
         <ProportionalBarCell value={5000} maxValue={10000} label="spend" testIdPrefix="test-bar" />,
       );
       expect(html).toContain('₹5,000');
-      expect(html).toContain('role="progressbar"');
-      expect(html).toContain('aria-valuenow="5000"');
-      expect(html).toContain('aria-valuemin="0"');
-      expect(html).toContain('aria-valuemax="10000"');
-      expect(html).toContain('width:50%');
-      expect(html).toContain('50% of max');
+      expect(html).toContain('tabular-nums');
+      expect(html).toContain('text-right');
+      expect(html).toContain('data-testid="test-bar-cell"');
     });
 
-    it('clamps bar width at 100% when value equals or exceeds max', () => {
-      const html = renderToString(
-        <ProportionalBarCell value={12000} maxValue={10000} />,
-      );
-      expect(html).toContain('width:100%');
-    });
-
-    it('handles zero or negative values safely without dividing by zero', () => {
-      const html = renderToString(
-        <ProportionalBarCell value={0} maxValue={0} />,
-      );
-      expect(html).toContain('width:0%');
-      expect(html).toContain('aria-valuemax="1"');
+    it('uses Indian digit grouping', () => {
+      expect(renderToString(<ProportionalBarCell value={1234567} />)).toContain('₹12,34,567');
     });
   });
 
@@ -378,8 +366,7 @@ describe('FoodLeaders (S-055)', () => {
         </table>,
       );
       expect(html).toContain('aria-pressed="true"');
-      expect(html).toContain('bg-primary/10');
-      expect(html).toContain('text-primary');
+      expect(html).toContain('bg-accent');
     });
 
     it('invokes onClick handler when clicked', () => {
@@ -454,8 +441,7 @@ describe('FoodLeaders (S-055)', () => {
 
       // Find filter button in cell
       const tdFirst = rendered.props.children[0];
-      const divWrapper = tdFirst.props.children;
-      const filterBtn = divWrapper.props.children[1];
+      const filterBtn = tdFirst.props.children[1];
       const stopPropagation = vi.fn();
       filterBtn.props.onClick({ stopPropagation });
       expect(stopPropagation).toHaveBeenCalled();
@@ -481,10 +467,9 @@ describe('FoodLeaders (S-055)', () => {
       expect(html).toContain('aria-sort="descending"');
       expect(html).toContain('data-testid="sort-desc"');
 
-      // Inline proportional bars (Requirement 3)
-      expect(html).toContain('role="progressbar"');
-      expect(html).toContain('data-testid="restaurant-amount-bar"');
-      expect(html).toContain('data-testid="dish-amount-bar"');
+      // Ledger figures
+      expect(html).toContain('data-testid="restaurant-amount-cell"');
+      expect(html).toContain('data-testid="dish-amount-cell"');
 
       // Row accessibility (Requirement 4)
       expect(html).toContain('data-testid="restaurant-row-rest-1"');
@@ -532,15 +517,15 @@ describe('FoodLeaders (S-055)', () => {
       mockFilters = { restaurant_ids: ['rest-1'] };
       const html = renderToString(<FoodLeaders />);
       expect(html).toContain('aria-pressed="true"');
-      expect(html).toContain('bg-primary/10 font-semibold text-primary');
+      expect(html).toContain('bg-accent');
     });
 
     it('renders empty message when no restaurants or dishes match', () => {
       mockRestaurantsQuery.data = { rows: [], total: 0 };
       mockItemsQuery.data = { rows: [], total: 0 };
       const html = renderToString(<FoodLeaders />);
-      expect(html).toContain('No matching restaurants.');
-      expect(html).toContain('No matching dishes.');
+      expect(html).toContain('No restaurants match.');
+      expect(html).toContain('No dishes match.');
     });
 
     it('renders loading status when queries are pending', () => {
@@ -555,8 +540,7 @@ describe('FoodLeaders (S-055)', () => {
       mockRestaurantsQuery.isError = true;
       mockItemsQuery.isError = true;
       const html = renderToString(<FoodLeaders />);
-      expect(html).toContain('Retry restaurants');
-      expect(html).toContain('Retry dishes');
+      expect(html).toContain('could not load.');
     });
 
     it('calls onRestaurantClick and onDishClick callbacks if provided', () => {
@@ -570,5 +554,13 @@ describe('FoodLeaders (S-055)', () => {
       );
       expect(elem).toBeDefined();
     });
+  });
+});
+
+describe('locality for repeated names', () => {
+  it('finds names that appear more than once and reads the locality from the merged key', () => {
+    expect([...duplicateNames([{ name: 'A' }, { name: 'B' }, { name: 'A' }])]).toEqual(['A']);
+    expect(localityOf('basil & bamboo|indiranagar')).toBe('Indiranagar');
+    expect(localityOf('plain-key')).toBeNull();
   });
 });
